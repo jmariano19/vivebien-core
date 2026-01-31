@@ -108,12 +108,14 @@ export async function handleInboundMessage(
   );
 
   // Step 10: Confirm credit debit
-  await logExecution(
-    correlationId,
-    'confirm_credit',
-    async () => creditService.confirmDebit(creditCheck.reservationId),
-    logger
-  );
+  if (creditCheck.reservationId) {
+    await logExecution(
+      correlationId,
+      'confirm_credit',
+      async () => creditService.confirmDebit(creditCheck.reservationId!),
+      logger
+    );
+  }
 
   // Step 11: Send response via Chatwoot
   await logExecution(

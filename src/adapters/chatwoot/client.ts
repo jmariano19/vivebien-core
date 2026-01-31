@@ -95,7 +95,15 @@ export class ChatwootClient {
         throw new ChatwootError(`Failed to get conversation: ${response.status}`);
       }
 
-      return await response.json();
+      return await response.json() as {
+        id: number;
+        status: string;
+        contact: {
+          id: number;
+          phone_number: string;
+          name: string;
+        };
+      };
     } catch (error) {
       if (error instanceof ChatwootError) {
         throw error;

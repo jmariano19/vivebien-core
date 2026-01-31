@@ -24,13 +24,13 @@ export class CreditService {
       [correlationId]
     );
 
-    if (existing.rows.length > 0) {
-      const tx = existing.rows[0];
+    const existingTx = existing.rows[0];
+    if (existingTx) {
       // Already processed - return existing result
       const balance = await this.getBalance(userId);
       return {
-        hasCredits: tx.status === 'confirmed',
-        reservationId: tx.id,
+        hasCredits: existingTx.status === 'confirmed',
+        reservationId: existingTx.id,
         creditsRemaining: balance,
       };
     }
@@ -64,7 +64,7 @@ export class CreditService {
 
     return {
       hasCredits: true,
-      reservationId: result.rows[0].id,
+      reservationId: result.rows[0]!.id,
       creditsRemaining: balance - cost,
     };
   }
@@ -95,7 +95,7 @@ export class CreditService {
         throw new Error(`Reservation not found: ${reservationId}`);
       }
 
-      const tx = reservation.rows[0];
+      const tx = reservation.rows[0]!;
 
       if (tx.status === 'confirmed') {
         // Already confirmed - idempotent
@@ -189,7 +189,7 @@ export class CreditService {
 
       await client.query('COMMIT');
 
-      return result.rows[0].credits;
+      return result.rows[0]!.credits;
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;

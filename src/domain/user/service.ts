@@ -37,11 +37,11 @@ export class UserService {
       [phone]
     );
 
-    if (result.rows.length === 0) {
+    const row = result.rows[0];
+    if (!row) {
       return null;
     }
 
-    const row = result.rows[0];
     return {
       id: row.id,
       phone: row.phone,
@@ -67,11 +67,11 @@ export class UserService {
       [userId]
     );
 
-    if (result.rows.length === 0) {
+    const row = result.rows[0];
+    if (!row) {
       return null;
     }
 
-    const row = result.rows[0];
     return {
       id: row.id,
       phone: row.phone,
@@ -103,7 +103,7 @@ export class UserService {
         [phone]
       );
 
-      const user = userResult.rows[0];
+      const user = userResult.rows[0]!;
 
       // Create billing account with free credits
       await client.query(
