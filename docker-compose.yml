@@ -1,0 +1,129 @@
+# ============================================================================
+# ViveBien Core - Local Development Docker Compose
+# ============================================================================
+#
+# Usage:
+#   docker compose up -d          # Start all services
+#   docker compose up api worker  # Start only API and Worker (use existing Redis/Postgres)
+#   docker compose logs -f        # Follow logs
+#   docker compose down           # Stop all services
+#
+# For development with hot reload, run the API and Worker natively:
+#   npm run dev          # API with hot reload
+#   npm run dev:worker   # Worker with hot reload
+#
+
+version: '3.8'
+
+services:
+  # ==========================================================================
+  # API Service
+  # ==========================================================================
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vivebien-core-api
+    command: node dist/index.js
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - DATABASE_URL=postgres://vivebien:vivebien@postgres:5432/vivebien
+      - REDIS_URL=redis://redis:6379
+      - API_SECRET_KEY=${API_SECRET_KEY:-development-secret-key-min-16}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - CHATWOOT_URL=${CHATWOOT_URL}
+      - CHATWOOT_API_KEY=${CHATWOOT_API_KEY}
+      - CHATWOOT_ACCOUNT_ID=${CHATWOOT_ACCOUNT_ID:-1}
+      - LOG_LEVEL=debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  # ==========================================================================
+  # Worker Service
+  # ==========================================================================
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vivebien-core-worker
+    command: node dist/worker/index.js
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgres://vivebien:vivebien@postgres:5432/vivebien
+      - REDIS_URL=redis://redis:6379
+      - API_SECRET_KEY=${API_SECRET_KEY:-development-secret-key-min-16}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - CHATWOOT_URL=${CHATWOOT_URL}
+      - CHATWOOT_API_KEY=${CHATWOOT_API_KEY}
+      - CHATWOOT_ACCOUNT_ID=${CHATWOOT_ACCOUNT_ID:-1}
+      - WORKER_CONCURRENCY=10
+      - LOG_LEVEL=debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    # Scale workers: docker compose up -d --scale worker=3
+
+  # ==========================================================================
+  # Redis (Queue)
+  # ==========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: vivebien-core-redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy noeviction
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+
+  # ==========================================================================
+  # PostgreSQL (Database) - Only for local dev
+  # ==========================================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: vivebien-core-postgres
+    environment:
+      - POSTGRES_USER=vivebien
+      - POSTGRES_PASSWORD=vivebien
+      - POSTGRES_DB=vivebien
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vivebien -d vivebien"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+  postgres_data:
+
+networks:
+  default:
+    name: vivebien-network
