@@ -151,7 +151,10 @@ export async function handleInboundMessage(
     ),
     logger
   ).catch((err) => {
-    logger.warn({ error: err.message }, 'Failed to update health summary');
+    logger.error(
+      { err, userId: user.id, correlationId },
+      'Failed to update health summary - data may be inconsistent'
+    );
   });
 
   return {

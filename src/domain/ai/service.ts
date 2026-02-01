@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { config } from '../../config';
 import { AIResponse, Message, ConversationContext, TokenUsage } from '../../shared/types';
 import { AIServiceError } from '../../shared/errors';
-import { logAIUsage } from '../../infra/logging/logger';
+import { logAIUsage, logger } from '../../infra/logging/logger';
 import { ConversationService } from '../conversation/service';
 import { db } from '../../infra/db/client';
 import { RateLimiter } from '../../shared/rate-limiter';
@@ -372,8 +372,8 @@ Rules:
       return content.trim();
     } catch (error) {
       const err = error as Error;
-      // If summary generation fails, return current summary or empty
-      console.error('Failed to generate summary:', err.message);
+      // If summary generation fails, log and return current summary or empty
+      logger.error({ err, currentSummary: !!currentSummary }, 'Failed to generate summary');
       return currentSummary || '';
     }
   }

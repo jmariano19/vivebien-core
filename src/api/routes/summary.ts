@@ -1,6 +1,5 @@
 import { FastifyInstance, FastifyPluginAsync } from 'fastify';
-import { z } from 'zod';
-import { query, queryOne, queryMany } from '../../infra/db/client';
+import { queryOne, queryMany } from '../../infra/db/client';
 import { NotFoundError } from '../../shared/errors';
 
 export const summaryRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
@@ -219,60 +218,48 @@ export const summaryRoutes: FastifyPluginAsync = async (app: FastifyInstance) =>
   /**
    * Get all users with summaries (for dashboard)
    * Returns paginated list of users with their latest summary preview
+   * Optimized: Uses JOIN instead of N+1 queries
    */
   app.get('/users', async (request, reply) => {
     const queryParams = request.query as { limit?: string; offset?: string };
     const limit = Math.min(parseInt(queryParams.limit || '20', 10), 100);
     const offset = parseInt(queryParams.offset || '0', 10);
 
-    // Simple query first - just get users
+    // Optimized: Single query with LEFT JOIN to get users and conversation stats
     const users = await queryMany<{
       id: string;
       phone: string;
       language: string;
       created_at: Date;
+      message_count: number | null;
+      phase: string | null;
     }>(
       `SELECT
-         id,
-         phone,
-         COALESCE(preferred_language, 'es') as language,
-         created_at
-       FROM users
-       ORDER BY created_at DESC
+         u.id,
+         u.phone,
+         COALESCE(u.preferred_language, 'es') as language,
+         u.created_at,
+         cs.message_count,
+         cs.phase
+       FROM users u
+       LEFT JOIN conversation_state cs ON u.id = cs.user_id
+       ORDER BY u.created_at DESC
        LIMIT $1 OFFSET $2`,
       [limit, offset]
     );
 
     const total = await queryOne<{ count: number }>('SELECT COUNT(*) as count FROM users');
 
-    // Enrich with conversation state if available
-    const enrichedUsers = await Promise.all(users.map(async (u) => {
-      let messageCount = 0;
-      let phase = 'new';
-
-      try {
-        const stats = await queryOne<{ message_count: number; phase: string }>(
-          `SELECT message_count, phase FROM conversation_state WHERE user_id = $1`,
-          [u.id]
-        );
-        if (stats) {
-          messageCount = stats.message_count;
-          phase = stats.phase;
-        }
-      } catch (err) {
-        // Table may not exist
-      }
-
-      return {
-        id: u.id,
-        phone: u.phone,
-        language: u.language,
-        joinedAt: u.created_at,
-        messageCount,
-        phase,
-        summaryPreview: null,
-        summaryUpdatedAt: null,
-      };
+    // Transform results (no additional queries needed)
+    const enrichedUsers = users.map((u) => ({
+      id: u.id,
+      phone: u.phone,
+      language: u.language,
+      joinedAt: u.created_at,
+      messageCount: u.message_count || 0,
+      phase: u.phase || 'new',
+      summaryPreview: null,
+      summaryUpdatedAt: null,
     }));
 
     return {
