@@ -2,13 +2,21 @@ import { FastifyInstance, FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { addInboundJob } from '../../infra/queue/client';
 import { checkIdempotencyKey, setIdempotencyKey } from '../../infra/db/client';
-import { ChatwootWebhookPayload, InboundJobData } from '../../shared/types';
+import { InboundJobData, Attachment } from '../../shared/types';
 import { BadRequestError } from '../../shared/errors';
 
 // Helper to normalize phone numbers
 function normalizePhone(raw: string): string {
   const digits = raw.replace(/[^\d+]/g, '');
   return digits.startsWith('+') ? digits : `+${digits}`;
+}
+
+// Helper to map file types to attachment types
+function mapFileType(fileType: string): Attachment['type'] {
+  if (fileType.startsWith('audio')) return 'audio';
+  if (fileType.startsWith('image')) return 'image';
+  if (fileType.startsWith('video')) return 'video';
+  return 'document';
 }
 
 // Validation schema for Chatwoot webhook
@@ -76,21 +84,23 @@ export const ingestRoutes: FastifyPluginAsync = async (app: FastifyInstance) => 
       throw new BadRequestError('Invalid phone number in webhook');
     }
 
+    // Build job data
     const jobData: InboundJobData = {
+      type: 'inbound_message',
       correlationId,
       phone,
       message: payload.content || '',
       conversationId: payload.conversation.id,
-      senderName: payload.conversation.meta?.sender?.name || payload.sender?.name || 'Unknown',
+      chatwootContactId: payload.sender?.id || 0,
       attachments: payload.attachments?.map(a => ({
-        type: a.file_type,
+        type: mapFileType(a.file_type),
         url: a.data_url,
-      })) || [],
+      })),
       timestamp: new Date().toISOString(),
     };
 
     await addInboundJob(jobData);
-    await setIdempotencyKey(idempotencyKey);
+    await setIdempotencyKey(idempotencyKey, { status: 'queued' }, 24);
 
     app.log.info({ correlationId, phone, conversationId: payload.conversation.id }, 'Message queued successfully');
 
