@@ -109,9 +109,9 @@ export class CreditService {
 
       // Debit the credits
       await client.query(
-        `UPDATE billing_accounts
-         SET credits = credits - $1
-         WHERE user_id = $2`,
+        `UPDATE users
+         SET credits_remaining = credits_remaining - $1
+         WHERE id = $2`,
         [tx.amount, tx.user_id]
       );
 
@@ -148,12 +148,12 @@ export class CreditService {
    * Get user's current credit balance
    */
   async getBalance(userId: string): Promise<number> {
-    const result = await this.db.query<{ credits: number }>(
-      `SELECT credits FROM billing_accounts WHERE user_id = $1`,
+    const result = await this.db.query<{ credits_remaining: number }>(
+      `SELECT credits_remaining FROM users WHERE id = $1`,
       [userId]
     );
 
-    return result.rows[0]?.credits || 0;
+    return result.rows[0]?.credits_remaining || 0;
   }
 
   /**
@@ -171,11 +171,11 @@ export class CreditService {
       await client.query('BEGIN');
 
       // Add credits
-      const result = await client.query<{ credits: number }>(
-        `UPDATE billing_accounts
-         SET credits = credits + $1
-         WHERE user_id = $2
-         RETURNING credits`,
+      const result = await client.query<{ credits_remaining: number }>(
+        `UPDATE users
+         SET credits_remaining = credits_remaining + $1
+         WHERE id = $2
+         RETURNING credits_remaining`,
         [amount, userId]
       );
 
@@ -189,7 +189,7 @@ export class CreditService {
 
       await client.query('COMMIT');
 
-      return result.rows[0]!.credits;
+      return result.rows[0]!.credits_remaining;
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
