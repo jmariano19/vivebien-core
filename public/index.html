@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Care Log - Dashboard</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background-color: #fafafa;
+      color: #1a1a1a;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    header {
+      margin-bottom: 2rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    header h1 {
+      font-size: 1.5rem;
+      font-weight: 500;
+      color: #333;
+    }
+
+    header p {
+      color: #666;
+      font-size: 0.9rem;
+      margin-top: 0.25rem;
+    }
+
+    .search-bar {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .search-bar input {
+      flex: 1;
+      padding: 0.75rem 1rem;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .search-bar input:focus {
+      border-color: #666;
+    }
+
+    .search-bar button {
+      padding: 0.75rem 1.5rem;
+      background: #333;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .search-bar button:hover {
+      background: #555;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      gap: 2rem;
+    }
+
+    @media (max-width: 768px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .user-list {
+      background: white;
+      border-radius: 8px;
+      border: 1px solid #e0e0e0;
+      overflow: hidden;
+    }
+
+    .user-list-header {
+      padding: 1rem;
+      background: #f5f5f5;
+      border-bottom: 1px solid #e0e0e0;
+      font-weight: 500;
+      font-size: 0.9rem;
+      color: #666;
+    }
+
+    .user-item {
+      padding: 1rem;
+      border-bottom: 1px solid #f0f0f0;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .user-item:hover {
+      background: #f9f9f9;
+    }
+
+    .user-item.active {
+      background: #f0f7ff;
+      border-left: 3px solid #333;
+    }
+
+    .user-item:last-child {
+      border-bottom: none;
+    }
+
+    .user-phone {
+      font-weight: 500;
+      font-size: 0.95rem;
+    }
+
+    .user-meta {
+      font-size: 0.8rem;
+      color: #888;
+      margin-top: 0.25rem;
+    }
+
+    .user-preview {
+      font-size: 0.85rem;
+      color: #666;
+      margin-top: 0.5rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .summary-panel {
+      background: white;
+      border-radius: 8px;
+      border: 1px solid #e0e0e0;
+    }
+
+    .summary-header {
+      padding: 1.5rem;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .summary-header h2 {
+      font-size: 1.1rem;
+      font-weight: 500;
+    }
+
+    .summary-header .meta {
+      font-size: 0.85rem;
+      color: #888;
+      margin-top: 0.5rem;
+    }
+
+    .summary-content {
+      padding: 1.5rem;
+      white-space: pre-wrap;
+      font-size: 0.95rem;
+      line-height: 1.8;
+    }
+
+    .summary-section {
+      margin-bottom: 1.5rem;
+    }
+
+    .summary-section:last-child {
+      margin-bottom: 0;
+    }
+
+    .summary-section-title {
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 0.5rem;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .summary-section-content {
+      color: #555;
+      padding-left: 1rem;
+    }
+
+    .empty-state {
+      padding: 3rem;
+      text-align: center;
+      color: #888;
+    }
+
+    .loading {
+      padding: 2rem;
+      text-align: center;
+      color: #888;
+    }
+
+    .error {
+      padding: 1rem;
+      background: #fff5f5;
+      border: 1px solid #ffcccc;
+      border-radius: 4px;
+      color: #cc0000;
+      margin-bottom: 1rem;
+    }
+
+    .stats {
+      display: flex;
+      gap: 2rem;
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid #f0f0f0;
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 500;
+      color: #333;
+    }
+
+    .stat-label {
+      font-size: 0.8rem;
+      color: #888;
+      margin-top: 0.25rem;
+    }
+
+    .refresh-btn {
+      padding: 0.5rem 1rem;
+      background: transparent;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      color: #666;
+      transition: all 0.2s;
+    }
+
+    .refresh-btn:hover {
+      background: #f5f5f5;
+      border-color: #ccc;
+    }
+
+    .auto-refresh {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      color: #888;
+    }
+
+    .auto-refresh input {
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useCallback } = React;
+
+    const API_BASE = window.location.origin;
+
+    function App() {
+      const [users, setUsers] = useState([]);
+      const [selectedUser, setSelectedUser] = useState(null);
+      const [summary, setSummary] = useState(null);
+      const [loading, setLoading] = useState(true);
+      const [error, setError] = useState(null);
+      const [searchPhone, setSearchPhone] = useState('');
+      const [autoRefresh, setAutoRefresh] = useState(false);
+
+      // Fetch users list
+      const fetchUsers = useCallback(async () => {
+        try {
+          const res = await fetch(`${API_BASE}/api/summary/users?limit=50`);
+          const data = await res.json();
+          if (data.success) {
+            setUsers(data.data.users);
+            setError(null);
+          } else {
+            setError(data.error || 'Failed to fetch users');
+          }
+        } catch (err) {
+          setError('Could not connect to server');
+        } finally {
+          setLoading(false);
+        }
+      }, []);
+
+      // Fetch user summary
+      const fetchSummary = useCallback(async (phone) => {
+        try {
+          const res = await fetch(`${API_BASE}/api/summary/user/${encodeURIComponent(phone)}`);
+          const data = await res.json();
+          if (data.success) {
+            setSummary(data.data);
+            setError(null);
+          } else {
+            setError(data.error || 'User not found');
+            setSummary(null);
+          }
+        } catch (err) {
+          setError('Could not fetch summary');
+        }
+      }, []);
+
+      // Search by phone
+      const handleSearch = async () => {
+        if (!searchPhone.trim()) return;
+        setSelectedUser(null);
+        await fetchSummary(searchPhone.trim());
+      };
+
+      // Select user from list
+      const handleSelectUser = (user) => {
+        setSelectedUser(user);
+        fetchSummary(user.phone);
+      };
+
+      // Initial load
+      useEffect(() => {
+        fetchUsers();
+      }, [fetchUsers]);
+
+      // Auto-refresh
+      useEffect(() => {
+        if (!autoRefresh) return;
+        const interval = setInterval(() => {
+          fetchUsers();
+          if (selectedUser) {
+            fetchSummary(selectedUser.phone);
+          }
+        }, 10000); // Refresh every 10 seconds
+        return () => clearInterval(interval);
+      }, [autoRefresh, selectedUser, fetchUsers, fetchSummary]);
+
+      // Format date
+      const formatDate = (dateStr) => {
+        if (!dateStr) return 'Never';
+        const date = new Date(dateStr);
+        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      };
+
+      // Parse summary into sections
+      const parseSummary = (content) => {
+        if (!content) return [];
+        const sections = [];
+        const lines = content.split('\n');
+        let currentSection = null;
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+
+          // Check if it's a section header (all caps or starts with specific patterns)
+          if (trimmed.match(/^[A-ZÁÉÍÓÚÑ\s\/]+$/) ||
+              trimmed.match(/^(SÍNTOMAS|LOGGED|MEDICATIONS|PREGUNTAS|QUESTIONS|CAMBIOS|CHANGES|PRÓXIMOS|NEXT)/i)) {
+            if (currentSection && currentSection.content.length > 0) {
+              sections.push(currentSection);
+            }
+            currentSection = { title: trimmed, content: [] };
+          } else if (currentSection) {
+            currentSection.content.push(trimmed);
+          } else {
+            // Content before any section
+            if (!sections.length) {
+              currentSection = { title: '', content: [trimmed] };
+            }
+          }
+        }
+
+        if (currentSection && currentSection.content.length > 0) {
+          sections.push(currentSection);
+        }
+
+        return sections;
+      };
+
+      return (
+        <div className="container">
+          <header>
+            <h1>Care Log Dashboard</h1>
+            <p>Live health records between visits</p>
+          </header>
+
+          {error && <div className="error">{error}</div>}
+
+          <div className="search-bar">
+            <input
+              type="text"
+              placeholder="Search by phone number..."
+              value={searchPhone}
+              onChange={(e) => setSearchPhone(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            />
+            <button onClick={handleSearch}>Search</button>
+            <button className="refresh-btn" onClick={() => { fetchUsers(); if (selectedUser) fetchSummary(selectedUser.phone); }}>
+              Refresh
+            </button>
+            <label className="auto-refresh">
+              <input
+                type="checkbox"
+                checked={autoRefresh}
+                onChange={(e) => setAutoRefresh(e.target.checked)}
+              />
+              Auto-refresh
+            </label>
+          </div>
+
+          <div className="layout">
+            <div className="user-list">
+              <div className="user-list-header">
+                Users ({users.length})
+              </div>
+              {loading ? (
+                <div className="loading">Loading...</div>
+              ) : users.length === 0 ? (
+                <div className="empty-state">No users found</div>
+              ) : (
+                users.map((user) => (
+                  <div
+                    key={user.id}
+                    className={`user-item ${selectedUser?.id === user.id ? 'active' : ''}`}
+                    onClick={() => handleSelectUser(user)}
+                  >
+                    <div className="user-phone">{user.phone}</div>
+                    <div className="user-meta">
+                      {user.messageCount} entries · {user.phase}
+                    </div>
+                    {user.summaryPreview && (
+                      <div className="user-preview">{user.summaryPreview}</div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="summary-panel">
+              {!summary ? (
+                <div className="empty-state">
+                  Select a user to view their Care Log
+                </div>
+              ) : (
+                <>
+                  <div className="summary-header">
+                    <h2>{summary.user?.phone || 'User'}</h2>
+                    <div className="meta">
+                      {summary.summary?.updatedAt ? (
+                        <>Last updated: {formatDate(summary.summary.updatedAt)}</>
+                      ) : (
+                        <>No entries yet</>
+                      )}
+                    </div>
+                    <div className="stats">
+                      <div className="stat">
+                        <div className="stat-value">{summary.stats?.totalMessages || 0}</div>
+                        <div className="stat-label">Total Entries</div>
+                      </div>
+                      <div className="stat">
+                        <div className="stat-value">{summary.stats?.phase || 'new'}</div>
+                        <div className="stat-label">Phase</div>
+                      </div>
+                      <div className="stat">
+                        <div className="stat-value">{summary.user?.language || 'es'}</div>
+                        <div className="stat-label">Language</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="summary-content">
+                    {summary.summary?.content ? (
+                      parseSummary(summary.summary.content).map((section, idx) => (
+                        <div key={idx} className="summary-section">
+                          {section.title && (
+                            <div className="summary-section-title">{section.title}</div>
+                          )}
+                          <div className="summary-section-content">
+                            {section.content.map((line, lineIdx) => (
+                              <div key={lineIdx}>{line}</div>
+                            ))}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="empty-state">
+                        No health summary recorded yet.
+                        <br /><br />
+                        Summary will appear after the user logs symptoms or health information.
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>

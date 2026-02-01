@@ -1,5 +1,7 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import fastifyStatic from '@fastify/static';
+import path from 'path';
 import { config } from './config';
 import { healthRoutes } from './api/routes/health';
 import { ingestRoutes } from './api/routes/ingest';
@@ -46,6 +48,12 @@ async function bootstrap() {
   await app.register(cors, {
     origin: config.corsOrigins,
     credentials: true,
+  });
+
+  // Static files for dashboard
+  await app.register(fastifyStatic, {
+    root: path.join(__dirname, '..', 'public'),
+    prefix: '/',
   });
 
   // Correlation ID middleware
