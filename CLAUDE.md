@@ -87,3 +87,49 @@ The system uses "Care Log" personality:
 ## n8n Integration
 - Database access workflow: `Claude Database Access` (ID: AofV_qusW1Vz9XZQtIksN)
 - Accepts POST with `{"sql": "..."}` to execute queries
+
+## Care Log Onboarding Flow (7 Steps)
+
+### Identity
+- Care Log is an AI health system (not emotional support)
+- Does not diagnose or replace doctors
+- Creates doctor-ready summaries
+
+### Flow
+1. **3-Message Open** (Value First)
+   - Greeting + identity
+   - Boundary (don't replace doctors)
+   - Invitation (tell me what's happening)
+
+2. **Micro-Capture** (1-3 questions, one at a time)
+   - What's going on?
+   - When did it start?
+   - What makes it better or worse?
+
+3. **Immediate "Aha" Output** - Mini doctor-ready summary
+
+4. **Name Request** - Only after delivering value
+
+5. **Trust & Control** - Brief reassurance (user controls data)
+
+6. **3 Rails** - Clear next paths:
+   - 1: Keep logging symptoms/changes
+   - 2: Prepare for a visit
+   - 3: Generate shareable summary
+
+7. **Link** - Only when earned (user asks to share)
+
+### Safety (Always On)
+Scans for red flags:
+- Chest pain, severe shortness of breath
+- Neurological symptoms (face drooping, slurred speech)
+- Pregnancy emergencies
+- Self-harm / suicidal thoughts
+
+### Doctor-Ready Summary Format
+- Main concern
+- Onset / duration
+- Pattern / severity
+- What helps / worsens
+- Questions for visit
+- Timeline
