@@ -166,25 +166,27 @@ export class AIService {
       .map((m) => `${m.role === 'user' ? (isSpanish ? 'Usuario' : 'User') : (isSpanish ? 'Asistente' : 'Assistant')}: ${m.content}`)
       .join('\n\n');
 
-    // Language-specific section headers
+    // Language-specific section headers (doctor-ready format)
     const headers = isSpanish ? {
-      symptoms: 'SÍNTOMAS REGISTRADOS',
-      medications: 'MEDICAMENTOS / TRATAMIENTOS',
-      questions: 'PREGUNTAS PARA EL MÉDICO',
-      changes: 'CAMBIOS DESDE ÚLTIMA VISITA',
-      changesRecent: 'CAMBIOS RECIENTES',
-      nextSteps: 'PRÓXIMOS PASOS',
+      mainConcern: 'MOTIVO PRINCIPAL',
+      onset: 'INICIO / DURACIÓN',
+      pattern: 'PATRÓN / SEVERIDAD',
+      factors: 'QUÉ AYUDA / EMPEORA',
+      medications: 'MEDICAMENTOS ACTUALES',
+      questions: 'PREGUNTAS PARA LA VISITA',
+      timeline: 'CRONOLOGÍA',
     } : {
-      symptoms: 'LOGGED SYMPTOMS',
-      medications: 'MEDICATIONS / TREATMENTS',
-      questions: 'QUESTIONS FOR DOCTOR',
-      changes: 'CHANGES SINCE LAST VISIT',
-      changesRecent: 'RECENT CHANGES',
-      nextSteps: 'NEXT STEPS',
+      mainConcern: 'MAIN CONCERN',
+      onset: 'ONSET / DURATION',
+      pattern: 'PATTERN / SEVERITY',
+      factors: 'WHAT HELPS / WORSENS',
+      medications: 'CURRENT MEDICATIONS',
+      questions: 'QUESTIONS FOR VISIT',
+      timeline: 'TIMELINE',
     };
 
     const prompt = currentSummary
-      ? `You are Care Log. Update the following health record based on recent entries.
+      ? `You are Care Log. Update this doctor-ready health record based on recent entries.
 
 CURRENT RECORD:
 ${currentSummary}
@@ -192,54 +194,74 @@ ${currentSummary}
 RECENT ENTRIES:
 ${conversationText}
 
-Generate an updated record. Use this format (include only sections with information):
+Generate an updated doctor-ready record. Use this format (include only sections with information):
 
-${headers.symptoms}
-- [symptom]: [when started], [frequency], [severity if mentioned]
+${headers.mainConcern}
+[Primary symptom or health issue in one clear sentence]
+
+${headers.onset}
+[When it started, how long it has lasted]
+
+${headers.pattern}
+[How often, how severe, any patterns noticed]
+
+${headers.factors}
+- Helps: [what makes it better]
+- Worsens: [what makes it worse]
 
 ${headers.medications}
-- [medication/treatment]: [dosage if known], [frequency]
+- [medication]: [dosage], [frequency]
 
 ${headers.questions}
-- [question logged by user]
+- [question 1]
+- [question 2]
+- [question 3]
 
-${headers.changes}
-- [change noted]
-
-${headers.nextSteps}
-- [follow-up item]
+${headers.timeline}
+- [date/time]: [what happened]
 
 Rules:
-- Be factual, not emotional
-- No reassurance language
+- Neutral, clinical language
+- No diagnosis certainty
+- Never invent data
+- Mark unknowns as "not provided" or omit section
+- Concise, scannable bullets
 - No emojis or exclamation marks
-- If no new relevant information, keep previous record
 - Write in ${isSpanish ? 'Spanish' : 'the same language as the conversation'}`
-      : `You are Care Log. Create an initial health record based on the conversation.
+      : `You are Care Log. Create a doctor-ready health record from this conversation.
 
 ENTRIES:
 ${conversationText}
 
-Generate a structured record. Use this format (include only sections with information):
+Generate a structured doctor-ready record. Use this format (include only sections with information):
 
-${headers.symptoms}
-- [symptom]: [when started], [frequency], [severity if mentioned]
+${headers.mainConcern}
+[Primary symptom or health issue in one clear sentence]
+
+${headers.onset}
+[When it started, how long it has lasted]
+
+${headers.pattern}
+[How often, how severe, any patterns noticed]
+
+${headers.factors}
+- Helps: [what makes it better]
+- Worsens: [what makes it worse]
 
 ${headers.medications}
-- [medication/treatment]: [dosage if known], [frequency]
+- [medication]: [dosage], [frequency]
 
 ${headers.questions}
-- [question logged by user]
-
-${headers.changesRecent}
-- [change noted]
-
-${headers.nextSteps}
-- [follow-up item]
+- [question 1]
+- [question 2]
+- [question 3]
 
 Rules:
-- Be factual, not emotional
-- No reassurance language
+- Neutral, clinical language
+- No diagnosis certainty
+- Never invent data
+- Mark unknowns as "not provided" or omit section
+- Concise, scannable bullets
 - No emojis or exclamation marks
 - Only include sections where information exists
 - Write in ${isSpanish ? 'Spanish' : 'the same language as the conversation'}`;
