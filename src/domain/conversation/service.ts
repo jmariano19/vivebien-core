@@ -343,6 +343,17 @@ Never mix languages. Never default to Spanish unless user writes in Spanish.
 The user's first message determines the language for the conversation.
 ${userLanguage ? `User's stored language preference: ${userLanguage}` : 'No stored preference - detect from user message.'}`;
 
+    // Add user context for summary link
+    prompt += `\n\nUSER CONTEXT
+User ID: ${context.userId}
+Summary Link: https://carelog.vivebien.io/${context.userId}
+
+When sharing a summary, include the link so users can view it on web:
+- ES: "También puedes verlo aquí: https://carelog.vivebien.io/${context.userId}"
+- EN: "You can also view it here: https://carelog.vivebien.io/${context.userId}"
+- PT: "Você também pode ver aqui: https://carelog.vivebien.io/${context.userId}"
+- FR: "Vous pouvez aussi le voir ici: https://carelog.vivebien.io/${context.userId}"`;
+
     return prompt;
   }
 
@@ -570,6 +581,14 @@ Format (short, neutral):
 - 1–3 questions for the visit
 
 This early summary is the value moment.
+
+IMPORTANT: After generating any summary, ALWAYS include the web link:
+- Spanish: "También puedes verlo aquí: https://carelog.vivebien.io/{userId}"
+- English: "You can also view it here: https://carelog.vivebien.io/{userId}"
+- Portuguese: "Você também pode ver aqui: https://carelog.vivebien.io/{userId}"
+- French: "Vous pouvez aussi le voir ici: https://carelog.vivebien.io/{userId}"
+
+Replace {userId} with the actual user ID from context. The link lets users view and share their summary on any device.
 
 Step 4 — Name (Only After Value)
 After delivering the mini-summary:

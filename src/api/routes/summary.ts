@@ -9,6 +9,66 @@ export const summaryRoutes: FastifyPluginAsync = async (app: FastifyInstance) =>
   // ============================================================================
 
   /**
+   * Get health summary by user ID (simple endpoint for landing page)
+   * URL: /api/summary/:userId
+   */
+  app.get('/:userId', async (request, reply) => {
+    const { userId } = request.params as { userId: string };
+
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(userId)) {
+      return reply.status(404).send({ error: 'Invalid user ID format' });
+    }
+
+    // Get user
+    const user = await queryOne<{
+      id: string;
+      phone: string;
+      language: string;
+      name: string | null;
+    }>(
+      `SELECT id, phone, COALESCE(language, 'es') as language, name
+       FROM users
+       WHERE id = $1`,
+      [userId]
+    );
+
+    if (!user) {
+      return reply.status(404).send({ error: 'User not found' });
+    }
+
+    // Get health summary from memories table
+    let summary = null;
+    try {
+      summary = await queryOne<{
+        content: string;
+        created_at: Date;
+      }>(
+        `SELECT content, created_at
+         FROM memories
+         WHERE user_id = $1 AND category = 'health_summary'
+         ORDER BY created_at DESC LIMIT 1`,
+        [userId]
+      );
+    } catch (err) {
+      // Table may not exist yet
+    }
+
+    if (!summary) {
+      return reply.status(404).send({ error: 'No summary found' });
+    }
+
+    return {
+      userId: user.id,
+      userName: user.name,
+      language: user.language,
+      summary: summary.content,
+      updatedAt: summary.created_at,
+    };
+  });
+
+  /**
    * Get health summary for a user by phone number
    * This is the main endpoint for the website to display live summaries
    */

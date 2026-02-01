@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Confianza - Tu Resumen de Salud</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --primary: #10b981;
+      --primary-dark: #059669;
+      --primary-light: #d1fae5;
+      --secondary: #6366f1;
+      --bg: #fafafa;
+      --card-bg: #ffffff;
+      --text: #1f2937;
+      --text-muted: #6b7280;
+      --border: #e5e7eb;
+      --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 16px;
+      padding-bottom: 100px;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      padding: 24px 0;
+      margin-bottom: 16px;
+    }
+
+    .logo {
+      width: 56px;
+      height: 56px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      border-radius: 16px;
+      margin: 0 auto 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .logo svg {
+      width: 32px;
+      height: 32px;
+      color: white;
+    }
+
+    .header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+
+    .header p {
+      color: var(--text-muted);
+      font-size: 15px;
+    }
+
+    /* Live indicator */
+    .live-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--primary-light);
+      color: var(--primary-dark);
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-top: 12px;
+    }
+
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--primary);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.2); }
+    }
+
+    /* Cards */
+    .card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .card-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .card-icon.concern { background: #fef3c7; color: #d97706; }
+    .card-icon.timeline { background: #dbeafe; color: #2563eb; }
+    .card-icon.pattern { background: #f3e8ff; color: #7c3aed; }
+    .card-icon.questions { background: #d1fae5; color: #059669; }
+
+    .card-icon svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .card-subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .card-content {
+      font-size: 16px;
+      color: var(--text);
+    }
+
+    .card-content.large {
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    /* User info */
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px;
+      background: linear-gradient(135deg, var(--primary-light), #ede9fe);
+      border-radius: 16px;
+      margin-bottom: 16px;
+    }
+
+    .user-avatar {
+      width: 52px;
+      height: 52px;
+      background: var(--primary);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 600;
+      font-size: 20px;
+    }
+
+    .user-name {
+      font-weight: 600;
+      font-size: 17px;
+      color: var(--text);
+    }
+
+    .user-updated {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    /* Severity badge */
+    .severity-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-top: 8px;
+    }
+
+    .severity-mild { background: #d1fae5; color: #065f46; }
+    .severity-moderate { background: #fef3c7; color: #92400e; }
+    .severity-severe { background: #fee2e2; color: #991b1b; }
+
+    /* Factors */
+    .factors {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .factor-box {
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 14px;
+    }
+
+    .factor-box.helps {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .factor-box.worsens {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .factor-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+      opacity: 0.8;
+    }
+
+    /* Questions list */
+    .questions-list {
+      list-style: none;
+    }
+
+    .questions-list li {
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .questions-list li:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .question-number {
+      width: 26px;
+      height: 26px;
+      background: var(--primary-light);
+      color: var(--primary-dark);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    /* Footer actions */
+    .footer-actions {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--card-bg);
+      padding: 16px;
+      box-shadow: 0 -4px 12px rgb(0 0 0 / 0.1);
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 14px 20px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+    }
+
+    .btn-secondary {
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    /* Loading state */
+    .loading {
+      text-align: center;
+      padding: 80px 20px;
+    }
+
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 3px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+    }
+
+    .empty-state svg {
+      width: 72px;
+      height: 72px;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    .empty-state h3 {
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+
+    /* Raw summary card */
+    .summary-content {
+      white-space: pre-wrap;
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--text);
+    }
+
+    .summary-content strong {
+      color: var(--primary-dark);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <div class="logo">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+        </svg>
+      </div>
+      <h1>Confianza</h1>
+      <p id="headerSubtitle">Tu resumen para el doctor</p>
+      <div class="live-badge">
+        <span class="live-dot"></span>
+        <span id="liveBadgeText">Se actualiza en vivo</span>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loading" class="loading">
+      <div class="spinner"></div>
+      <p id="loadingText">Cargando tu resumen...</p>
+    </div>
+
+    <!-- Main Content (hidden initially) -->
+    <div id="content" style="display: none;">
+      <!-- User Info -->
+      <div class="user-info" id="userInfo">
+        <div class="user-avatar" id="userAvatar">U</div>
+        <div>
+          <div class="user-name" id="userName">Usuario</div>
+          <div class="user-updated" id="lastUpdated">Actualizado hace un momento</div>
+        </div>
+      </div>
+
+      <!-- Raw Summary Card -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon concern">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </div>
+          <div>
+            <div class="card-title" id="summaryTitle">Resumen para tu doctor</div>
+            <div class="card-subtitle" id="summarySubtitle">Listo para compartir</div>
+          </div>
+        </div>
+        <div class="summary-content" id="summaryContent">-</div>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div id="empty" class="empty-state" style="display: none;">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+      <h3 id="emptyTitle">Aún no hay resumen</h3>
+      <p style="color: var(--text-muted); margin-top: 8px;" id="emptyText">Continúa tu conversación en WhatsApp para generar tu resumen de salud.</p>
+    </div>
+  </div>
+
+  <!-- Footer Actions -->
+  <div class="footer-actions">
+    <button class="btn btn-secondary" onclick="shareText()">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+      </svg>
+      <span id="shareBtn">Compartir</span>
+    </button>
+    <button class="btn btn-primary" onclick="copyText()">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+      </svg>
+      <span id="copyBtn">Copiar para doctor</span>
+    </button>
+  </div>
+
+  <script>
+    // Get user ID from URL path
+    const pathParts = window.location.pathname.split('/').filter(p => p);
+    const userId = pathParts[pathParts.length - 1] || null;
+
+    // API endpoint - use the dashboard API
+    const API_BASE = window.location.origin + '/api';
+
+    let summaryData = null;
+    let summaryText = '';
+    let pollInterval = null;
+
+    // Detect language from browser or stored preference
+    const browserLang = navigator.language?.split('-')[0] || 'es';
+    const isEnglish = browserLang === 'en';
+    const isFrench = browserLang === 'fr';
+    const isPortuguese = browserLang === 'pt';
+
+    // Localization
+    const i18n = {
+      es: {
+        headerSubtitle: 'Tu resumen para el doctor',
+        liveBadge: 'Se actualiza en vivo',
+        loading: 'Cargando tu resumen...',
+        summaryTitle: 'Resumen para tu doctor',
+        summarySubtitle: 'Listo para compartir',
+        emptyTitle: 'Aún no hay resumen',
+        emptyText: 'Continúa tu conversación en WhatsApp para generar tu resumen de salud.',
+        shareBtn: 'Compartir',
+        copyBtn: 'Copiar para doctor',
+        copied: '¡Copiado!',
+        updatedNow: 'Actualizado hace un momento',
+        updatedMins: 'Actualizado hace {n} min',
+        updatedHours: 'Actualizado hace {n} horas',
+        updatedDays: 'Actualizado hace {n} días',
+        footer: 'Generado con Confianza by ViveBien'
+      },
+      en: {
+        headerSubtitle: 'Your summary for the doctor',
+        liveBadge: 'Updates live',
+        loading: 'Loading your summary...',
+        summaryTitle: 'Summary for your doctor',
+        summarySubtitle: 'Ready to share',
+        emptyTitle: 'No summary yet',
+        emptyText: 'Continue your WhatsApp conversation to generate your health summary.',
+        shareBtn: 'Share',
+        copyBtn: 'Copy for doctor',
+        copied: 'Copied!',
+        updatedNow: 'Updated just now',
+        updatedMins: 'Updated {n} min ago',
+        updatedHours: 'Updated {n} hours ago',
+        updatedDays: 'Updated {n} days ago',
+        footer: 'Generated with Confianza by ViveBien'
+      },
+      pt: {
+        headerSubtitle: 'Seu resumo para o médico',
+        liveBadge: 'Atualiza ao vivo',
+        loading: 'Carregando seu resumo...',
+        summaryTitle: 'Resumo para seu médico',
+        summarySubtitle: 'Pronto para compartilhar',
+        emptyTitle: 'Ainda não há resumo',
+        emptyText: 'Continue sua conversa no WhatsApp para gerar seu resumo de saúde.',
+        shareBtn: 'Compartilhar',
+        copyBtn: 'Copiar para médico',
+        copied: 'Copiado!',
+        updatedNow: 'Atualizado agora',
+        updatedMins: 'Atualizado há {n} min',
+        updatedHours: 'Atualizado há {n} horas',
+        updatedDays: 'Atualizado há {n} dias',
+        footer: 'Gerado com Confianza by ViveBien'
+      },
+      fr: {
+        headerSubtitle: 'Votre résumé pour le médecin',
+        liveBadge: 'Mise à jour en direct',
+        loading: 'Chargement de votre résumé...',
+        summaryTitle: 'Résumé pour votre médecin',
+        summarySubtitle: 'Prêt à partager',
+        emptyTitle: 'Pas encore de résumé',
+        emptyText: 'Continuez votre conversation WhatsApp pour générer votre résumé de santé.',
+        shareBtn: 'Partager',
+        copyBtn: 'Copier pour le médecin',
+        copied: 'Copié!',
+        updatedNow: 'Mis à jour à l\'instant',
+        updatedMins: 'Mis à jour il y a {n} min',
+        updatedHours: 'Mis à jour il y a {n} heures',
+        updatedDays: 'Mis à jour il y a {n} jours',
+        footer: 'Généré avec Confianza by ViveBien'
+      }
+    };
+
+    const lang = i18n[browserLang] || i18n.es;
+
+    // Apply localization
+    function applyLocalization() {
+      document.getElementById('headerSubtitle').textContent = lang.headerSubtitle;
+      document.getElementById('liveBadgeText').textContent = lang.liveBadge;
+      document.getElementById('loadingText').textContent = lang.loading;
+      document.getElementById('summaryTitle').textContent = lang.summaryTitle;
+      document.getElementById('summarySubtitle').textContent = lang.summarySubtitle;
+      document.getElementById('emptyTitle').textContent = lang.emptyTitle;
+      document.getElementById('emptyText').textContent = lang.emptyText;
+      document.getElementById('shareBtn').textContent = lang.shareBtn;
+      document.getElementById('copyBtn').textContent = lang.copyBtn;
+    }
+
+    // Fetch summary data
+    async function fetchSummary() {
+      if (!userId || userId === 'preview' || userId === 'summary.html') {
+        showDemo();
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/summary/${userId}`);
+        if (!response.ok) {
+          if (response.status === 404) {
+            showEmpty();
+            return;
+          }
+          throw new Error('Failed to fetch');
+        }
+
+        const data = await response.json();
+        if (data && data.summary) {
+          summaryData = data;
+          summaryText = data.summary;
+          renderSummary(data);
+        } else {
+          showEmpty();
+        }
+      } catch (error) {
+        console.error('Error fetching summary:', error);
+        setTimeout(fetchSummary, 5000);
+      }
+    }
+
+    // Render summary data
+    function renderSummary(data) {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('empty').style.display = 'none';
+      document.getElementById('content').style.display = 'block';
+
+      // User info
+      const name = data.userName || data.user?.name || 'Usuario';
+      document.getElementById('userName').textContent = name;
+      document.getElementById('userAvatar').textContent = name.charAt(0).toUpperCase();
+
+      // Last updated
+      if (data.updatedAt) {
+        const updated = new Date(data.updatedAt);
+        const now = new Date();
+        const diffMs = now - updated;
+        const diffMins = Math.floor(diffMs / 60000);
+
+        let timeText;
+        if (diffMins < 1) timeText = lang.updatedNow;
+        else if (diffMins < 60) timeText = lang.updatedMins.replace('{n}', diffMins);
+        else if (diffMins < 1440) timeText = lang.updatedHours.replace('{n}', Math.floor(diffMins/60));
+        else timeText = lang.updatedDays.replace('{n}', Math.floor(diffMins/1440));
+
+        document.getElementById('lastUpdated').textContent = timeText;
+      }
+
+      // Summary content
+      document.getElementById('summaryContent').textContent = data.summary || 'No summary available';
+    }
+
+    // Show empty state
+    function showEmpty() {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('content').style.display = 'none';
+      document.getElementById('empty').style.display = 'block';
+    }
+
+    // Show demo data
+    function showDemo() {
+      const demoSummary = browserLang === 'en'
+        ? `MAIN CONCERN
+Morning headaches
+
+ONSET / DURATION
+Approximately 2 weeks
+
+PATTERN / SEVERITY
+Mainly upon waking, lasts 1-2 hours
+
+WHAT HELPS / WORSENS
+- Helps: Rest, hydration, occasional medication
+- Worsens: Stress, lack of sleep, screens
+
+QUESTIONS FOR VISIT
+- Could it be related to sleep or posture?
+- Should I track anything specific?
+- Are tests recommended for morning headaches?`
+        : `MOTIVO PRINCIPAL
+Dolores de cabeza matutinos
+
+INICIO / DURACIÓN
+Hace aproximadamente 2 semanas
+
+PATRÓN / SEVERIDAD
+Principalmente al despertar, dura 1-2 horas
+
+QUÉ AYUDA / EMPEORA
+- Ayuda: Descanso, hidratación, medicamento ocasional
+- Empeora: Estrés, falta de sueño, pantallas
+
+PREGUNTAS PARA LA VISITA
+- ¿Podría estar relacionado con el sueño o la postura?
+- ¿Debería hacer seguimiento de algo específico?
+- ¿Se recomiendan pruebas para dolores de cabeza matutinos?`;
+
+      summaryText = demoSummary;
+      renderSummary({
+        userName: 'Demo',
+        updatedAt: new Date().toISOString(),
+        summary: demoSummary
+      });
+    }
+
+    // Copy to clipboard
+    async function copyText() {
+      if (!summaryText) {
+        alert('No hay resumen para copiar');
+        return;
+      }
+
+      const textToCopy = summaryText + '\n\n---\n' + lang.footer;
+
+      try {
+        await navigator.clipboard.writeText(textToCopy);
+
+        const btn = event.target.closest('.btn');
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg> ' + lang.copied;
+        btn.style.background = '#059669';
+
+        setTimeout(() => {
+          btn.innerHTML = originalHTML;
+          btn.style.background = '';
+        }, 2000);
+      } catch (err) {
+        const textarea = document.createElement('textarea');
+        textarea.value = textToCopy;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        alert(lang.copied);
+      }
+    }
+
+    // Share (Web Share API)
+    async function shareText() {
+      if (!summaryText) {
+        alert('No hay resumen para compartir');
+        return;
+      }
+
+      const textToShare = summaryText + '\n\n---\n' + lang.footer;
+
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: 'Mi Resumen de Salud - Confianza',
+            text: textToShare
+          });
+        } catch (err) {
+          if (err.name !== 'AbortError') {
+            copyText();
+          }
+        }
+      } else {
+        copyText();
+      }
+    }
+
+    // Start polling for updates
+    function startPolling() {
+      pollInterval = setInterval(fetchSummary, 10000);
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      applyLocalization();
+      fetchSummary();
+      if (userId && userId !== 'preview' && userId !== 'summary.html') {
+        startPolling();
+      }
+    });
+
+    // Cleanup on page hide
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && pollInterval) {
+        clearInterval(pollInterval);
+      } else if (!document.hidden && userId && userId !== 'preview') {
+        fetchSummary();
+        startPolling();
+      }
+    });
+  </script>
+</body>
+</html>
