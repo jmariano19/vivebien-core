@@ -365,8 +365,10 @@
       // Parse summary into sections
       const parseSummary = (content) => {
         if (!content) return [];
+        // Handle both actual newlines and escaped \n characters
+        const normalizedContent = content.replace(/\\n/g, '\n');
         const sections = [];
-        const lines = content.split('\n');
+        const lines = normalizedContent.split('\n');
         let currentSection = null;
 
         for (const line of lines) {
