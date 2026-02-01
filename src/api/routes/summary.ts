@@ -28,7 +28,7 @@ export const summaryRoutes: FastifyPluginAsync = async (app: FastifyInstance) =>
       language: string;
       name: string | null;
     }>(
-      `SELECT id, phone, COALESCE(language, 'es') as language, name
+      `SELECT id, phone, COALESCE(preferred_language, 'es') as language, name
        FROM users
        WHERE id = $1`,
       [userId]
@@ -85,7 +85,7 @@ export const summaryRoutes: FastifyPluginAsync = async (app: FastifyInstance) =>
       language: string;
       created_at: Date;
     }>(
-      `SELECT id, phone, COALESCE(language, 'es') as language, created_at
+      `SELECT id, phone, COALESCE(preferred_language, 'es') as language, created_at
        FROM users
        WHERE phone = $1 OR phone = $2`,
       [phone, normalizedPhone]
@@ -172,7 +172,7 @@ export const summaryRoutes: FastifyPluginAsync = async (app: FastifyInstance) =>
       language: string;
       created_at: Date;
     }>(
-      `SELECT id, phone, COALESCE(language, 'es') as language, created_at
+      `SELECT id, phone, COALESCE(preferred_language, 'es') as language, created_at
        FROM users
        WHERE id = $1`,
       [userId]
@@ -235,7 +235,7 @@ export const summaryRoutes: FastifyPluginAsync = async (app: FastifyInstance) =>
       `SELECT
          id,
          phone,
-         COALESCE(language, 'es') as language,
+         COALESCE(preferred_language, 'es') as language,
          created_at
        FROM users
        ORDER BY created_at DESC
