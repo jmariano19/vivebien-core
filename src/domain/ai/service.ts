@@ -44,9 +44,9 @@ export class AIService {
         content: m.content,
       }));
 
-      // Call Claude
+      // Call Claude Opus 4.5 - best conversational model for nuanced health conversations
       const response = await this.client.messages.create({
-        model: 'claude-sonnet-4-5-20250929',
+        model: 'claude-opus-4-5-20251101',
         max_tokens: 1024,
         system: systemPrompt,
         messages: anthropicMessages,
@@ -186,7 +186,7 @@ export class AIService {
     };
 
     const prompt = currentSummary
-      ? `You are Care Log. Update this doctor-ready health record based on recent entries.
+      ? `You are Confianza. Update this doctor-ready health record based on recent entries.
 
 CURRENT RECORD:
 ${currentSummary}
@@ -228,7 +228,7 @@ Rules:
 - Concise, scannable bullets
 - No emojis or exclamation marks
 - Write in ${isSpanish ? 'Spanish' : 'the same language as the conversation'}`
-      : `You are Care Log. Create a doctor-ready health record from this conversation.
+      : `You are Confianza. Create a doctor-ready health record from this conversation.
 
 ENTRIES:
 ${conversationText}
