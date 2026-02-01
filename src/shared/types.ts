@@ -69,6 +69,7 @@ export interface ConversationContext {
   promptVersion: string;
   experimentVariants: Record<string, string>;
   metadata: Record<string, unknown>;
+  language?: string;
 }
 
 export type ConversationPhase =

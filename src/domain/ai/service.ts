@@ -35,8 +35,8 @@ export class AIService {
     const startTime = Date.now();
 
     try {
-      // Get system prompt based on context
-      const systemPrompt = await conversationService.getSystemPrompt(context);
+      // Get system prompt based on context (with language adaptation)
+      const systemPrompt = await conversationService.getSystemPrompt(context, context.language);
 
       // Convert messages to Anthropic format
       const anthropicMessages = messages.map((m) => ({
@@ -155,12 +155,33 @@ export class AIService {
    * Generate or update a health summary based on conversation history
    * This creates a live summary that can be displayed on a website
    */
-  async generateSummary(messages: Message[], currentSummary: string | null): Promise<string> {
+  async generateSummary(messages: Message[], currentSummary: string | null, language?: string): Promise<string> {
     await this.rateLimiter.acquire();
 
+    // Detect language from recent messages or use provided language
+    const detectedLang = language || this.detectLanguage(messages);
+    const isSpanish = detectedLang === 'es' || detectedLang === 'spanish';
+
     const conversationText = messages
-      .map((m) => `${m.role === 'user' ? 'Usuario' : 'Asistente'}: ${m.content}`)
+      .map((m) => `${m.role === 'user' ? (isSpanish ? 'Usuario' : 'User') : (isSpanish ? 'Asistente' : 'Assistant')}: ${m.content}`)
       .join('\n\n');
+
+    // Language-specific section headers
+    const headers = isSpanish ? {
+      symptoms: 'SÍNTOMAS REGISTRADOS',
+      medications: 'MEDICAMENTOS / TRATAMIENTOS',
+      questions: 'PREGUNTAS PARA EL MÉDICO',
+      changes: 'CAMBIOS DESDE ÚLTIMA VISITA',
+      changesRecent: 'CAMBIOS RECIENTES',
+      nextSteps: 'PRÓXIMOS PASOS',
+    } : {
+      symptoms: 'LOGGED SYMPTOMS',
+      medications: 'MEDICATIONS / TREATMENTS',
+      questions: 'QUESTIONS FOR DOCTOR',
+      changes: 'CHANGES SINCE LAST VISIT',
+      changesRecent: 'RECENT CHANGES',
+      nextSteps: 'NEXT STEPS',
+    };
 
     const prompt = currentSummary
       ? `You are Care Log. Update the following health record based on recent entries.
@@ -173,19 +194,19 @@ ${conversationText}
 
 Generate an updated record. Use this format (include only sections with information):
 
-SÍNTOMAS REGISTRADOS
+${headers.symptoms}
 - [symptom]: [when started], [frequency], [severity if mentioned]
 
-MEDICAMENTOS / TRATAMIENTOS
+${headers.medications}
 - [medication/treatment]: [dosage if known], [frequency]
 
-PREGUNTAS PARA EL MÉDICO
+${headers.questions}
 - [question logged by user]
 
-CAMBIOS DESDE ÚLTIMA VISITA
+${headers.changes}
 - [change noted]
 
-PRÓXIMOS PASOS
+${headers.nextSteps}
 - [follow-up item]
 
 Rules:
@@ -193,7 +214,7 @@ Rules:
 - No reassurance language
 - No emojis or exclamation marks
 - If no new relevant information, keep previous record
-- Write in Spanish`
+- Write in ${isSpanish ? 'Spanish' : 'the same language as the conversation'}`
       : `You are Care Log. Create an initial health record based on the conversation.
 
 ENTRIES:
@@ -201,19 +222,19 @@ ${conversationText}
 
 Generate a structured record. Use this format (include only sections with information):
 
-SÍNTOMAS REGISTRADOS
+${headers.symptoms}
 - [symptom]: [when started], [frequency], [severity if mentioned]
 
-MEDICAMENTOS / TRATAMIENTOS
+${headers.medications}
 - [medication/treatment]: [dosage if known], [frequency]
 
-PREGUNTAS PARA EL MÉDICO
+${headers.questions}
 - [question logged by user]
 
-CAMBIOS RECIENTES
+${headers.changesRecent}
 - [change noted]
 
-PRÓXIMOS PASOS
+${headers.nextSteps}
 - [follow-up item]
 
 Rules:
@@ -221,7 +242,7 @@ Rules:
 - No reassurance language
 - No emojis or exclamation marks
 - Only include sections where information exists
-- Write in Spanish`;
+- Write in ${isSpanish ? 'Spanish' : 'the same language as the conversation'}`;
 
     try {
       const response = await this.client.messages.create({
@@ -242,5 +263,35 @@ Rules:
       console.error('Failed to generate summary:', err.message);
       return currentSummary || '';
     }
+  }
+
+  /**
+   * Simple language detection based on common words in messages
+   */
+  private detectLanguage(messages: Message[]): string {
+    const text = messages
+      .filter((m) => m.role === 'user')
+      .map((m) => m.content.toLowerCase())
+      .join(' ');
+
+    // Spanish indicators
+    const spanishWords = ['hola', 'tengo', 'estoy', 'dolor', 'desde', 'cuando', 'porque', 'médico', 'doctor', 'gracias', 'por favor', 'síntoma', 'siento', 'cabeza', 'cuerpo', 'hace', 'días', 'semana'];
+    const spanishCount = spanishWords.filter((w) => text.includes(w)).length;
+
+    // English indicators
+    const englishWords = ['hello', 'have', 'feel', 'pain', 'since', 'when', 'because', 'doctor', 'thanks', 'please', 'symptom', 'head', 'body', 'days', 'week', 'been', 'feeling'];
+    const englishCount = englishWords.filter((w) => text.includes(w)).length;
+
+    // Portuguese indicators
+    const portugueseWords = ['olá', 'tenho', 'estou', 'dor', 'desde', 'quando', 'porque', 'médico', 'obrigado', 'por favor', 'sintoma', 'sinto', 'cabeça', 'corpo', 'dias', 'semana'];
+    const portugueseCount = portugueseWords.filter((w) => text.includes(w)).length;
+
+    if (portugueseCount > spanishCount && portugueseCount > englishCount) {
+      return 'pt';
+    }
+    if (englishCount > spanishCount) {
+      return 'en';
+    }
+    return 'es'; // Default to Spanish
   }
 }

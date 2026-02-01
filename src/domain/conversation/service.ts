@@ -11,20 +11,26 @@ export class ConversationService {
   constructor(private db: Pool) {}
 
   async loadContext(userId: string, conversationId: number): Promise<ConversationContext> {
-    // Get conversation state
-    const stateResult = await this.db.query<{
-      phase: ConversationPhase;
-      onboarding_step: number | null;
-      message_count: number;
-      last_message_at: Date | null;
-      prompt_version: string;
-      metadata: Record<string, unknown> | null;
-    }>(
-      `SELECT phase, onboarding_step, message_count, last_message_at, prompt_version, metadata
-       FROM conversation_state
-       WHERE user_id = $1`,
-      [userId]
-    );
+    // Get conversation state and user language in parallel
+    const [stateResult, userResult] = await Promise.all([
+      this.db.query<{
+        phase: ConversationPhase;
+        onboarding_step: number | null;
+        message_count: number;
+        last_message_at: Date | null;
+        prompt_version: string;
+        metadata: Record<string, unknown> | null;
+      }>(
+        `SELECT phase, onboarding_step, message_count, last_message_at, prompt_version, metadata
+         FROM conversation_state
+         WHERE user_id = $1`,
+        [userId]
+      ),
+      this.db.query<{ language: string }>(
+        `SELECT language FROM users WHERE id = $1`,
+        [userId]
+      ),
+    ]);
 
     const state = stateResult.rows[0] || {
       phase: 'onboarding' as ConversationPhase,
@@ -34,6 +40,8 @@ export class ConversationService {
       prompt_version: 'v1',
       metadata: {},
     };
+
+    const userLanguage = userResult.rows[0]?.language;
 
     // Get experiment variants for this user
     const experiments = await this.getExperimentVariants(userId);
@@ -48,6 +56,7 @@ export class ConversationService {
       promptVersion: state.prompt_version || 'v1',
       experimentVariants: experiments,
       metadata: state.metadata || {},
+      language: userLanguage,
     };
   }
 
@@ -114,10 +123,15 @@ export class ConversationService {
     userId: string,
     userMessage: string,
     assistantResponse: string,
-    aiService: { generateSummary: (messages: Message[], currentSummary: string | null) => Promise<string> }
+    aiService: { generateSummary: (messages: Message[], currentSummary: string | null, language?: string) => Promise<string> }
   ): Promise<void> {
-    // Get current summary
-    const currentSummary = await this.getHealthSummary(userId);
+    // Get current summary and user language
+    const [currentSummary, userResult] = await Promise.all([
+      this.getHealthSummary(userId),
+      this.db.query<{ language: string }>(`SELECT language FROM users WHERE id = $1`, [userId]),
+    ]);
+
+    const userLanguage = userResult.rows[0]?.language;
 
     // Get recent messages for context
     const recentMessages = await this.getRecentMessages(userId, 20);
@@ -129,8 +143,8 @@ export class ConversationService {
       { role: 'assistant' as const, content: assistantResponse },
     ];
 
-    // Generate updated summary using AI
-    const newSummary = await aiService.generateSummary(allMessages, currentSummary);
+    // Generate updated summary using AI (with language preference)
+    const newSummary = await aiService.generateSummary(allMessages, currentSummary, userLanguage);
 
     // Upsert the summary (check if exists, then insert or update)
     const existing = await this.db.query(
@@ -260,7 +274,7 @@ export class ConversationService {
     return template || this.getDefaultTemplate(key, language);
   }
 
-  async getSystemPrompt(context: ConversationContext): Promise<string> {
+  async getSystemPrompt(context: ConversationContext, userLanguage?: string): Promise<string> {
     // Get base system prompt
     const basePrompt = await getActivePrompt('system');
 
@@ -281,6 +295,15 @@ export class ConversationService {
         prompt += '\n\n' + variantPrompt;
       }
     }
+
+    // Add language adaptation instruction
+    prompt += `\n\nLANGUAGE ADAPTATION
+Detect the language the user writes in and respond in the same language.
+If user writes in Spanish, respond in Spanish.
+If user writes in English, respond in English.
+If user writes in Portuguese, respond in Portuguese.
+Always match the user's language exactly.
+${userLanguage ? `User's stored preference: ${userLanguage}` : ''}`;
 
     return prompt;
   }
@@ -441,8 +464,6 @@ If user is anxious:
 NORTH-STAR CHECK
 Before sending any message, ask yourself:
 Does this help hold what happens between visits?
-If not, don't send it.
-
-Respond in Spanish unless the user writes in English.`;
+If not, don't send it.`;
   }
 }
