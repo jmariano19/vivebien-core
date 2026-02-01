@@ -96,8 +96,11 @@ export class AIService {
 
   /**
    * Post-process AI response to clean up formatting
+   * @param content - The AI response content
+   * @param userId - Optional user ID to add summary link
+   * @param language - Optional language for the link text
    */
-  postProcess(content: string): string {
+  postProcess(content: string, userId?: string, language?: string): string {
     let cleaned = content;
 
     // Remove markdown bold/italic that doesn't render well in WhatsApp
@@ -118,12 +121,57 @@ export class AIService {
     // Trim whitespace
     cleaned = cleaned.trim();
 
+    // Add summary link if this looks like a summary response and we have a userId
+    if (userId && this.looksLikeSummary(cleaned)) {
+      const linkText = this.getSummaryLinkText(language || 'es', userId);
+      // Only add if not already present
+      if (!cleaned.includes('carelog.vivebien.io')) {
+        cleaned += '\n\n' + linkText;
+      }
+    }
+
     // Limit response length (WhatsApp has a 4096 character limit)
     if (cleaned.length > 4000) {
       cleaned = cleaned.substring(0, 3997) + '...';
     }
 
     return cleaned;
+  }
+
+  /**
+   * Check if the response looks like a summary
+   */
+  private looksLikeSummary(content: string): boolean {
+    const summaryIndicators = [
+      'resumen', 'summary', 'resumo', 'résumé',
+      'motivo', 'concern', 'queixa', 'motif',
+      'preguntas para', 'questions for', 'perguntas para', 'questions pour',
+      'inicio:', 'onset:', 'início:', 'début:',
+      'empeora con', 'worsens with', 'piora com', 'aggrave avec',
+      '---', // Common separator in summaries
+    ];
+
+    const lowerContent = content.toLowerCase();
+    const matchCount = summaryIndicators.filter(indicator =>
+      lowerContent.includes(indicator.toLowerCase())
+    ).length;
+
+    // If 3+ indicators found, it's likely a summary
+    return matchCount >= 3;
+  }
+
+  /**
+   * Get the summary link text in the appropriate language
+   */
+  private getSummaryLinkText(language: string, userId: string): string {
+    const link = `https://carelog.vivebien.io/${userId}`;
+    const texts: Record<string, string> = {
+      es: `También puedes verlo aquí: ${link}`,
+      en: `You can also view it here: ${link}`,
+      pt: `Você também pode ver aqui: ${link}`,
+      fr: `Vous pouvez aussi le voir ici: ${link}`,
+    };
+    return texts[language] || texts.es!;
   }
 
   /**

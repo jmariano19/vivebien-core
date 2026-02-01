@@ -98,8 +98,8 @@ export async function handleInboundMessage(
     logger
   );
 
-  // Step 8: Post-process response
-  const cleanedResponse = aiService.postProcess(aiResponse.content);
+  // Step 8: Post-process response (includes adding summary link if applicable)
+  const cleanedResponse = aiService.postProcess(aiResponse.content, user.id, user.language);
 
   // Step 9: Save message to history
   await logExecution(
