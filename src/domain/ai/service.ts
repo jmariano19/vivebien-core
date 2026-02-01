@@ -46,7 +46,7 @@ export class AIService {
 
       // Call Claude
       const response = await this.client.messages.create({
-        model: 'claude-sonnet-4-5-20250514',
+        model: 'claude-sonnet-4-5-20250929',
         max_tokens: 1024,
         system: systemPrompt,
         messages: anthropicMessages,
@@ -134,7 +134,7 @@ export class AIService {
 
     try {
       const response = await this.client.messages.create({
-        model: 'claude-sonnet-4-5-20250514',
+        model: 'claude-sonnet-4-5-20250929',
         max_tokens: 256,
         messages: [{ role: 'user', content: prompt }],
       });

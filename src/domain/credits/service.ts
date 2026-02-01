@@ -29,7 +29,7 @@ export class CreditService {
       // Already processed - return existing result
       const balance = await this.getBalance(userId);
       return {
-        hasCredits: existingTx.status === 'confirmed',
+        hasCredits: existingTx.status === 'confirmed' || existingTx.status === 'reserved',
         reservationId: existingTx.id,
         creditsRemaining: balance,
       };
