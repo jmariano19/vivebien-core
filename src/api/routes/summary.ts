@@ -160,9 +160,9 @@ export const summaryRoutes: FastifyPluginAsync = async (app: FastifyInstance) =>
    * Returns paginated list of users with their latest summary preview
    */
   app.get('/users', async (request, reply) => {
-    const query = request.query as { limit?: string; offset?: string };
-    const limit = Math.min(parseInt(query.limit || '20', 10), 100);
-    const offset = parseInt(query.offset || '0', 10);
+    const queryParams = request.query as { limit?: string; offset?: string };
+    const limit = Math.min(parseInt(queryParams.limit || '20', 10), 100);
+    const offset = parseInt(queryParams.offset || '0', 10);
 
     const users = await queryMany<{
       id: string;
@@ -223,8 +223,8 @@ export const summaryRoutes: FastifyPluginAsync = async (app: FastifyInstance) =>
    */
   app.get('/user/:phone/messages', async (request, reply) => {
     const { phone } = request.params as { phone: string };
-    const query = request.query as { limit?: string };
-    const limit = Math.min(parseInt(query.limit || '50', 10), 200);
+    const queryParams = request.query as { limit?: string };
+    const limit = Math.min(parseInt(queryParams.limit || '50', 10), 200);
 
     const normalizedPhone = phone.replace(/[\s\-\(\)]/g, '');
 
