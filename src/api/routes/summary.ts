@@ -24,9 +24,8 @@ export const summaryRoutes: FastifyPluginAsync = async (app: FastifyInstance) =>
       phone: string;
       language: string;
       created_at: Date;
-      last_message_at: Date | null;
     }>(
-      `SELECT id, phone, COALESCE(language, 'es') as language, created_at, last_message_at
+      `SELECT id, phone, COALESCE(language, 'es') as language, created_at
        FROM users
        WHERE phone = $1 OR phone = $2`,
       [phone, normalizedPhone]
@@ -77,7 +76,6 @@ export const summaryRoutes: FastifyPluginAsync = async (app: FastifyInstance) =>
           phone: user.phone,
           language: user.language,
           joinedAt: user.created_at,
-          lastActiveAt: user.last_message_at,
         },
         summary: summary ? {
           content: summary.content,
@@ -113,9 +111,8 @@ export const summaryRoutes: FastifyPluginAsync = async (app: FastifyInstance) =>
       phone: string;
       language: string;
       created_at: Date;
-      last_message_at: Date | null;
     }>(
-      `SELECT id, phone, language, created_at, last_message_at
+      `SELECT id, phone, COALESCE(language, 'es') as language, created_at
        FROM users
        WHERE id = $1`,
       [userId]
@@ -126,16 +123,21 @@ export const summaryRoutes: FastifyPluginAsync = async (app: FastifyInstance) =>
     }
 
     // Get health summary
-    const summary = await queryOne<{
-      content: string;
-      created_at: Date;
-    }>(
-      `SELECT content, created_at
-       FROM memories
-       WHERE user_id = $1 AND category = 'health_summary'
-       ORDER BY created_at DESC LIMIT 1`,
-      [userId]
-    );
+    let summary = null;
+    try {
+      summary = await queryOne<{
+        content: string;
+        created_at: Date;
+      }>(
+        `SELECT content, created_at
+         FROM memories
+         WHERE user_id = $1 AND category = 'health_summary'
+         ORDER BY created_at DESC LIMIT 1`,
+        [userId]
+      );
+    } catch (err) {
+      // Table may not exist
+    }
 
     return {
       success: true,
@@ -145,7 +147,6 @@ export const summaryRoutes: FastifyPluginAsync = async (app: FastifyInstance) =>
           phone: user.phone,
           language: user.language,
           joinedAt: user.created_at,
-          lastActiveAt: user.last_message_at,
         },
         summary: summary ? {
           content: summary.content,
@@ -170,16 +171,14 @@ export const summaryRoutes: FastifyPluginAsync = async (app: FastifyInstance) =>
       phone: string;
       language: string;
       created_at: Date;
-      last_message_at: Date | null;
     }>(
       `SELECT
          id,
          phone,
          COALESCE(language, 'es') as language,
-         created_at,
-         last_message_at
+         created_at
        FROM users
-       ORDER BY last_message_at DESC NULLS LAST
+       ORDER BY created_at DESC
        LIMIT $1 OFFSET $2`,
       [limit, offset]
     );
@@ -209,7 +208,6 @@ export const summaryRoutes: FastifyPluginAsync = async (app: FastifyInstance) =>
         phone: u.phone,
         language: u.language,
         joinedAt: u.created_at,
-        lastActiveAt: u.last_message_at,
         messageCount,
         phase,
         summaryPreview: null,
@@ -251,19 +249,24 @@ export const summaryRoutes: FastifyPluginAsync = async (app: FastifyInstance) =>
     }
 
     // Get messages
-    const messages = await queryMany<{
-      id: string;
-      role: string;
-      content: string;
-      created_at: Date;
-    }>(
-      `SELECT id, role, content, created_at
-       FROM messages
-       WHERE user_id = $1
-       ORDER BY created_at DESC
-       LIMIT $2`,
-      [user.id, limit]
-    );
+    let messages: Array<{ id: string; role: string; content: string; created_at: Date }> = [];
+    try {
+      messages = await queryMany<{
+        id: string;
+        role: string;
+        content: string;
+        created_at: Date;
+      }>(
+        `SELECT id, role, content, created_at
+         FROM messages
+         WHERE user_id = $1
+         ORDER BY created_at DESC
+         LIMIT $2`,
+        [user.id, limit]
+      );
+    } catch (err) {
+      // Table may not exist
+    }
 
     return {
       success: true,
