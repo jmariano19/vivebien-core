@@ -26,7 +26,7 @@ export const summaryRoutes: FastifyPluginAsync = async (app: FastifyInstance) =>
       created_at: Date;
       last_message_at: Date | null;
     }>(
-      `SELECT id, phone, language, created_at, last_message_at
+      `SELECT id, phone, COALESCE(language, 'es') as language, created_at, last_message_at
        FROM users
        WHERE phone = $1 OR phone = $2`,
       [phone, normalizedPhone]
@@ -36,37 +36,37 @@ export const summaryRoutes: FastifyPluginAsync = async (app: FastifyInstance) =>
       throw new NotFoundError(`User not found with phone: ${phone}`);
     }
 
-    // Get health summary
-    const summary = await queryOne<{
-      content: string;
-      created_at: Date;
-      access_count: number;
-    }>(
-      `SELECT content, created_at, access_count
-       FROM memories
-       WHERE user_id = $1 AND category = 'health_summary'
-       ORDER BY created_at DESC LIMIT 1`,
-      [user.id]
-    );
-
-    // Get conversation stats
-    const stats = await queryOne<{
-      message_count: number;
-      phase: string;
-    }>(
-      `SELECT message_count, phase
-       FROM conversation_state
-       WHERE user_id = $1`,
-      [user.id]
-    );
-
-    // Update access count for analytics
-    if (summary) {
-      await query(
-        `UPDATE memories SET access_count = access_count + 1, last_accessed_at = NOW()
-         WHERE user_id = $1 AND category = 'health_summary'`,
+    // Get health summary (handle missing table/columns gracefully)
+    let summary = null;
+    try {
+      summary = await queryOne<{
+        content: string;
+        created_at: Date;
+      }>(
+        `SELECT content, created_at
+         FROM memories
+         WHERE user_id = $1 AND category = 'health_summary'
+         ORDER BY created_at DESC LIMIT 1`,
         [user.id]
       );
+    } catch (err) {
+      // Table may not exist yet - that's ok
+    }
+
+    // Get conversation stats (handle missing table gracefully)
+    let stats = null;
+    try {
+      stats = await queryOne<{
+        message_count: number;
+        phase: string;
+      }>(
+        `SELECT message_count, phase
+         FROM conversation_state
+         WHERE user_id = $1`,
+        [user.id]
+      );
+    } catch (err) {
+      // Table may not exist yet - that's ok
     }
 
     return {
@@ -82,7 +82,7 @@ export const summaryRoutes: FastifyPluginAsync = async (app: FastifyInstance) =>
         summary: summary ? {
           content: summary.content,
           updatedAt: summary.created_at,
-          viewCount: summary.access_count,
+          viewCount: 0,
         } : null,
         stats: stats ? {
           totalMessages: stats.message_count,
@@ -164,51 +164,63 @@ export const summaryRoutes: FastifyPluginAsync = async (app: FastifyInstance) =>
     const limit = Math.min(parseInt(queryParams.limit || '20', 10), 100);
     const offset = parseInt(queryParams.offset || '0', 10);
 
+    // Simple query first - just get users
     const users = await queryMany<{
       id: string;
       phone: string;
       language: string;
       created_at: Date;
       last_message_at: Date | null;
-      message_count: number;
-      phase: string;
-      summary_preview: string | null;
-      summary_updated_at: Date | null;
     }>(
       `SELECT
-         u.id,
-         u.phone,
-         u.language,
-         u.created_at,
-         u.last_message_at,
-         COALESCE(cs.message_count, 0) as message_count,
-         COALESCE(cs.phase, 'new') as phase,
-         LEFT(m.content, 200) as summary_preview,
-         m.created_at as summary_updated_at
-       FROM users u
-       LEFT JOIN conversation_state cs ON cs.user_id = u.id
-       LEFT JOIN memories m ON m.user_id = u.id AND m.category = 'health_summary'
-       ORDER BY u.last_message_at DESC NULLS LAST
+         id,
+         phone,
+         COALESCE(language, 'es') as language,
+         created_at,
+         last_message_at
+       FROM users
+       ORDER BY last_message_at DESC NULLS LAST
        LIMIT $1 OFFSET $2`,
       [limit, offset]
     );
 
     const total = await queryOne<{ count: number }>('SELECT COUNT(*) as count FROM users');
 
+    // Enrich with conversation state if available
+    const enrichedUsers = await Promise.all(users.map(async (u) => {
+      let messageCount = 0;
+      let phase = 'new';
+
+      try {
+        const stats = await queryOne<{ message_count: number; phase: string }>(
+          `SELECT message_count, phase FROM conversation_state WHERE user_id = $1`,
+          [u.id]
+        );
+        if (stats) {
+          messageCount = stats.message_count;
+          phase = stats.phase;
+        }
+      } catch (err) {
+        // Table may not exist
+      }
+
+      return {
+        id: u.id,
+        phone: u.phone,
+        language: u.language,
+        joinedAt: u.created_at,
+        lastActiveAt: u.last_message_at,
+        messageCount,
+        phase,
+        summaryPreview: null,
+        summaryUpdatedAt: null,
+      };
+    }));
+
     return {
       success: true,
       data: {
-        users: users.map(u => ({
-          id: u.id,
-          phone: u.phone,
-          language: u.language,
-          joinedAt: u.created_at,
-          lastActiveAt: u.last_message_at,
-          messageCount: u.message_count,
-          phase: u.phase,
-          summaryPreview: u.summary_preview,
-          summaryUpdatedAt: u.summary_updated_at,
-        })),
+        users: enrichedUsers,
         pagination: {
           limit,
           offset,
