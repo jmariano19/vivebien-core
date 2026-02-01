@@ -160,30 +160,63 @@ export class AIService {
 
     // Detect language from recent messages or use provided language
     const detectedLang = language || this.detectLanguage(messages);
-    const isSpanish = detectedLang === 'es' || detectedLang === 'spanish';
 
+    // Language-specific labels for conversation text
+    const labels: Record<string, { user: string; assistant: string }> = {
+      es: { user: 'Usuario', assistant: 'Asistente' },
+      en: { user: 'User', assistant: 'Assistant' },
+      pt: { user: 'Usuário', assistant: 'Assistente' },
+      fr: { user: 'Utilisateur', assistant: 'Assistant' },
+    };
+
+    const label = labels[detectedLang] || labels.en;
     const conversationText = messages
-      .map((m) => `${m.role === 'user' ? (isSpanish ? 'Usuario' : 'User') : (isSpanish ? 'Asistente' : 'Assistant')}: ${m.content}`)
+      .map((m) => `${m.role === 'user' ? label.user : label.assistant}: ${m.content}`)
       .join('\n\n');
 
     // Language-specific section headers (doctor-ready format)
-    const headers = isSpanish ? {
-      mainConcern: 'MOTIVO PRINCIPAL',
-      onset: 'INICIO / DURACIÓN',
-      pattern: 'PATRÓN / SEVERIDAD',
-      factors: 'QUÉ AYUDA / EMPEORA',
-      medications: 'MEDICAMENTOS ACTUALES',
-      questions: 'PREGUNTAS PARA LA VISITA',
-      timeline: 'CRONOLOGÍA',
-    } : {
-      mainConcern: 'MAIN CONCERN',
-      onset: 'ONSET / DURATION',
-      pattern: 'PATTERN / SEVERITY',
-      factors: 'WHAT HELPS / WORSENS',
-      medications: 'CURRENT MEDICATIONS',
-      questions: 'QUESTIONS FOR VISIT',
-      timeline: 'TIMELINE',
+    const allHeaders: Record<string, typeof headers> = {
+      es: {
+        mainConcern: 'MOTIVO PRINCIPAL',
+        onset: 'INICIO / DURACIÓN',
+        pattern: 'PATRÓN / SEVERIDAD',
+        factors: 'QUÉ AYUDA / EMPEORA',
+        medications: 'MEDICAMENTOS ACTUALES',
+        questions: 'PREGUNTAS PARA LA VISITA',
+        timeline: 'CRONOLOGÍA',
+      },
+      en: {
+        mainConcern: 'MAIN CONCERN',
+        onset: 'ONSET / DURATION',
+        pattern: 'PATTERN / SEVERITY',
+        factors: 'WHAT HELPS / WORSENS',
+        medications: 'CURRENT MEDICATIONS',
+        questions: 'QUESTIONS FOR VISIT',
+        timeline: 'TIMELINE',
+      },
+      pt: {
+        mainConcern: 'QUEIXA PRINCIPAL',
+        onset: 'INÍCIO / DURAÇÃO',
+        pattern: 'PADRÃO / GRAVIDADE',
+        factors: 'O QUE AJUDA / PIORA',
+        medications: 'MEDICAMENTOS ATUAIS',
+        questions: 'PERGUNTAS PARA A CONSULTA',
+        timeline: 'CRONOLOGIA',
+      },
+      fr: {
+        mainConcern: 'MOTIF PRINCIPAL',
+        onset: 'DÉBUT / DURÉE',
+        pattern: 'SCHÉMA / GRAVITÉ',
+        factors: 'CE QUI AIDE / AGGRAVE',
+        medications: 'MÉDICAMENTS ACTUELS',
+        questions: 'QUESTIONS POUR LA VISITE',
+        timeline: 'CHRONOLOGIE',
+      },
     };
+
+    const headers = allHeaders[detectedLang] || allHeaders.en;
+    const languageNames: Record<string, string> = { es: 'Spanish', en: 'English', pt: 'Portuguese', fr: 'French' };
+    const languageName = languageNames[detectedLang] || 'English';
 
     const prompt = currentSummary
       ? `You are Confianza. Update this doctor-ready health record based on recent entries.
@@ -227,7 +260,7 @@ Rules:
 - Mark unknowns as "not provided" or omit section
 - Concise, scannable bullets
 - No emojis or exclamation marks
-- Write in ${isSpanish ? 'Spanish' : 'the same language as the conversation'}`
+- Write entirely in ${languageName}`
       : `You are Confianza. Create a doctor-ready health record from this conversation.
 
 ENTRIES:
@@ -264,9 +297,10 @@ Rules:
 - Concise, scannable bullets
 - No emojis or exclamation marks
 - Only include sections where information exists
-- Write in ${isSpanish ? 'Spanish' : 'the same language as the conversation'}`;
+- Write entirely in ${languageName}`;
 
     try {
+      // Use Sonnet for summaries (cost-effective for structured output)
       const response = await this.client.messages.create({
         model: 'claude-sonnet-4-5-20250929',
         max_tokens: 1024,
@@ -288,7 +322,8 @@ Rules:
   }
 
   /**
-   * Simple language detection based on common words in messages
+   * Language detection based on common words in messages
+   * Supports: Spanish, English, Portuguese, French
    */
   private detectLanguage(messages: Message[]): string {
     const text = messages
@@ -297,23 +332,36 @@ Rules:
       .join(' ');
 
     // Spanish indicators
-    const spanishWords = ['hola', 'tengo', 'estoy', 'dolor', 'desde', 'cuando', 'porque', 'médico', 'doctor', 'gracias', 'por favor', 'síntoma', 'siento', 'cabeza', 'cuerpo', 'hace', 'días', 'semana'];
+    const spanishWords = ['hola', 'tengo', 'estoy', 'dolor', 'desde', 'cuando', 'porque', 'médico', 'doctor', 'gracias', 'por favor', 'síntoma', 'siento', 'cabeza', 'cuerpo', 'hace', 'días', 'semana', 'buenos', 'buenas', 'qué', 'cómo'];
     const spanishCount = spanishWords.filter((w) => text.includes(w)).length;
 
     // English indicators
-    const englishWords = ['hello', 'have', 'feel', 'pain', 'since', 'when', 'because', 'doctor', 'thanks', 'please', 'symptom', 'head', 'body', 'days', 'week', 'been', 'feeling'];
+    const englishWords = ['hello', 'hi', 'have', 'feel', 'pain', 'since', 'when', 'because', 'doctor', 'thanks', 'thank', 'please', 'symptom', 'head', 'body', 'days', 'week', 'been', 'feeling', 'good', 'morning', 'what', 'how'];
     const englishCount = englishWords.filter((w) => text.includes(w)).length;
 
     // Portuguese indicators
-    const portugueseWords = ['olá', 'tenho', 'estou', 'dor', 'desde', 'quando', 'porque', 'médico', 'obrigado', 'por favor', 'sintoma', 'sinto', 'cabeça', 'corpo', 'dias', 'semana'];
+    const portugueseWords = ['olá', 'oi', 'tenho', 'estou', 'dor', 'desde', 'quando', 'porque', 'médico', 'obrigado', 'obrigada', 'por favor', 'sintoma', 'sinto', 'cabeça', 'corpo', 'dias', 'semana', 'bom', 'boa', 'como', 'você'];
     const portugueseCount = portugueseWords.filter((w) => text.includes(w)).length;
 
-    if (portugueseCount > spanishCount && portugueseCount > englishCount) {
-      return 'pt';
-    }
-    if (englishCount > spanishCount) {
+    // French indicators
+    const frenchWords = ['bonjour', 'salut', 'j\'ai', 'je suis', 'douleur', 'depuis', 'quand', 'parce', 'médecin', 'docteur', 'merci', 's\'il vous plaît', 'symptôme', 'tête', 'corps', 'jours', 'semaine', 'comment', 'bien', 'mal'];
+    const frenchCount = frenchWords.filter((w) => text.includes(w)).length;
+
+    // Find the language with highest count
+    const scores = [
+      { lang: 'es', count: spanishCount },
+      { lang: 'en', count: englishCount },
+      { lang: 'pt', count: portugueseCount },
+      { lang: 'fr', count: frenchCount },
+    ];
+
+    const sorted = scores.sort((a, b) => b.count - a.count);
+
+    // If no clear winner (all zero or tie), default to English
+    if (sorted[0].count === 0 || (sorted[0].count === sorted[1].count)) {
       return 'en';
     }
-    return 'es'; // Default to Spanish
+
+    return sorted[0].lang;
   }
 }

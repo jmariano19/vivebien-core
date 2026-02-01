@@ -301,8 +301,8 @@ export class ConversationService {
     };
   }
 
-  async getTemplate(key: string, language: 'es' | 'en' = 'es'): Promise<string> {
-    const template = await getConfigTemplate(key, language);
+  async getTemplate(key: string, language: string = 'es'): Promise<string> {
+    const template = await getConfigTemplate(key, language as 'es' | 'en');
     return template || this.getDefaultTemplate(key, language);
   }
 
@@ -329,13 +329,19 @@ export class ConversationService {
     }
 
     // Add language adaptation instruction
-    prompt += `\n\nLANGUAGE ADAPTATION
-Detect the language the user writes in and respond in the same language.
-If user writes in Spanish, respond in Spanish.
-If user writes in English, respond in English.
-If user writes in Portuguese, respond in Portuguese.
-Always match the user's language exactly.
-${userLanguage ? `User's stored preference: ${userLanguage}` : ''}`;
+    prompt += `\n\nLANGUAGE ADAPTATION (CRITICAL)
+You MUST respond in the SAME language the user writes in. This is non-negotiable.
+
+Detection rules:
+- If user writes in Spanish → respond entirely in Spanish
+- If user writes in English → respond entirely in English
+- If user writes in Portuguese → respond entirely in Portuguese
+- If user writes in French → respond entirely in French
+- If user writes in ANY other language → respond in that same language
+
+Never mix languages. Never default to Spanish unless user writes in Spanish.
+The user's first message determines the language for the conversation.
+${userLanguage ? `User's stored language preference: ${userLanguage}` : 'No stored preference - detect from user message.'}`;
 
     return prompt;
   }
@@ -369,55 +375,77 @@ ${userLanguage ? `User's stored preference: ${userLanguage}` : ''}`;
     return context.phase;
   }
 
-  private getDefaultTemplate(key: string, language: 'es' | 'en'): string {
+  private getDefaultTemplate(key: string, language: string): string {
     const templates: Record<string, Record<string, string>> = {
       no_credits: {
         es: 'Tu registro de Confianza requiere créditos adicionales. Visita la web para continuar.',
         en: 'Your Confianza record requires additional credits. Visit the website to continue.',
+        pt: 'Seu registro Confianza requer créditos adicionais. Visite o site para continuar.',
+        fr: 'Votre dossier Confianza nécessite des crédits supplémentaires. Visitez le site pour continuer.',
       },
       error: {
         es: 'No se pudo procesar tu entrada. Intenta de nuevo.',
         en: 'Could not process your entry. Try again.',
+        pt: 'Não foi possível processar sua entrada. Tente novamente.',
+        fr: 'Impossible de traiter votre entrée. Réessayez.',
       },
       maintenance: {
         es: 'Confianza no está disponible temporalmente. Vuelve pronto.',
         en: 'Confianza is temporarily unavailable. Return soon.',
+        pt: 'Confianza está temporariamente indisponível. Volte em breve.',
+        fr: 'Confianza est temporairement indisponible. Revenez bientôt.',
       },
       // Step 1: 3-Message Open (Value First)
       onboarding_greeting: {
-        es: 'Hola. Soy Confianza, un sistema de IA.',
-        en: 'Hi. I\'m Confianza, an AI system.',
+        es: 'Hola. Soy Confianza, un compañero de IA para tu salud.',
+        en: 'Hi. I\'m Confianza, an AI companion for your health.',
+        pt: 'Olá. Sou Confianza, um companheiro de IA para sua saúde.',
+        fr: 'Bonjour. Je suis Confianza, un compagnon IA pour votre santé.',
       },
       onboarding_boundary: {
         es: 'No reemplazo a los médicos. Te ayudo a prepararte para ellos.',
         en: 'I don\'t replace doctors. I help you prepare for them.',
+        pt: 'Não substituo médicos. Ajudo você a se preparar para eles.',
+        fr: 'Je ne remplace pas les médecins. Je vous aide à vous préparer pour eux.',
       },
       onboarding_invitation: {
         es: 'Cuéntame qué ha estado pasando y lo organizaré para tu próxima visita.',
         en: 'Tell me what\'s been happening and I\'ll organize it for your next visit.',
+        pt: 'Conte-me o que está acontecendo e vou organizar para sua próxima consulta.',
+        fr: 'Dites-moi ce qui se passe et je l\'organiserai pour votre prochaine visite.',
       },
       // Step 2: Micro-Capture Questions
       micro_what: {
         es: '¿Qué está pasando?',
         en: 'What\'s going on?',
+        pt: 'O que está acontecendo?',
+        fr: 'Qu\'est-ce qui se passe?',
       },
       micro_when: {
         es: '¿Cuándo comenzó?',
         en: 'When did it start?',
+        pt: 'Quando começou?',
+        fr: 'Quand cela a-t-il commencé?',
       },
       micro_pattern: {
         es: '¿Qué lo mejora o empeora?',
         en: 'What makes it better or worse?',
+        pt: 'O que melhora ou piora?',
+        fr: 'Qu\'est-ce qui améliore ou aggrave?',
       },
       // Step 4: Name Request (After Value)
       ask_name: {
         es: '¿Cómo te gustaría que te llame? (Puedes omitir esto si prefieres.)',
         en: 'What would you like me to call you? (You can skip this if you prefer.)',
+        pt: 'Como você gostaria que eu te chamasse? (Pode pular se preferir.)',
+        fr: 'Comment aimeriez-vous que je vous appelle? (Vous pouvez ignorer si vous préférez.)',
       },
       // Step 5: Trust & Control
       trust_message: {
         es: 'Tú controlas lo que registras. Tú decides qué compartir. Si algo es urgente, te lo diré.',
         en: 'You control what you log. You decide what to share. If something is urgent, I\'ll say so.',
+        pt: 'Você controla o que registra. Você decide o que compartilhar. Se algo for urgente, eu aviso.',
+        fr: 'Vous contrôlez ce que vous enregistrez. Vous décidez ce que vous partagez. Si c\'est urgent, je vous le dirai.',
       },
       // Step 6: 3 Rails
       three_rails: {
@@ -435,6 +463,20 @@ Responde 1, 2 o 3.`,
 3. Generate a summary to share
 
 Reply 1, 2, or 3.`,
+        pt: `O que você gostaria de fazer?
+
+1. Continuar registrando sintomas ou mudanças
+2. Preparar para uma consulta (perguntas, cronologia)
+3. Gerar um resumo para compartilhar
+
+Responda 1, 2 ou 3.`,
+        fr: `Que souhaitez-vous faire?
+
+1. Continuer à enregistrer les symptômes ou changements
+2. Préparer une visite (questions, chronologie)
+3. Générer un résumé à partager
+
+Répondez 1, 2 ou 3.`,
       },
       // Safety: Urgent Care
       urgent_care: {
@@ -444,14 +486,23 @@ Si quieres, puedo preparar un resumen de lo que me has contado para que se lo mu
         en: `These symptoms may need urgent attention. I recommend you contact emergency services or go to urgent care now.
 
 If you'd like, I can prepare a summary of what you've told me to show the clinician.`,
+        pt: `Esses sintomas podem precisar de atenção urgente. Recomendo que você entre em contato com serviços de emergência ou vá ao pronto-socorro agora.
+
+Se quiser, posso preparar um resumo do que você me contou para mostrar ao médico.`,
+        fr: `Ces symptômes peuvent nécessiter une attention urgente. Je vous recommande de contacter les services d'urgence ou d'aller aux urgences maintenant.
+
+Si vous le souhaitez, je peux préparer un résumé de ce que vous m'avez dit pour le montrer au médecin.`,
       },
       logged: {
         es: 'Registrado.',
         en: 'Logged.',
+        pt: 'Registrado.',
+        fr: 'Enregistré.',
       },
     };
 
-    return templates[key]?.[language] || templates[key]?.es || '';
+    // Return template in requested language, fallback to English, then Spanish
+    return templates[key]?.[language] || templates[key]?.en || templates[key]?.es || '';
   }
 
   private getDefaultSystemPrompt(): string {
