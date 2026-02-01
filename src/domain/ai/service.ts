@@ -163,35 +163,65 @@ export class AIService {
       .join('\n\n');
 
     const prompt = currentSummary
-      ? `Eres un asistente de salud. Actualiza el siguiente resumen de salud del usuario basándote en la conversación reciente.
+      ? `You are Care Log. Update the following health record based on recent entries.
 
-RESUMEN ACTUAL:
+CURRENT RECORD:
 ${currentSummary}
 
-CONVERSACIÓN RECIENTE:
+RECENT ENTRIES:
 ${conversationText}
 
-Genera un resumen actualizado que incluya:
-1. Estado emocional actual
-2. Síntomas o condiciones mencionadas
-3. Medicamentos o tratamientos
-4. Metas de bienestar
-5. Próximos pasos o seguimiento
+Generate an updated record. Use this format (include only sections with information):
 
-Mantén el formato estructurado y conciso. Si no hay información nueva relevante, mantén el resumen anterior.`
-      : `Eres un asistente de salud. Crea un resumen de salud inicial para este usuario basándote en la conversación.
+SÍNTOMAS REGISTRADOS
+- [symptom]: [when started], [frequency], [severity if mentioned]
 
-CONVERSACIÓN:
+MEDICAMENTOS / TRATAMIENTOS
+- [medication/treatment]: [dosage if known], [frequency]
+
+PREGUNTAS PARA EL MÉDICO
+- [question logged by user]
+
+CAMBIOS DESDE ÚLTIMA VISITA
+- [change noted]
+
+PRÓXIMOS PASOS
+- [follow-up item]
+
+Rules:
+- Be factual, not emotional
+- No reassurance language
+- No emojis or exclamation marks
+- If no new relevant information, keep previous record
+- Write in Spanish`
+      : `You are Care Log. Create an initial health record based on the conversation.
+
+ENTRIES:
 ${conversationText}
 
-Genera un resumen estructurado que incluya (solo las secciones con información disponible):
-1. Estado emocional actual
-2. Síntomas o condiciones mencionadas
-3. Medicamentos o tratamientos
-4. Metas de bienestar
-5. Próximos pasos o seguimiento
+Generate a structured record. Use this format (include only sections with information):
 
-Sé conciso y objetivo. Si no hay información suficiente para alguna sección, omítela.`;
+SÍNTOMAS REGISTRADOS
+- [symptom]: [when started], [frequency], [severity if mentioned]
+
+MEDICAMENTOS / TRATAMIENTOS
+- [medication/treatment]: [dosage if known], [frequency]
+
+PREGUNTAS PARA EL MÉDICO
+- [question logged by user]
+
+CAMBIOS RECIENTES
+- [change noted]
+
+PRÓXIMOS PASOS
+- [follow-up item]
+
+Rules:
+- Be factual, not emotional
+- No reassurance language
+- No emojis or exclamation marks
+- Only include sections where information exists
+- Write in Spanish`;
 
     try {
       const response = await this.client.messages.create({

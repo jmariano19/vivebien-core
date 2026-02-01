@@ -83,11 +83,11 @@ export class ConversationService {
     // Build the message array with history
     const messages: Message[] = [];
 
-    // Add health context as a system-level memory if available
+    // Add health record context if available
     if (healthSummary) {
       messages.push({
         role: 'assistant',
-        content: `[Contexto del usuario - Resumen de salud actualizado]:\n${healthSummary}`,
+        content: `[Care Log - Registro actual del usuario]:\n${healthSummary}`,
       });
     }
 
@@ -317,16 +317,58 @@ export class ConversationService {
   private getDefaultTemplate(key: string, language: 'es' | 'en'): string {
     const templates: Record<string, Record<string, string>> = {
       no_credits: {
-        es: 'Lo siento, no tienes créditos disponibles. Visita nuestra web para obtener más.',
-        en: "Sorry, you don't have any credits available. Visit our website to get more.",
+        es: 'Tu registro de Care Log requiere créditos adicionales. Visita la web para continuar.',
+        en: 'Your Care Log requires additional credits. Visit the website to continue.',
       },
       error: {
-        es: 'Lo siento, ocurrió un error. Por favor intenta de nuevo.',
-        en: 'Sorry, an error occurred. Please try again.',
+        es: 'No se pudo procesar tu entrada. Intenta de nuevo.',
+        en: 'Could not process your entry. Try again.',
       },
       maintenance: {
-        es: 'Estamos en mantenimiento. Volvemos pronto.',
-        en: 'We are under maintenance. We will be back soon.',
+        es: 'Care Log no está disponible temporalmente. Vuelve pronto.',
+        en: 'Care Log is temporarily unavailable. Return soon.',
+      },
+      welcome: {
+        es: `Bienvenido a Care Log.
+
+Care Log es un registro de lo que sucede entre visitas médicas.
+
+Puedes usar este espacio para registrar síntomas, preguntas o cambios cuando ocurran. Los organizaré para que llegues preparado a tu próxima cita.`,
+        en: `Welcome to Care Log.
+
+Care Log is a living record of what happens between doctor visits.
+
+You can use this space to log symptoms, questions, or changes as they happen. I'll organize them so you arrive prepared for your next visit.`,
+      },
+      boundaries: {
+        es: `Care Log no reemplaza a tu médico y no proporciona diagnósticos.
+
+Te ayuda a llevar un registro de detalles importantes para que nada se pierda entre visitas.`,
+        en: `Care Log does not replace your doctor and does not provide diagnoses.
+
+It helps you keep track of important details so nothing gets lost between visits.`,
+      },
+      privacy: {
+        es: 'Todo lo que compartas aquí te pertenece. Tú decides qué registrar y qué compartir con tu médico.',
+        en: 'Everything you share here belongs to you. You decide what to log and what to share with your doctor.',
+      },
+      start_prompt: {
+        es: `Cuando estés listo, puedes empezar registrando lo que ha estado pasando.
+
+Por ejemplo:
+- Un síntoma que notaste
+- Una pregunta para tu médico
+- Un cambio desde tu última visita`,
+        en: `When you're ready, you can start by logging what's been happening.
+
+For example:
+- A symptom you noticed
+- A question you want to ask your doctor
+- A change since your last visit`,
+      },
+      logged: {
+        es: 'Registrado. He guardado esto en tu Care Log.',
+        en: 'Logged. I have saved this to your Care Log.',
       },
     };
 
@@ -334,10 +376,73 @@ export class ConversationService {
   }
 
   private getDefaultSystemPrompt(): string {
-    return `Eres un asistente de bienestar emocional llamado ViveBien.
-Tu objetivo es ayudar a las personas a mejorar su bienestar mental y emocional.
-Responde siempre en español a menos que el usuario escriba en otro idioma.
-Sé empático, comprensivo y ofrece apoyo constructivo.
-Nunca des consejos médicos específicos - recomienda consultar a un profesional cuando sea apropiado.`;
+    return `You are Care Log.
+
+ROLE & TONE
+Care Log is:
+- Calm
+- Factual
+- Supportive
+- Not emotional
+- Not chatty
+- Not pretending to be human
+
+Care Log does not:
+- Diagnose
+- Replace doctors
+- Reassure excessively
+- Use emojis
+- Use exclamation marks
+- Use hype language
+
+Your job is to:
+- Capture
+- Organize
+- Hold
+- Prepare
+
+Everything you say should reduce uncertainty, not decorate it.
+
+LANGUAGE RULES
+Always prefer:
+- "log" / "registrar"
+- "record" / "registro"
+- "entry" / "entrada"
+- "summary" / "resumen"
+- "between visits" / "entre visitas"
+
+Never use:
+- "Don't worry" / "No te preocupes"
+- "I understand how you feel" / "Entiendo cómo te sientes"
+- "Everything will be okay" / "Todo estará bien"
+- Emojis
+- Exclamation marks
+- "I'm here for you" language
+
+LOGGING BEHAVIOR
+When the user writes a health-related message:
+1. Acknowledge briefly
+2. Confirm it has been logged
+3. Do not over-respond
+4. Optionally ask ONE clarifying question if it improves the record
+
+Example responses:
+"Registrado."
+"He guardado esto en tu Care Log."
+"Registrado. Para que quede claro para tu médico, puedes indicar cuándo comenzó esto."
+
+FAILURE HANDLING
+If user asks for diagnosis:
+"No puedo diagnosticar ni dar consejos médicos. Lo que puedo hacer es ayudarte a registrar esto claramente para que tu médico tenga el panorama completo."
+
+If user is anxious:
+"He registrado esto. Mantener un registro claro ayuda a los médicos a tomar mejores decisiones."
+
+NORTH-STAR CHECK
+Before sending any message, ask yourself:
+Does this help hold what happens between visits?
+If not, don't send it.
+
+Respond in Spanish unless the user writes in English.`;
   }
 }
