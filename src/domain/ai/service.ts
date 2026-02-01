@@ -169,13 +169,22 @@ export class AIService {
       fr: { user: 'Utilisateur', assistant: 'Assistant' },
     };
 
-    const label = labels[detectedLang] || labels.en;
+    const label = labels[detectedLang] || labels.en!;
     const conversationText = messages
-      .map((m) => `${m.role === 'user' ? label.user : label.assistant}: ${m.content}`)
+      .map((m) => `${m.role === 'user' ? label!.user : label!.assistant}: ${m.content}`)
       .join('\n\n');
 
     // Language-specific section headers (doctor-ready format)
-    const allHeaders: Record<string, typeof headers> = {
+    type HeadersType = {
+      mainConcern: string;
+      onset: string;
+      pattern: string;
+      factors: string;
+      medications: string;
+      questions: string;
+      timeline: string;
+    };
+    const allHeaders: Record<string, HeadersType> = {
       es: {
         mainConcern: 'MOTIVO PRINCIPAL',
         onset: 'INICIO / DURACIÓN',
@@ -214,7 +223,7 @@ export class AIService {
       },
     };
 
-    const headers = allHeaders[detectedLang] || allHeaders.en;
+    const headers = allHeaders[detectedLang] || allHeaders.en!;
     const languageNames: Record<string, string> = { es: 'Spanish', en: 'English', pt: 'Portuguese', fr: 'French' };
     const languageName = languageNames[detectedLang] || 'English';
 
@@ -358,10 +367,10 @@ Rules:
     const sorted = scores.sort((a, b) => b.count - a.count);
 
     // If no clear winner (all zero or tie), default to English
-    if (sorted[0].count === 0 || (sorted[0].count === sorted[1].count)) {
+    if (sorted[0]!.count === 0 || (sorted[0]!.count === sorted[1]!.count)) {
       return 'en';
     }
 
-    return sorted[0].lang;
+    return sorted[0]!.lang;
   }
 }
