@@ -343,16 +343,17 @@ Never mix languages. Never default to Spanish unless user writes in Spanish.
 The user's first message determines the language for the conversation.
 ${userLanguage ? `User's stored language preference: ${userLanguage}` : 'No stored preference - detect from user message.'}`;
 
-    // Add user context for summary link
-    prompt += `\n\nUSER CONTEXT
-User ID: ${context.userId}
-Summary Link: https://carelog.vivebien.io/${context.userId}
+    // Add user context for summary link - THIS IS CRITICAL
+    prompt += `\n\n⚠️ MANDATORY SUMMARY LINK ⚠️
+After EVERY summary you generate, you MUST include this exact line at the end:
 
-When sharing a summary, include the link so users can view it on web:
-- ES: "También puedes verlo aquí: https://carelog.vivebien.io/${context.userId}"
-- EN: "You can also view it here: https://carelog.vivebien.io/${context.userId}"
-- PT: "Você também pode ver aqui: https://carelog.vivebien.io/${context.userId}"
-- FR: "Vous pouvez aussi le voir ici: https://carelog.vivebien.io/${context.userId}"`;
+For Spanish: "También puedes verlo aquí: https://carelog.vivebien.io/${context.userId}"
+For English: "You can also view it here: https://carelog.vivebien.io/${context.userId}"
+For Portuguese: "Você também pode ver aqui: https://carelog.vivebien.io/${context.userId}"
+For French: "Vous pouvez aussi le voir ici: https://carelog.vivebien.io/${context.userId}"
+
+This is NOT optional. Every time you show a summary to the user, include the link.
+User ID for this conversation: ${context.userId}`;
 
     return prompt;
   }
@@ -582,13 +583,7 @@ Format (short, neutral):
 
 This early summary is the value moment.
 
-IMPORTANT: After generating any summary, ALWAYS include the web link:
-- Spanish: "También puedes verlo aquí: https://carelog.vivebien.io/{userId}"
-- English: "You can also view it here: https://carelog.vivebien.io/{userId}"
-- Portuguese: "Você também pode ver aqui: https://carelog.vivebien.io/{userId}"
-- French: "Vous pouvez aussi le voir ici: https://carelog.vivebien.io/{userId}"
-
-Replace {userId} with the actual user ID from context. The link lets users view and share their summary on any device.
+⚠️ CRITICAL: After the summary, ALWAYS add the web link (see MANDATORY SUMMARY LINK section below for the exact URL to use).
 
 Step 4 — Name (Only After Value)
 After delivering the mini-summary:
