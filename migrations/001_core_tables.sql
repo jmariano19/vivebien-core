@@ -214,6 +214,24 @@ CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id
 CREATE INDEX IF NOT EXISTS idx_messages_created ON messages(created_at);
 
 -- ============================================================================
+-- 12. Memories - Store health summaries and other long-term memories
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS memories (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL,
+  content TEXT NOT NULL,
+  category VARCHAR(50) NOT NULL DEFAULT 'general', -- 'health_summary', 'general', etc.
+  importance_score DECIMAL(3,2) DEFAULT 1.0,
+  access_count INTEGER DEFAULT 0,
+  last_accessed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_memories_user ON memories(user_id);
+CREATE INDEX IF NOT EXISTS idx_memories_category ON memories(user_id, category);
+CREATE INDEX IF NOT EXISTS idx_memories_created ON memories(created_at);
+
+-- ============================================================================
 -- Cleanup job for old data (run via cron)
 -- ============================================================================
 -- Delete old execution logs (keep 7 days)
