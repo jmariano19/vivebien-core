@@ -82,8 +82,13 @@ export async function handleInboundMessage(
     // Handle urgent case (crisis protocol)
   }
 
-  // Step 6: Build conversation messages for AI
-  const messages = conversationService.buildMessages(context, processedMessage);
+  // Step 6: Build conversation messages for AI (with history)
+  const messages = await logExecution(
+    correlationId,
+    'build_messages',
+    async () => conversationService.buildMessages(context, processedMessage),
+    logger
+  );
 
   // Step 7: Call Claude
   const aiResponse = await logExecution(
@@ -132,6 +137,22 @@ export async function handleInboundMessage(
     async () => conversationService.updateState(user.id, context),
     logger
   );
+
+  // Step 13: Update health summary (async, non-blocking for response)
+  // This runs in background to update the live summary for the website
+  logExecution(
+    correlationId,
+    'update_summary',
+    async () => conversationService.updateHealthSummary(
+      user.id,
+      processedMessage,
+      cleanedResponse,
+      aiService
+    ),
+    logger
+  ).catch((err) => {
+    logger.warn({ error: err.message }, 'Failed to update health summary');
+  });
 
   return {
     status: 'completed',

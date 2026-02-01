@@ -4,6 +4,7 @@ import { config } from './config';
 import { healthRoutes } from './api/routes/health';
 import { ingestRoutes } from './api/routes/ingest';
 import { adminRoutes } from './api/routes/admin';
+import { summaryRoutes } from './api/routes/summary';
 import { correlationMiddleware } from './api/middleware/correlation';
 import { logger } from './infra/logging/logger';
 import { db } from './infra/db/client';
@@ -54,6 +55,7 @@ async function bootstrap() {
   await app.register(healthRoutes);
   await app.register(ingestRoutes);
   await app.register(adminRoutes, { prefix: '/admin' });
+  await app.register(summaryRoutes, { prefix: '/api/summary' });
 
   // Global error handler
   app.setErrorHandler((error, request, reply) => {

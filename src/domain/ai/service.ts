@@ -150,4 +150,67 @@ export class AIService {
       throw new AIServiceError(err.message, err);
     }
   }
+
+  /**
+   * Generate or update a health summary based on conversation history
+   * This creates a live summary that can be displayed on a website
+   */
+  async generateSummary(messages: Message[], currentSummary: string | null): Promise<string> {
+    await this.rateLimiter.acquire();
+
+    const conversationText = messages
+      .map((m) => `${m.role === 'user' ? 'Usuario' : 'Asistente'}: ${m.content}`)
+      .join('\n\n');
+
+    const prompt = currentSummary
+      ? `Eres un asistente de salud. Actualiza el siguiente resumen de salud del usuario basándote en la conversación reciente.
+
+RESUMEN ACTUAL:
+${currentSummary}
+
+CONVERSACIÓN RECIENTE:
+${conversationText}
+
+Genera un resumen actualizado que incluya:
+1. Estado emocional actual
+2. Síntomas o condiciones mencionadas
+3. Medicamentos o tratamientos
+4. Metas de bienestar
+5. Próximos pasos o seguimiento
+
+Mantén el formato estructurado y conciso. Si no hay información nueva relevante, mantén el resumen anterior.`
+      : `Eres un asistente de salud. Crea un resumen de salud inicial para este usuario basándote en la conversación.
+
+CONVERSACIÓN:
+${conversationText}
+
+Genera un resumen estructurado que incluya (solo las secciones con información disponible):
+1. Estado emocional actual
+2. Síntomas o condiciones mencionadas
+3. Medicamentos o tratamientos
+4. Metas de bienestar
+5. Próximos pasos o seguimiento
+
+Sé conciso y objetivo. Si no hay información suficiente para alguna sección, omítela.`;
+
+    try {
+      const response = await this.client.messages.create({
+        model: 'claude-sonnet-4-5-20250929',
+        max_tokens: 1024,
+        messages: [{ role: 'user', content: prompt }],
+      });
+
+      const content = response.content
+        .filter((block) => block.type === 'text')
+        .map((block) => (block as { type: 'text'; text: string }).text)
+        .join('\n');
+
+      return content.trim();
+    } catch (error) {
+      const err = error as Error;
+      // If summary generation fails, return current summary or empty
+      console.error('Failed to generate summary:', err.message);
+      return currentSummary || '';
+    }
+  }
 }

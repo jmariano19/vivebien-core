@@ -73,12 +73,84 @@ export class ConversationService {
     }));
   }
 
-  buildMessages(context: ConversationContext, newMessage: string): Message[] {
-    // This would typically load recent messages and add the new one
-    // For now, just return the new message
-    return [
-      { role: 'user', content: newMessage },
+  async buildMessages(context: ConversationContext, newMessage: string): Promise<Message[]> {
+    // Load recent conversation history
+    const recentMessages = await this.getRecentMessages(context.userId, 10);
+
+    // Load current health summary for context
+    const healthSummary = await this.getHealthSummary(context.userId);
+
+    // Build the message array with history
+    const messages: Message[] = [];
+
+    // Add health context as a system-level memory if available
+    if (healthSummary) {
+      messages.push({
+        role: 'assistant',
+        content: `[Contexto del usuario - Resumen de salud actualizado]:\n${healthSummary}`,
+      });
+    }
+
+    // Add recent conversation history
+    messages.push(...recentMessages);
+
+    // Add the new message
+    messages.push({ role: 'user', content: newMessage });
+
+    return messages;
+  }
+
+  async getHealthSummary(userId: string): Promise<string | null> {
+    const result = await this.db.query<{ content: string }>(
+      `SELECT content FROM memories
+       WHERE user_id = $1 AND category = 'health_summary'
+       ORDER BY created_at DESC LIMIT 1`,
+      [userId]
+    );
+    return result.rows[0]?.content || null;
+  }
+
+  async updateHealthSummary(
+    userId: string,
+    userMessage: string,
+    assistantResponse: string,
+    aiService: { generateSummary: (messages: Message[], currentSummary: string | null) => Promise<string> }
+  ): Promise<void> {
+    // Get current summary
+    const currentSummary = await this.getHealthSummary(userId);
+
+    // Get recent messages for context
+    const recentMessages = await this.getRecentMessages(userId, 20);
+
+    // Add the new exchange
+    const allMessages = [
+      ...recentMessages,
+      { role: 'user' as const, content: userMessage },
+      { role: 'assistant' as const, content: assistantResponse },
     ];
+
+    // Generate updated summary using AI
+    const newSummary = await aiService.generateSummary(allMessages, currentSummary);
+
+    // Upsert the summary (check if exists, then insert or update)
+    const existing = await this.db.query(
+      `SELECT id FROM memories WHERE user_id = $1 AND category = 'health_summary'`,
+      [userId]
+    );
+
+    if (existing.rows.length > 0) {
+      await this.db.query(
+        `UPDATE memories SET content = $1, created_at = NOW(), access_count = access_count + 1
+         WHERE user_id = $2 AND category = 'health_summary'`,
+        [newSummary, userId]
+      );
+    } else {
+      await this.db.query(
+        `INSERT INTO memories (id, user_id, content, category, importance_score, created_at, access_count)
+         VALUES (gen_random_uuid(), $1, $2, 'health_summary', 1.0, NOW(), 0)`,
+        [userId, newSummary]
+      );
+    }
   }
 
   async saveMessages(
