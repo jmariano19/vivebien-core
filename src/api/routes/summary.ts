@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
-import { queryOne, queryMany } from '../../infra/db/client';
+import { query, queryOne, queryMany } from '../../infra/db/client';
 import { NotFoundError } from '../../shared/errors';
 
 export const summaryRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
@@ -62,7 +62,7 @@ export const summaryRoutes: FastifyPluginAsync = async (app: FastifyInstance) =>
 
     // Update access count for analytics
     if (summary) {
-      await app.pg?.query(
+      await query(
         `UPDATE memories SET access_count = access_count + 1, last_accessed_at = NOW()
          WHERE user_id = $1 AND category = 'health_summary'`,
         [user.id]
