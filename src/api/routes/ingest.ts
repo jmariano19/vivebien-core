@@ -21,9 +21,11 @@ const chatwootWebhookSchema = z.object({
       }).optional(),
     }).optional(),
   }),
-  sender: z.object({
+sender: z.object({
     id: z.number(),
     name: z.string().optional(),
+    phone_number: z.string().optional(),
+    identifier: z.string().optional(),
   }).optional(),
   attachments: z.array(z.object({
     file_type: z.string(),
@@ -80,8 +82,12 @@ export const ingestRoutes: FastifyPluginAsync = async (app: FastifyInstance) => 
     }
 
     // Extract phone number (WhatsApp format: +1234567890)
-    const phone = normalizePhone(payload.conversation.contact_inbox.source_id);
-    if (!phone) {
+    // Extract phone number from sender (WhatsApp format: +1234567890)
+    // Try phone_number first, then identifier (e.g., "12017370113@s.whatsapp.net")
+    const rawPhone = payload.sender?.phone_number
+      || payload.sender?.identifier?.split('@')[0]
+      || '';
+    const phone = normalizePhone(rawPhone);
       throw new BadRequestError('Invalid phone number in webhook');
     }
 
