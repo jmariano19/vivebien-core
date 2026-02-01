@@ -54,6 +54,8 @@ async function bootstrap() {
   await app.register(fastifyStatic, {
     root: path.join(__dirname, '..', 'public'),
     prefix: '/',
+    index: ['index.html'],
+    decorateReply: true,
   });
 
   // Correlation ID middleware
