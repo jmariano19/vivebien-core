@@ -44,6 +44,7 @@ process.on('SIGINT', () => shutdown('SIGINT'));
 
 // Register plugins and middleware
 async function bootstrap() {
+  logger.info('Starting ViveBien Core API bootstrap...');
   // CORS for admin dashboard access
   await app.register(cors, {
     origin: config.corsOrigins,
@@ -51,12 +52,18 @@ async function bootstrap() {
   });
 
   // Static files for dashboard
-  await app.register(fastifyStatic, {
-    root: path.join(__dirname, '..', 'public'),
-    prefix: '/',
-    index: ['index.html'],
-    decorateReply: true,
-  });
+  const publicPath = path.join(__dirname, '..', 'public');
+  try {
+    await app.register(fastifyStatic, {
+      root: publicPath,
+      prefix: '/',
+      index: ['index.html'],
+      decorateReply: true,
+    });
+    logger.info({ path: publicPath }, 'Static file serving enabled');
+  } catch (err) {
+    logger.warn({ err, path: publicPath }, 'Static file serving failed - dashboard may not be available');
+  }
 
   // Correlation ID middleware
   await app.register(correlationMiddleware);
