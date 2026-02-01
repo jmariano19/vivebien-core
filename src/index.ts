@@ -74,6 +74,18 @@ async function bootstrap() {
   await app.register(adminRoutes, { prefix: '/admin' });
   await app.register(summaryRoutes, { prefix: '/api/summary' });
 
+  // Serve summary landing page for /:userId URLs
+  app.get('/:userId', async (request, reply) => {
+    const { userId } = request.params as { userId: string };
+    // Only serve for UUID-like paths (avoid conflicts with other routes)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (uuidRegex.test(userId)) {
+      return reply.sendFile('summary.html');
+    }
+    // Not a UUID, return 404
+    return reply.status(404).send({ error: 'Not found' });
+  });
+
   // Global error handler
   app.setErrorHandler((error, request, reply) => {
     const correlationId = request.id;
