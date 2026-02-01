@@ -87,7 +87,7 @@ export interface Message {
 
 export interface SafetyCheckResult {
   isUrgent: boolean;
-  type?: 'crisis' | 'self_harm' | 'danger';
+  type?: 'crisis' | 'self_harm' | 'danger' | 'medical_emergency';
   confidence: number;
   action?: string;
 }
