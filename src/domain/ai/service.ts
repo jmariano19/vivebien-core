@@ -122,8 +122,11 @@ export class AIService {
     cleaned = cleaned.trim();
 
     // Add summary link if this looks like a summary response and we have a userId
-    if (userId && this.looksLikeSummary(cleaned)) {
+    const isSummary = this.looksLikeSummary(cleaned);
+    console.log(`[postProcess] userId: ${userId}, isSummary: ${isSummary}, language: ${language}`);
+    if (userId && isSummary) {
       const linkText = this.getSummaryLinkText(language || 'es', userId);
+      console.log(`[postProcess] Adding link: ${linkText}`);
       // Only add if not already present
       if (!cleaned.includes('carelog.vivebien.io')) {
         cleaned += '\n\n' + linkText;
