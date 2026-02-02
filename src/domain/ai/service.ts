@@ -160,12 +160,12 @@ export class AIService {
    * Get the summary link text in the appropriate language
    */
   private getSummaryLinkText(language: string, userId: string): string {
-    const link = `https://carelog.vivebien.io/summary/${userId}`;
+    const link = `https://carelog.vivebien.io/${userId}`;
     const texts: Record<string, string> = {
-      es: `📋 Ver tu resumen completo:\n${link}`,
-      en: `📋 View your full summary:\n${link}`,
-      pt: `📋 Ver seu resumo completo:\n${link}`,
-      fr: `📋 Voir votre résumé complet:\n${link}`,
+      es: `📋 *Ver mi resumen completo* 👇\n${link}`,
+      en: `📋 *View my full summary* 👇\n${link}`,
+      pt: `📋 *Ver meu resumo completo* 👇\n${link}`,
+      fr: `📋 *Voir mon résumé complet* 👇\n${link}`,
     };
     return texts[language] || texts.es!;
   }

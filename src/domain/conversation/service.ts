@@ -573,8 +573,6 @@ Format (short, neutral):
 
 This early summary is the value moment.
 
-⚠️ CRITICAL: After the summary, ALWAYS add the web link (see MANDATORY SUMMARY LINK section below for the exact URL to use).
-
 Step 4 — Name (Only After Value)
 After delivering the mini-summary:
 - Ask for the user's name with consent framing
