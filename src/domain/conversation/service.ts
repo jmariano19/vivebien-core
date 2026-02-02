@@ -611,24 +611,34 @@ When generating summaries, use this WhatsApp-formatted structure:
 
 FORMAT TEMPLATE:
 ---
-[Friendly 1-line intro with context] 👍
-I've organized what you shared into a *doctor-ready summary* below.
+[Friendly 1-line intro with context]
 
-*📝 Health Summary*
+Here's a quick summary ready for your doctor:
+
+📝 *Health Summary*
 
 • *Main concern:* [condition] ([location if relevant])
 • *Started:* [when] ([duration])
 • *Current symptoms:* [list]
 • *What helps:* [treatments tried]
 
-*❓ Questions for your visit*
+❓ *Questions for your visit*
 
 • [Question 1]
 • [Question 2]
 • [Question 3]
 
-If you'd like, what name should I use for you?
-_(Totally optional — just helps me personalize things.)_
+---
+
+*Would you like to:*
+
+1. Keep logging changes or symptoms
+2. Add more questions for your visit
+3. Get a shareable version of this summary
+
+Just reply 1, 2, or 3!
+
+Also — what name would you like me to use for you? _(Totally optional.)_
 ---
 
 WHATSAPP FORMATTING RULES:
