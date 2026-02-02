@@ -103,16 +103,16 @@ export class AIService {
   postProcess(content: string, userId?: string, language?: string): string {
     let cleaned = content;
 
-    // Remove markdown bold/italic that doesn't render well in WhatsApp
-    cleaned = cleaned.replace(/\*\*(.+?)\*\*/g, '$1');
-    cleaned = cleaned.replace(/\*(.+?)\*/g, '$1');
-    cleaned = cleaned.replace(/_(.+?)_/g, '$1');
+    // Convert markdown double asterisks to WhatsApp single asterisks for bold
+    cleaned = cleaned.replace(/\*\*(.+?)\*\*/g, '*$1*');
+
+    // Keep single *text* (WhatsApp bold) and _text_ (WhatsApp italic) as-is
 
     // Remove code blocks
     cleaned = cleaned.replace(/```[\s\S]*?```/g, '');
     cleaned = cleaned.replace(/`(.+?)`/g, '$1');
 
-    // Remove headers
+    // Remove markdown headers (keep the text)
     cleaned = cleaned.replace(/^#+\s+/gm, '');
 
     // Remove excessive newlines

@@ -29,6 +29,8 @@ function extractUserName(userMessage: string, recentMessages: Message[]): string
     /cómo te llamas/i,
     /cuál es tu nombre/i,
     /what would you like me to call you/i,
+    /what name would you like me to use/i,
+    /what name should i use/i,
     /what's your name/i,
     /what is your name/i,
     /como você gostaria que eu te chamasse/i,
@@ -100,40 +102,28 @@ function extractUserName(userMessage: string, recentMessages: Message[]): string
 function detectLanguage(message: string): 'es' | 'en' | 'pt' | 'fr' | null {
   const lower = message.toLowerCase();
 
-  // Portuguese patterns (check first as it's similar to Spanish)
-  const ptPatterns = [
-    /\b(você|voce|oi|olá|ola|obrigad[oa]|tudo bem|estou|tenho|não|nao|meu|minha|como)\b/i,
-    /\b(está|esta|bom dia|boa tarde|boa noite|por favor)\b/i,
-    /ção\b/i, // common Portuguese suffix
-    /ões\b/i, // common Portuguese suffix
-  ];
-  const ptScore = ptPatterns.filter(p => p.test(lower)).length;
+  // Count individual word matches for more accurate detection
+  const countMatches = (words: string[]): number => {
+    return words.filter(word => new RegExp(`\\b${word}\\b`, 'i').test(lower)).length;
+  };
 
-  // Spanish patterns
-  const esPatterns = [
-    /\b(hola|estoy|tengo|cómo|como estás|buenos días|buenas tardes|por favor|gracias)\b/i,
-    /\b(qué|que|cuál|cual|cuándo|cuando|dónde|donde|el|la|los|las|mi|mis)\b/i,
-    /ción\b/i, // common Spanish suffix
-  ];
-  const esScore = esPatterns.filter(p => p.test(lower)).length;
+  // Portuguese words
+  const ptWords = ['você', 'voce', 'oi', 'olá', 'ola', 'obrigado', 'obrigada', 'tudo', 'bem', 'estou', 'tenho', 'não', 'nao', 'meu', 'minha', 'como', 'está', 'bom', 'dia', 'boa', 'tarde', 'noite', 'por', 'favor', 'dor', 'ontem', 'hoje', 'semana'];
+  const ptScore = countMatches(ptWords) + (lower.match(/ção\b|ões\b/g)?.length || 0);
 
-  // English patterns
-  const enPatterns = [
-    /\b(hello|hi|how are you|i am|i'm|i have|the|my|is|are|what|when|where|please|thank)\b/i,
-    /\b(good morning|good afternoon|good evening|today|yesterday|tomorrow)\b/i,
-    /ing\b/i, // common English suffix
-  ];
-  const enScore = enPatterns.filter(p => p.test(lower)).length;
+  // Spanish words
+  const esWords = ['hola', 'estoy', 'tengo', 'cómo', 'como', 'estás', 'buenos', 'días', 'buenas', 'tardes', 'gracias', 'qué', 'que', 'cuál', 'cual', 'cuándo', 'cuando', 'dónde', 'donde', 'dolor', 'ayer', 'hoy', 'semana'];
+  const esScore = countMatches(esWords) + (lower.match(/ción\b/g)?.length || 0);
 
-  // French patterns
-  const frPatterns = [
-    /\b(bonjour|salut|je suis|j'ai|comment|merci|s'il vous plaît|oui|non)\b/i,
-    /\b(le|la|les|mon|ma|mes|que|qui|où)\b/i,
-    /tion\b/i, // common French suffix
-  ];
-  const frScore = frPatterns.filter(p => p.test(lower)).length;
+  // English words (expanded for better detection)
+  const enWords = ['hello', 'hi', 'hey', 'i', 'am', 'have', 'has', 'had', 'the', 'a', 'an', 'my', 'is', 'are', 'was', 'were', 'what', 'when', 'where', 'why', 'how', 'please', 'thank', 'thanks', 'yes', 'no', 'not', 'it', 'this', 'that', 'with', 'for', 'on', 'in', 'to', 'and', 'but', 'or', 'eye', 'pain', 'day', 'days', 'week', 'yesterday', 'today', 'started', 'feeling', 'feel'];
+  const enScore = countMatches(enWords) + (lower.match(/ing\b/g)?.length || 0);
 
-  // Determine winner (need at least 2 matches to be confident)
+  // French words
+  const frWords = ['bonjour', 'salut', 'je', 'suis', 'ai', 'comment', 'merci', 'oui', 'non', 'le', 'la', 'les', 'mon', 'ma', 'mes', 'que', 'qui', 'où', 'douleur', 'hier', 'aujourd', 'semaine'];
+  const frScore = countMatches(frWords);
+
+  // Determine winner
   const scores = [
     { lang: 'pt' as const, score: ptScore },
     { lang: 'es' as const, score: esScore },
@@ -141,11 +131,17 @@ function detectLanguage(message: string): 'es' | 'en' | 'pt' | 'fr' | null {
     { lang: 'fr' as const, score: frScore },
   ].sort((a, b) => b.score - a.score);
 
-  // Need clear winner with at least 2 matches
   const first = scores[0]!;
   const second = scores[1]!;
+
+  // Need at least 2 word matches and clear lead
   if (first.score >= 2 && first.score > second.score) {
     return first.lang;
+  }
+
+  // For ties with high scores, prefer English (common second language)
+  if (first.score >= 3 && first.score === second.score && (first.lang === 'en' || second.lang === 'en')) {
+    return 'en';
   }
 
   return null;
@@ -270,8 +266,8 @@ export async function handleInboundMessage(
     logger
   );
 
-  // Step 10: Extract and save user name if provided during onboarding
-  if (context.phase === 'onboarding' && !user.name) {
+  // Step 10: Extract and save user name if provided (works during onboarding or active phase)
+  if (!user.name) {
     const recentMessages = await conversationService.getRecentMessages(user.id, 5);
     const extractedName = extractUserName(processedMessage, recentMessages);
 

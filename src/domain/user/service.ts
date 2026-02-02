@@ -27,7 +27,7 @@ export class UserService {
       id: string;
       phone: string;
       name: string | null;
-      language: 'es' | 'en';
+      language: 'es' | 'en' | 'pt' | 'fr';
       timezone: string;
       created_at: Date;
     }>(
@@ -57,7 +57,7 @@ export class UserService {
       id: string;
       phone: string;
       name: string | null;
-      language: 'es' | 'en';
+      language: 'es' | 'en' | 'pt' | 'fr';
       timezone: string;
       created_at: Date;
     }>(
@@ -93,7 +93,7 @@ export class UserService {
       const userResult = await client.query<{
         id: string;
         phone: string;
-        language: 'es' | 'en';
+        language: 'es' | 'en' | 'pt' | 'fr';
         timezone: string;
         created_at: Date;
       }>(
