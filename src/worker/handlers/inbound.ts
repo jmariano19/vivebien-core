@@ -142,8 +142,10 @@ function detectLanguage(message: string): 'es' | 'en' | 'pt' | 'fr' | null {
   ].sort((a, b) => b.score - a.score);
 
   // Need clear winner with at least 2 matches
-  if (scores[0].score >= 2 && scores[0].score > scores[1].score) {
-    return scores[0].lang;
+  const first = scores[0]!;
+  const second = scores[1]!;
+  if (first.score >= 2 && first.score > second.score) {
+    return first.lang;
   }
 
   return null;

@@ -41,7 +41,7 @@ export interface User {
   id: string;
   phone: string;
   name?: string;
-  language: 'es' | 'en';
+  language: 'es' | 'en' | 'pt' | 'fr';
   timezone: string;
   createdAt: Date;
   isNew: boolean;
