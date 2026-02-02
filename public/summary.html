@@ -73,44 +73,8 @@
     .card-brand {
       display: flex;
       align-items: center;
-      gap: 8px;
+      justify-content: center;
       margin-bottom: 20px;
-    }
-
-    .card-brand svg {
-      width: 18px;
-      height: 18px;
-      color: var(--primary);
-    }
-
-    .card-brand .icon-list {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      padding: 2px 0;
-    }
-
-    .card-brand .icon-list span {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-
-    .card-brand .icon-list span::before {
-      content: '';
-      width: 5px;
-      height: 5px;
-      background: var(--primary);
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-
-    .card-brand .icon-list span::after {
-      content: '';
-      width: 14px;
-      height: 2.5px;
-      background: var(--primary);
-      border-radius: 2px;
     }
 
     .card-brand span {
@@ -136,15 +100,15 @@
     }
 
     .action-links a {
-      color: var(--primary);
+      color: #885955;
       font-size: 14px;
       font-weight: 500;
-      text-decoration: none;
+      text-decoration: underline;
       cursor: pointer;
     }
 
     .action-links a:hover {
-      text-decoration: underline;
+      color: #6d4744;
     }
 
     /* Live Updates */
@@ -315,11 +279,6 @@
       <!-- Main Card -->
       <div class="card">
         <div class="card-brand">
-          <div class="icon-list">
-            <span></span>
-            <span></span>
-            <span></span>
-          </div>
           <span>CareLog</span>
         </div>
         <div class="card-content" id="summaryContent">-</div>
@@ -368,9 +327,7 @@
     let summaryData = null;
     let summaryText = '';
     let pollInterval = null;
-
-    // Default to Spanish (primary user base), only switch for explicit English browsers
-    const browserLang = 'es'; // Force Spanish for now to match design
+    let userLang = 'es'; // Default to Spanish, will be updated from API
 
     // Localization
     const i18n = {
@@ -440,10 +397,14 @@
       }
     };
 
-    const lang = i18n[browserLang] || i18n.es;
+    // Get current language (will be updated when API returns user language)
+    function getLang() {
+      return i18n[userLang] || i18n.es;
+    }
 
     // Format date
     function formatDate(date) {
+      const lang = getLang();
       const now = new Date();
       const d = new Date(date);
       const dayName = lang.days[d.getDay()];
@@ -458,8 +419,9 @@
       return `${dayName} ${monthName} ${dayNum}`;
     }
 
-    // Apply localization
+    // Apply localization based on current userLang
     function applyLocalization() {
+      const lang = getLang();
       document.getElementById('loadingText').textContent = lang.loading;
       document.getElementById('emptyTitle').textContent = lang.emptyTitle;
       document.getElementById('emptyText').textContent = lang.emptyText;
@@ -493,6 +455,13 @@
         if (data && data.summary) {
           summaryData = data;
           summaryText = data.summary;
+
+          // Update language from API response if available
+          if (data.language && i18n[data.language]) {
+            userLang = data.language;
+            applyLocalization(); // Re-apply with new language
+          }
+
           renderSummary(data);
         } else {
           showEmpty();
@@ -594,6 +563,7 @@
     async function copyForDoctor() {
       if (!summaryText) return;
 
+      const lang = getLang();
       const textToCopy = summaryText + '\n\n---\n' + lang.footer;
 
       try {
