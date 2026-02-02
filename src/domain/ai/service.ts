@@ -158,6 +158,7 @@ export class AIService {
 
   /**
    * Get the summary link text in the appropriate language
+   * Only shown after summaries, not on every message
    */
   private getSummaryLinkText(language: string, userId: string): string {
     const link = `https://carelog.vivebien.io/${userId}`;
