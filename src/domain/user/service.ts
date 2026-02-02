@@ -137,7 +137,7 @@ export class UserService {
     }
   }
 
-  async updateLanguage(userId: string, language: 'es' | 'en'): Promise<void> {
+  async updateLanguage(userId: string, language: 'es' | 'en' | 'pt' | 'fr'): Promise<void> {
     await this.db.query(
       'UPDATE users SET language = $1 WHERE id = $2',
       [language, userId]

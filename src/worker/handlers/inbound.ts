@@ -93,6 +93,62 @@ function extractUserName(userMessage: string, recentMessages: Message[]): string
   return capitalizedName;
 }
 
+/**
+ * Detect the language of a message based on common patterns
+ * Returns 'es', 'en', 'pt', 'fr' or null if uncertain
+ */
+function detectLanguage(message: string): 'es' | 'en' | 'pt' | 'fr' | null {
+  const lower = message.toLowerCase();
+
+  // Portuguese patterns (check first as it's similar to Spanish)
+  const ptPatterns = [
+    /\b(você|voce|oi|olá|ola|obrigad[oa]|tudo bem|estou|tenho|não|nao|meu|minha|como)\b/i,
+    /\b(está|esta|bom dia|boa tarde|boa noite|por favor)\b/i,
+    /ção\b/i, // common Portuguese suffix
+    /ões\b/i, // common Portuguese suffix
+  ];
+  const ptScore = ptPatterns.filter(p => p.test(lower)).length;
+
+  // Spanish patterns
+  const esPatterns = [
+    /\b(hola|estoy|tengo|cómo|como estás|buenos días|buenas tardes|por favor|gracias)\b/i,
+    /\b(qué|que|cuál|cual|cuándo|cuando|dónde|donde|el|la|los|las|mi|mis)\b/i,
+    /ción\b/i, // common Spanish suffix
+  ];
+  const esScore = esPatterns.filter(p => p.test(lower)).length;
+
+  // English patterns
+  const enPatterns = [
+    /\b(hello|hi|how are you|i am|i'm|i have|the|my|is|are|what|when|where|please|thank)\b/i,
+    /\b(good morning|good afternoon|good evening|today|yesterday|tomorrow)\b/i,
+    /ing\b/i, // common English suffix
+  ];
+  const enScore = enPatterns.filter(p => p.test(lower)).length;
+
+  // French patterns
+  const frPatterns = [
+    /\b(bonjour|salut|je suis|j'ai|comment|merci|s'il vous plaît|oui|non)\b/i,
+    /\b(le|la|les|mon|ma|mes|que|qui|où)\b/i,
+    /tion\b/i, // common French suffix
+  ];
+  const frScore = frPatterns.filter(p => p.test(lower)).length;
+
+  // Determine winner (need at least 2 matches to be confident)
+  const scores = [
+    { lang: 'pt' as const, score: ptScore },
+    { lang: 'es' as const, score: esScore },
+    { lang: 'en' as const, score: enScore },
+    { lang: 'fr' as const, score: frScore },
+  ].sort((a, b) => b.score - a.score);
+
+  // Need clear winner with at least 2 matches
+  if (scores[0].score >= 2 && scores[0].score > scores[1].score) {
+    return scores[0].lang;
+  }
+
+  return null;
+}
+
 const userService = new UserService(db);
 const creditService = new CreditService(db);
 const conversationService = new ConversationService(db);
@@ -142,6 +198,21 @@ export async function handleInboundMessage(
     async () => conversationService.loadContext(user.id, conversationId),
     logger
   );
+
+  // Step 3.5: Detect and update language on first few messages
+  if (user.isNew || context.messageCount < 3) {
+    const detectedLang = detectLanguage(message);
+    if (detectedLang && detectedLang !== user.language) {
+      await logExecution(
+        correlationId,
+        'update_language',
+        async () => userService.updateLanguage(user.id, detectedLang),
+        logger
+      );
+      user.language = detectedLang;
+      logger.info({ userId: user.id, language: detectedLang }, 'User language updated');
+    }
+  }
 
   // Step 4: Process message content (handle media if present)
   let processedMessage = message;

@@ -123,9 +123,40 @@ Link appears after AI generates a summary in WhatsApp.
 
 ### Test Phone: +12017370113
 
-### Clear Test Data:
+### Clear Test Data (via n8n):
+Use the CareLog_Claude Database Access workflow (ID: `AofV_qusW1Vz9XZQtIksN`) to clear test data.
+
+**Execute these queries in order:**
 ```sql
-DELETE FROM users WHERE phone IN ('+12017370113', '2017370113');
+-- 1. Delete messages
+DELETE FROM messages WHERE user_id IN (SELECT id FROM users WHERE phone IN ('+12017370113', '12017370113', '2017370113'));
+
+-- 2. Delete memories
+DELETE FROM memories WHERE user_id IN (SELECT id FROM users WHERE phone IN ('+12017370113', '12017370113', '2017370113'));
+
+-- 3. Delete conversation state
+DELETE FROM conversation_state WHERE user_id IN (SELECT id FROM users WHERE phone IN ('+12017370113', '12017370113', '2017370113'));
+
+-- 4. Delete billing accounts
+DELETE FROM billing_accounts WHERE user_id IN (SELECT id FROM users WHERE phone IN ('+12017370113', '12017370113', '2017370113'));
+
+-- 5. Delete user (run last)
+DELETE FROM users WHERE phone IN ('+12017370113', '12017370113', '2017370113') RETURNING phone;
+```
+
+**MCP Execute Format:**
+```json
+{
+  "workflowId": "AofV_qusW1Vz9XZQtIksN",
+  "inputs": {
+    "type": "webhook",
+    "webhookData": {
+      "body": {
+        "sql": "DELETE FROM messages WHERE user_id IN (SELECT id FROM users WHERE phone IN ('+12017370113', '12017370113', '2017370113'))"
+      }
+    }
+  }
+}
 ```
 
 ### Quick Summary: Say "dame mi resumen" or "ver resumen"
@@ -140,6 +171,47 @@ git add -A && git commit -m "message" && git push
 Then in Easypanel deploy BOTH:
 1. vivebien-core-api → Deploy
 2. vivebien-core-worker → Deploy
+
+## n8n Workflows
+
+### Claude DevOps Gateway (Claude_DevOps_Gateway_v3)
+Direct database and project access for Claude assistants.
+
+**Webhook URL**: `https://projecto-1-n8n.yydhsb.easypanel.host/webhook/claude-devops`
+
+**Available Tools:**
+
+| Tool | Description | Example |
+|------|-------------|---------|
+| `database` | Execute raw SQL queries | `{ "tool": "database", "query": "SELECT * FROM users LIMIT 5" }` |
+| `get_context` | Get project status, priorities, stats | `{ "tool": "get_context" }` |
+| `health_check` | Check gateway status | `{ "tool": "health_check" }` |
+
+**Usage (via MCP):**
+```javascript
+// Execute workflow with tool and query
+{
+  "tool": "database",
+  "query": "UPDATE users SET language = 'pt' WHERE id = 'user-uuid'"
+}
+```
+
+**get_context returns:**
+- Project version, phase, status
+- Current focus area and next steps
+- Health metrics (active users, credits, errors)
+- Top 5 pending optimizations
+- Known issues and recent changes
+
+### CareLog Claude Database Access
+Alternative database access workflow for summary queries.
+
+**Workflow ID**: `AofV_qusW1Vz9XZQtIksN`
+
+### ViveBien DevOps Workflow Updater
+Allows updating n8n workflows programmatically.
+
+**Workflow ID**: `KuemMBFSQcwHyBkXAP50R`
 
 ## Notes
 - If summary link doesn't appear, check BOTH services are deployed
