@@ -40,10 +40,54 @@
       padding-bottom: 120px;
     }
 
+    /* Logo */
+    .logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    .logo-icon {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .logo-icon span {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .logo-icon span::before {
+      content: '';
+      width: 5px;
+      height: 5px;
+      background: var(--primary);
+      border-radius: 50%;
+    }
+
+    .logo-icon span::after {
+      content: '';
+      width: 14px;
+      height: 2px;
+      background: var(--primary);
+      border-radius: 1px;
+    }
+
+    .logo-text {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--primary);
+      letter-spacing: 0.3px;
+    }
+
     /* Header */
     .header {
       text-align: center;
-      margin-bottom: 28px;
+      margin-bottom: 24px;
     }
 
     .header h1 {
@@ -68,20 +112,6 @@
       padding: 28px 24px;
       box-shadow: var(--shadow);
       margin-bottom: 20px;
-    }
-
-    .card-brand {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 20px;
-    }
-
-    .card-brand span {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--primary);
-      letter-spacing: 0.3px;
     }
 
     .card-content {
@@ -262,6 +292,16 @@
 </head>
 <body>
   <div class="container">
+    <!-- Logo -->
+    <div class="logo">
+      <div class="logo-icon">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+      <span class="logo-text">CareLog</span>
+    </div>
+
     <!-- Header -->
     <div class="header">
       <h1 id="userName">Usuario</h1>
@@ -278,9 +318,6 @@
     <div id="content" style="display: none;">
       <!-- Main Card -->
       <div class="card">
-        <div class="card-brand">
-          <span>CareLog</span>
-        </div>
         <div class="card-content" id="summaryContent">-</div>
       </div>
 
