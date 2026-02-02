@@ -138,6 +138,7 @@ export class AIService {
       cleaned = cleaned.substring(0, 3997) + '...';
     }
 
+    console.log(`[postProcess] FINAL OUTPUT (last 200 chars): ...${cleaned.slice(-200)}`);
     return cleaned;
   }
 
