@@ -343,17 +343,7 @@ Never mix languages. Never default to Spanish unless user writes in Spanish.
 The user's first message determines the language for the conversation.
 ${userLanguage ? `User's stored language preference: ${userLanguage}` : 'No stored preference - detect from user message.'}`;
 
-    // Add user context for summary link - THIS IS CRITICAL
-    prompt += `\n\n⚠️ MANDATORY SUMMARY LINK ⚠️
-After EVERY summary you generate, you MUST include this exact line at the end:
-
-For Spanish: "También puedes verlo aquí: https://carelog.vivebien.io/${context.userId}"
-For English: "You can also view it here: https://carelog.vivebien.io/${context.userId}"
-For Portuguese: "Você também pode ver aqui: https://carelog.vivebien.io/${context.userId}"
-For French: "Vous pouvez aussi le voir ici: https://carelog.vivebien.io/${context.userId}"
-
-This is NOT optional. Every time you show a summary to the user, include the link.
-User ID for this conversation: ${context.userId}`;
+    // Note: Summary link is added automatically by postProcess - do not instruct AI to add it
 
     return prompt;
   }

@@ -121,10 +121,9 @@ export class AIService {
     // Trim whitespace
     cleaned = cleaned.trim();
 
-    // TEMPORARILY: Always add link to test if it appears
-    if (userId) {
+    // Add summary link only for summary messages, if not already present
+    if (userId && this.looksLikeSummary(cleaned) && !cleaned.includes('carelog.vivebien.io')) {
       const linkText = this.getSummaryLinkText(language || 'es', userId);
-      console.log(`[postProcess] FORCE adding link: ${linkText}`);
       cleaned += '\n\n' + linkText;
     }
 
@@ -132,8 +131,6 @@ export class AIService {
     if (cleaned.length > 4000) {
       cleaned = cleaned.substring(0, 3997) + '...';
     }
-
-    console.log(`[postProcess] FINAL OUTPUT (last 200 chars): ...${cleaned.slice(-200)}`);
     return cleaned;
   }
 
@@ -165,10 +162,10 @@ export class AIService {
   private getSummaryLinkText(language: string, userId: string): string {
     const link = `https://carelog.vivebien.io/summary/${userId}`;
     const texts: Record<string, string> = {
-      es: `También puedes verlo aquí: ${link}`,
-      en: `You can also view it here: ${link}`,
-      pt: `Você também pode ver aqui: ${link}`,
-      fr: `Vous pouvez aussi le voir ici: ${link}`,
+      es: `📋 Ver tu resumen completo:\n${link}`,
+      en: `📋 View your full summary:\n${link}`,
+      pt: `📋 Ver seu resumo completo:\n${link}`,
+      fr: `📋 Voir votre résumé complet:\n${link}`,
     };
     return texts[language] || texts.es!;
   }
