@@ -314,7 +314,7 @@ Rules:
 - Mark unknowns as "not provided" or omit section
 - Concise, scannable bullets
 - No emojis or exclamation marks
-- Write entirely in ${languageName}`
+- CRITICAL: Do NOT translate the user's original words. Keep symptoms, descriptions, and medical terms exactly as the user wrote them. Only use ${languageName} for section headers and structure.`
       : `You are Confianza. Create a doctor-ready health record from this conversation.
 
 ENTRIES:
@@ -351,7 +351,7 @@ Rules:
 - Concise, scannable bullets
 - No emojis or exclamation marks
 - Only include sections where information exists
-- Write entirely in ${languageName}`;
+- CRITICAL: Do NOT translate the user's original words. Keep symptoms, descriptions, and medical terms exactly as the user wrote them. Only use ${languageName} for section headers and structure.`;
 
     try {
       // Use Sonnet for summaries (cost-effective for structured output)
