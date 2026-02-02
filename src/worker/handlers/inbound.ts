@@ -1,5 +1,5 @@
 import { Logger } from 'pino';
-import { InboundJobData, JobResult, ConversationContext } from '../../shared/types';
+import { InboundJobData, JobResult, ConversationContext, Message } from '../../shared/types';
 import { UserService } from '../../domain/user/service';
 import { CreditService } from '../../domain/credits/service';
 import { ConversationService } from '../../domain/conversation/service';
@@ -7,6 +7,91 @@ import { AIService } from '../../domain/ai/service';
 import { ChatwootClient } from '../../adapters/chatwoot/client';
 import { db } from '../../infra/db/client';
 import { logExecution } from '../../infra/logging/logger';
+
+/**
+ * Detect if the AI asked for the user's name and extract it from the response
+ * Returns the name if found, null otherwise
+ */
+function extractUserName(userMessage: string, recentMessages: Message[]): string | null {
+  // Check if the previous assistant message asked for a name
+  const lastAssistantMessage = recentMessages
+    .slice()
+    .reverse()
+    .find(m => m.role === 'assistant');
+
+  if (!lastAssistantMessage) {
+    return null;
+  }
+
+  // Name request patterns in multiple languages
+  const nameRequestPatterns = [
+    /cómo te gustaría que te llame/i,
+    /cómo te llamas/i,
+    /cuál es tu nombre/i,
+    /what would you like me to call you/i,
+    /what's your name/i,
+    /what is your name/i,
+    /como você gostaria que eu te chamasse/i,
+    /qual é o seu nome/i,
+    /comment aimeriez-vous que je vous appelle/i,
+    /quel est votre nom/i,
+  ];
+
+  const askedForName = nameRequestPatterns.some(pattern =>
+    pattern.test(lastAssistantMessage.content)
+  );
+
+  if (!askedForName) {
+    return null;
+  }
+
+  // User declined to provide name
+  const declinePatterns = [
+    /no\s*(,|\.|\s|$)/i,
+    /skip/i,
+    /omitir/i,
+    /prefiero no/i,
+    /no (quiero|deseo)/i,
+    /pular/i,
+    /ignorer/i,
+    /prefer not/i,
+  ];
+
+  if (declinePatterns.some(pattern => pattern.test(userMessage))) {
+    return null;
+  }
+
+  // Clean and validate the user's response as a name
+  const cleaned = userMessage
+    .trim()
+    // Remove common prefixes like "me llamo", "my name is", etc.
+    .replace(/^(me llamo|soy|mi nombre es|my name is|i'm|i am|je suis|je m'appelle|meu nome é|me chamo)\s+/i, '')
+    // Remove punctuation
+    .replace(/[.,!?¿¡]+$/g, '')
+    .trim();
+
+  // Validate: should be 1-4 words, each 2-20 characters, no numbers or special chars
+  const words = cleaned.split(/\s+/);
+  if (words.length < 1 || words.length > 4) {
+    return null;
+  }
+
+  const isValidName = words.every(word => {
+    // Each word should be 2-20 chars, only letters (including accented)
+    return /^[\p{L}]{2,20}$/u.test(word);
+  });
+
+  if (!isValidName) {
+    return null;
+  }
+
+  // Capitalize each word
+  const capitalizedName = words
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+
+  return capitalizedName;
+}
 
 const userService = new UserService(db);
 const creditService = new CreditService(db);
@@ -112,7 +197,23 @@ export async function handleInboundMessage(
     logger
   );
 
-  // Step 10: Confirm credit debit
+  // Step 10: Extract and save user name if provided during onboarding
+  if (context.phase === 'onboarding' && !user.name) {
+    const recentMessages = await conversationService.getRecentMessages(user.id, 5);
+    const extractedName = extractUserName(processedMessage, recentMessages);
+
+    if (extractedName) {
+      await logExecution(
+        correlationId,
+        'save_user_name',
+        async () => userService.updateName(user.id, extractedName),
+        logger
+      );
+      logger.info({ userId: user.id, name: extractedName }, 'User name extracted and saved');
+    }
+  }
+
+  // Step 11: Confirm credit debit
   if (creditCheck.reservationId) {
     await logExecution(
       correlationId,
@@ -122,7 +223,7 @@ export async function handleInboundMessage(
     );
   }
 
-  // Step 11: Send response via Chatwoot
+  // Step 12: Send response via Chatwoot
   await logExecution(
     correlationId,
     'send_response',
@@ -130,7 +231,7 @@ export async function handleInboundMessage(
     logger
   );
 
-  // Step 12: Update conversation state
+  // Step 13: Update conversation state
   await logExecution(
     correlationId,
     'update_state',
@@ -138,7 +239,7 @@ export async function handleInboundMessage(
     logger
   );
 
-  // Step 13: Update health summary (async, non-blocking for response)
+  // Step 14: Update health summary (async, non-blocking for response)
   // This runs in background to update the live summary for the website
   logExecution(
     correlationId,
