@@ -6,7 +6,7 @@
   <title>CareLog - Tu Resumen de Salud</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600&family=Outfit:wght@300;400;500;700&display=swap" rel="stylesheet">
   <style>
     * {
       margin: 0;
@@ -15,29 +15,28 @@
     }
 
     :root {
-      --bg: #F5F0E8;
-      --card-bg: #FDFCFA;
-      --primary: #1D7A6F;
-      --primary-dark: #2D4F4A;
-      --text: #2D2D2D;
-      --text-muted: #8B8680;
-      --text-light: #6B6660;
-      --shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+      --bg: #F9F6F0;
+      --card-bg: #FFFFFF;
+      --primary: #2E915E;
+      --btn-color: #216F64;
+      --link-color: #885955;
+      --text: #373737;
+      --text-dark: #000000;
+      --footer-bg: #DFD6CB;
     }
 
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
-      line-height: 1.6;
     }
 
     .container {
-      max-width: 420px;
+      max-width: 402px;
       margin: 0 auto;
-      padding: 32px 20px;
-      padding-bottom: 120px;
+      padding: 22px 22px 180px 22px;
+      min-height: 100vh;
     }
 
     /* Logo */
@@ -45,79 +44,52 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
       margin-bottom: 24px;
     }
 
-    .logo-icon {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .logo-icon span {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-
-    .logo-icon span::before {
-      content: '';
-      width: 5px;
-      height: 5px;
-      background: var(--primary);
-      border-radius: 50%;
-    }
-
-    .logo-icon span::after {
-      content: '';
-      width: 14px;
-      height: 2px;
-      background: var(--primary);
-      border-radius: 1px;
-    }
-
-    .logo-text {
-      font-size: 16px;
-      font-weight: 600;
-      color: var(--primary);
-      letter-spacing: 0.3px;
+    .logo img {
+      height: 27px;
+      width: auto;
     }
 
     /* Header */
     .header {
       text-align: center;
-      margin-bottom: 24px;
+      margin-bottom: 20px;
     }
 
     .header h1 {
-      font-family: 'Playfair Display', Georgia, serif;
+      font-family: 'Lora', Georgia, serif;
       font-size: 32px;
       font-weight: 500;
       color: var(--text);
-      margin-bottom: 4px;
-      letter-spacing: -0.5px;
+      line-height: 28px;
+      margin-bottom: 8px;
     }
 
     .header .date {
-      color: var(--text-muted);
-      font-size: 14px;
-      font-weight: 400;
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      font-weight: 300;
+      color: var(--text-dark);
+      opacity: 0.5;
+      line-height: 20px;
     }
 
     /* Main Card */
     .card {
       background: var(--card-bg);
-      border-radius: 20px;
-      padding: 28px 24px;
-      box-shadow: var(--shadow);
-      margin-bottom: 20px;
+      border-radius: 15px;
+      padding: 32px 24px;
+      margin-bottom: 24px;
     }
 
     .card-content {
-      font-size: 17px;
-      line-height: 1.7;
-      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      font-size: 20px;
+      font-weight: 300;
+      line-height: 40px;
+      color: var(--text-dark);
       text-align: center;
     }
 
@@ -125,32 +97,31 @@
     .action-links {
       display: flex;
       justify-content: center;
-      gap: 24px;
-      margin-bottom: 32px;
+      gap: 32px;
+      margin-bottom: 28px;
     }
 
     .action-links a {
-      color: #885955;
-      font-size: 14px;
-      font-weight: 500;
+      font-family: 'Outfit', sans-serif;
+      color: var(--link-color);
+      font-size: 13px;
+      font-weight: 700;
       text-decoration: underline;
+      line-height: 35px;
       cursor: pointer;
-    }
-
-    .action-links a:hover {
-      color: #6d4744;
     }
 
     /* Live Updates */
     .live-updates {
       text-align: center;
-      margin-bottom: 24px;
+      margin-bottom: 20px;
     }
 
     .live-badge {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
+      justify-content: center;
+      gap: 6px;
       margin-bottom: 8px;
     }
 
@@ -158,7 +129,7 @@
       width: 10px;
       height: 10px;
       background: var(--primary);
-      border-radius: 50%;
+      border-radius: 9999px;
       animation: pulse 2s infinite;
     }
 
@@ -168,16 +139,38 @@
     }
 
     .live-badge span {
+      font-family: 'Outfit', sans-serif;
       font-size: 14px;
-      font-weight: 600;
+      font-weight: 500;
       color: var(--primary);
+      line-height: 28px;
     }
 
     .live-updates p {
-      font-size: 13px;
-      color: var(--text-muted);
-      line-height: 1.5;
-      max-width: 280px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      font-weight: 300;
+      color: var(--text-dark);
+      opacity: 0.5;
+      line-height: 20px;
+      max-width: 287px;
+      margin: 0 auto;
+    }
+
+    /* Disclaimer */
+    .disclaimer {
+      text-align: center;
+      margin-top: 24px;
+    }
+
+    .disclaimer p {
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      font-weight: 300;
+      color: var(--text-dark);
+      opacity: 0.5;
+      line-height: 20px;
+      max-width: 287px;
       margin: 0 auto;
     }
 
@@ -187,51 +180,31 @@
       bottom: 0;
       left: 0;
       right: 0;
-      background: var(--bg);
-      padding: 16px 20px 24px;
+      background: var(--footer-bg);
+      padding: 28px 32px;
       display: flex;
       justify-content: center;
-      gap: 12px;
-    }
-
-    .footer-actions::before {
-      content: '';
-      position: absolute;
-      top: -20px;
-      left: 0;
-      right: 0;
-      height: 20px;
-      background: linear-gradient(to top, var(--bg), transparent);
-      pointer-events: none;
+      gap: 14px;
     }
 
     .btn {
-      padding: 14px 24px;
-      border-radius: 24px;
-      font-size: 14px;
-      font-weight: 600;
+      padding: 14px 20px;
+      border-radius: 10px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 21px;
       border: none;
       cursor: pointer;
       transition: all 0.2s;
-      white-space: nowrap;
-    }
-
-    .btn-dark {
-      background: var(--primary-dark);
+      background: var(--btn-color);
       color: white;
+      min-width: 145px;
+      text-align: center;
     }
 
-    .btn-dark:hover {
-      background: #1f3d38;
-    }
-
-    .btn-primary {
-      background: var(--primary);
-      color: white;
-    }
-
-    .btn-primary:hover {
-      background: #166b62;
+    .btn:hover {
+      opacity: 0.9;
     }
 
     /* Loading state */
@@ -255,8 +228,10 @@
     }
 
     .loading p {
-      color: var(--text-muted);
-      font-size: 14px;
+      font-family: 'Outfit', sans-serif;
+      color: var(--text-dark);
+      opacity: 0.5;
+      font-size: 15px;
     }
 
     /* Empty state */
@@ -268,13 +243,13 @@
     .empty-state svg {
       width: 64px;
       height: 64px;
-      color: var(--text-muted);
+      color: var(--text);
       margin-bottom: 16px;
-      opacity: 0.5;
+      opacity: 0.3;
     }
 
     .empty-state h3 {
-      font-family: 'Playfair Display', Georgia, serif;
+      font-family: 'Lora', Georgia, serif;
       font-size: 20px;
       font-weight: 500;
       margin-bottom: 8px;
@@ -282,9 +257,11 @@
     }
 
     .empty-state p {
-      color: var(--text-muted);
-      font-size: 14px;
-      line-height: 1.5;
+      font-family: 'Outfit', sans-serif;
+      color: var(--text-dark);
+      opacity: 0.5;
+      font-size: 15px;
+      line-height: 20px;
       max-width: 260px;
       margin: 0 auto;
     }
@@ -294,12 +271,7 @@
   <div class="container">
     <!-- Logo -->
     <div class="logo">
-      <div class="logo-icon">
-        <span></span>
-        <span></span>
-        <span></span>
-      </div>
-      <span class="logo-text">CareLog</span>
+      <img src="logo.svg" alt="CareLog">
     </div>
 
     <!-- Header -->
@@ -335,6 +307,11 @@
         </div>
         <p id="liveDescription">Este resumen se actualiza automáticamente cuando compartes nuevos síntomas o cambios.</p>
       </div>
+
+      <!-- Disclaimer -->
+      <div class="disclaimer">
+        <p id="disclaimerText">Este registro fue generado por Confianza como herramienta de preparación. No sustituye la evaluación médica profesional.</p>
+      </div>
     </div>
 
     <!-- Empty State -->
@@ -349,8 +326,8 @@
 
   <!-- Footer Actions -->
   <div class="footer-actions">
-    <button class="btn btn-dark" onclick="copyForDoctor()" id="doctorBtn">Version para tu Doctor</button>
-    <button class="btn btn-primary" onclick="nextAppointment()" id="appointmentBtn">Proxima consulta</button>
+    <button class="btn" onclick="copyForDoctor()" id="doctorBtn">Version para tu Doctor</button>
+    <button class="btn" onclick="nextAppointment()" id="appointmentBtn">Proxima consulta</button>
   </div>
 
   <script>
@@ -376,6 +353,7 @@
         historyLink: 'Ver Historia',
         liveText: 'Updates Live',
         liveDescription: 'Este resumen se actualiza automáticamente cuando compartes nuevos síntomas o cambios.',
+        disclaimer: 'Este registro fue generado por Confianza como herramienta de preparación. No sustituye la evaluación médica profesional.',
         doctorBtn: 'Version para tu Doctor',
         appointmentBtn: 'Proxima consulta',
         copied: '¡Copiado!',
@@ -392,6 +370,7 @@
         historyLink: 'View History',
         liveText: 'Updates Live',
         liveDescription: 'This summary updates automatically when you share new symptoms or changes.',
+        disclaimer: 'This record was generated by Confianza as a preparation tool. It does not replace professional medical evaluation.',
         doctorBtn: 'Version for your Doctor',
         appointmentBtn: 'Next appointment',
         copied: 'Copied!',
@@ -408,6 +387,7 @@
         historyLink: 'Ver Histórico',
         liveText: 'Atualiza ao vivo',
         liveDescription: 'Este resumo é atualizado automaticamente quando você compartilha novos sintomas ou mudanças.',
+        disclaimer: 'Este registro foi gerado pelo Confianza como ferramenta de preparação. Não substitui a avaliação médica profissional.',
         doctorBtn: 'Versão para seu Médico',
         appointmentBtn: 'Próxima consulta',
         copied: 'Copiado!',
@@ -424,6 +404,7 @@
         historyLink: 'Voir l\'historique',
         liveText: 'Mise à jour en direct',
         liveDescription: 'Ce résumé se met à jour automatiquement lorsque vous partagez de nouveaux symptômes ou changements.',
+        disclaimer: 'Ce dossier a été généré par Confianza comme outil de préparation. Il ne remplace pas l\'évaluation médicale professionnelle.',
         doctorBtn: 'Version pour votre Médecin',
         appointmentBtn: 'Prochain rendez-vous',
         copied: 'Copié!',
@@ -434,7 +415,7 @@
       }
     };
 
-    // Get current language (will be updated when API returns user language)
+    // Get current language
     function getLang() {
       return i18n[userLang] || i18n.es;
     }
@@ -456,7 +437,7 @@
       return `${dayName} ${monthName} ${dayNum}`;
     }
 
-    // Apply localization based on current userLang
+    // Apply localization
     function applyLocalization() {
       const lang = getLang();
       document.getElementById('loadingText').textContent = lang.loading;
@@ -466,6 +447,7 @@
       document.getElementById('historyLink').textContent = lang.historyLink;
       document.getElementById('liveText').textContent = lang.liveText;
       document.getElementById('liveDescription').textContent = lang.liveDescription;
+      document.getElementById('disclaimerText').textContent = lang.disclaimer;
       document.getElementById('doctorBtn').textContent = lang.doctorBtn;
       document.getElementById('appointmentBtn').textContent = lang.appointmentBtn;
       document.getElementById('dateText').textContent = formatDate(new Date());
@@ -493,10 +475,10 @@
           summaryData = data;
           summaryText = data.summary;
 
-          // Update language from API response if available
+          // Update language from API response
           if (data.language && i18n[data.language]) {
             userLang = data.language;
-            applyLocalization(); // Re-apply with new language
+            applyLocalization();
           }
 
           renderSummary(data);
@@ -523,21 +505,16 @@
       const updateDate = data.updatedAt ? new Date(data.updatedAt) : new Date();
       document.getElementById('dateText').textContent = formatDate(updateDate);
 
-      // Summary content - convert structured format to prose if needed
+      // Summary content
       let summary = data.summary || '';
-
-      // Clean up the summary for display (remove headers, make it prose-like)
       summary = cleanSummaryForDisplay(summary);
-
       document.getElementById('summaryContent').textContent = summary;
     }
 
-    // Clean summary for display - extract only high-level description
+    // Clean summary for display
     function cleanSummaryForDisplay(text) {
-      // Split into lines and find the main description
       let lines = text.split('\n').map(l => l.trim()).filter(l => l);
 
-      // Patterns to skip (structured data, not prose)
       const skipPatterns = [
         /^(MOTIVO|MAIN|QUEIXA|MOTIF|INICIO|ONSET|INÍCIO|DÉBUT|PATRÓN|PATTERN|PADRÃO|SCHÉMA)/i,
         /^(QUÉ AYUDA|WHAT HELPS|O QUE|CE QUI)/i,
@@ -545,47 +522,40 @@
         /^(Localización|Location|Intensidad|Intensity|Síntomas|Symptoms|Temperatura|Temperature):/i,
         /^(Tipo de dolor|Pain type|Frecuencia|Frequency|Duración|Duration):/i,
         /^(Nota importante|Important note|Observación|Note):/i,
+        /Este registro fue generado/i,
+        /No sustituye la evaluación/i,
+        /herramienta de preparación/i,
+        /This record was generated/i,
+        /does not replace professional/i,
         /^(Hace \w+ días|A few days ago|Fecha actual|Current date):/i,
-        /^¿/, // Questions starting with ¿
-        /^\d+\/\d+/, // Ratings like 10/10
-        /^-\s/, // Bullet points
-        /^#{1,3}\s/, // Markdown headers
-        /^---/, // Horizontal rules
-        /^\*\*/, // Bold markdown
+        /^¿/,
+        /^\d+\/\d+/,
+        /^-\s/,
+        /^#{1,3}\s/,
+        /^---/,
+        /^\*\*/,
         /^Registro de Salud/i,
         /^Health Record/i,
       ];
 
-      // Find prose sentences (not structured data)
       let proseLines = [];
       for (const line of lines) {
-        // Skip if matches any structured pattern
         const isStructured = skipPatterns.some(p => p.test(line));
         if (isStructured) continue;
-
-        // Skip very short lines (likely labels)
         if (line.length < 20) continue;
-
-        // Skip lines that look like field:value pairs
         if (/^[A-Za-záéíóúñü\s]+:\s/.test(line) && line.indexOf(':') < 30) continue;
 
-        // This looks like a prose sentence
         proseLines.push(line);
-
-        // Stop after finding 2-3 good sentences (roughly 250 chars)
         if (proseLines.join(' ').length > 250) break;
       }
 
-      // Join found prose
       let result = proseLines.join(' ')
-        .replace(/\*\*/g, '') // Remove any remaining bold
+        .replace(/\*\*/g, '')
         .replace(/\s{2,}/g, ' ')
         .trim();
 
-      // If we found good prose, return it (max ~300 chars)
       if (result.length > 30) {
         if (result.length > 350) {
-          // Truncate at sentence boundary
           const truncated = result.substring(0, 350);
           const lastPeriod = truncated.lastIndexOf('.');
           if (lastPeriod > 200) {
@@ -596,7 +566,6 @@
         return result;
       }
 
-      // Fallback: take first ~300 chars of cleaned text
       let fallback = text
         .replace(/^#{1,3}\s+/gm, '')
         .replace(/\*\*/g, '')
@@ -648,14 +617,11 @@
         const btn = document.getElementById('doctorBtn');
         const original = btn.textContent;
         btn.textContent = lang.copied;
-        btn.style.background = '#166b62';
 
         setTimeout(() => {
           btn.textContent = original;
-          btn.style.background = '';
         }, 2000);
       } catch (err) {
-        // Fallback for older browsers
         const textarea = document.createElement('textarea');
         textarea.value = textToCopy;
         document.body.appendChild(textarea);
@@ -668,23 +634,20 @@
 
     // Next appointment action
     function nextAppointment() {
-      // Could integrate with calendar or appointment system
       alert('Próximamente: Programar cita');
     }
 
     // Suggest a change
     function suggestChange() {
-      // Could open WhatsApp or feedback form
       alert('Próximamente: Sugerir cambios');
     }
 
     // View history
     function viewHistory() {
-      // Could show timeline of entries
       alert('Próximamente: Ver historial');
     }
 
-    // Start polling for updates
+    // Start polling
     function startPolling() {
       pollInterval = setInterval(fetchSummary, 10000);
     }
