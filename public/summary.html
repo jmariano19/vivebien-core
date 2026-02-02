@@ -78,9 +78,39 @@
     }
 
     .card-brand svg {
-      width: 20px;
-      height: 20px;
+      width: 18px;
+      height: 18px;
       color: var(--primary);
+    }
+
+    .card-brand .icon-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 2px 0;
+    }
+
+    .card-brand .icon-list span {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .card-brand .icon-list span::before {
+      content: '';
+      width: 5px;
+      height: 5px;
+      background: var(--primary);
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .card-brand .icon-list span::after {
+      content: '';
+      width: 14px;
+      height: 2.5px;
+      background: var(--primary);
+      border-radius: 2px;
     }
 
     .card-brand span {
@@ -285,9 +315,11 @@
       <!-- Main Card -->
       <div class="card">
         <div class="card-brand">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-          </svg>
+          <div class="icon-list">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
           <span>CareLog</span>
         </div>
         <div class="card-content" id="summaryContent">-</div>
@@ -337,8 +369,8 @@
     let summaryText = '';
     let pollInterval = null;
 
-    // Detect language from browser
-    const browserLang = navigator.language?.split('-')[0] || 'es';
+    // Default to Spanish (primary user base), only switch for explicit English browsers
+    const browserLang = 'es'; // Force Spanish for now to match design
 
     // Localization
     const i18n = {
@@ -496,29 +528,47 @@
 
     // Clean summary for display (convert structured to prose)
     function cleanSummaryForDisplay(text) {
-      // Remove section headers and format as flowing prose
+      // Remove markdown formatting
       let cleaned = text
+        // Remove markdown headers (# ## ###)
+        .replace(/^#{1,3}\s+/gm, '')
+        // Remove bold markdown
+        .replace(/\*\*([^*]+)\*\*/g, '$1')
+        // Remove italic markdown
+        .replace(/\*([^*]+)\*/g, '$1')
+        // Remove horizontal rules
+        .replace(/^---+$/gm, '')
+        // Remove section headers (all caps with optional slash)
         .replace(/^(MOTIVO PRINCIPAL|MAIN CONCERN|QUEIXA PRINCIPAL|MOTIF PRINCIPAL)\s*/gim, '')
-        .replace(/^(INICIO \/ DURACIÓN|ONSET \/ DURATION|INÍCIO \/ DURAÇÃO|DÉBUT \/ DURÉE)\s*/gim, '')
-        .replace(/^(PATRÓN \/ SEVERIDAD|PATTERN \/ SEVERITY|PADRÃO \/ GRAVIDADE|SCHÉMA \/ GRAVITÉ)\s*/gim, '')
-        .replace(/^(QUÉ AYUDA \/ EMPEORA|WHAT HELPS \/ WORSENS|O QUE AJUDA \/ PIORA|CE QUI AIDE \/ AGGRAVE)\s*/gim, '')
+        .replace(/^(INICIO\s*\/?\s*DURACIÓN|ONSET\s*\/?\s*DURATION|INÍCIO\s*\/?\s*DURAÇÃO|DÉBUT\s*\/?\s*DURÉE)\s*/gim, '')
+        .replace(/^(PATRÓN\s*\/?\s*SEVERIDAD|PATTERN\s*\/?\s*SEVERITY|PADRÃO\s*\/?\s*GRAVIDADE|SCHÉMA\s*\/?\s*GRAVITÉ)\s*/gim, '')
+        .replace(/^(QUÉ AYUDA\s*\/?\s*EMPEORA|WHAT HELPS\s*\/?\s*WORSENS|O QUE AJUDA\s*\/?\s*PIORA|CE QUI AIDE\s*\/?\s*AGGRAVE)\s*/gim, '')
         .replace(/^(MEDICAMENTOS ACTUALES|CURRENT MEDICATIONS|MEDICAMENTOS ATUAIS|MÉDICAMENTS ACTUELS)\s*/gim, '')
         .replace(/^(PREGUNTAS PARA LA VISITA|QUESTIONS FOR VISIT|PERGUNTAS PARA A CONSULTA|QUESTIONS POUR LA VISITE)\s*/gim, '')
         .replace(/^(CRONOLOGÍA|TIMELINE|CRONOLOGIA|CHRONOLOGIE)\s*/gim, '')
+        // Remove "Registro de Salud" and similar headers
+        .replace(/^Registro de Salud\s*/gim, '')
+        .replace(/^Health Record\s*/gim, '')
+        // Remove date placeholders
+        .replace(/Fecha de preparación:\s*\[?Fecha actual\]?\s*/gi, '')
+        .replace(/Date prepared:\s*\[?Current date\]?\s*/gi, '')
+        // Remove bullet point prefixes
         .replace(/^-\s*(Ayuda|Helps|Ajuda|Aide):\s*/gim, '')
         .replace(/^-\s*(Empeora|Worsens|Piora|Aggrave):\s*/gim, '')
         .replace(/^-\s+/gm, '')
-        .replace(/\n{3,}/g, '\n\n')
+        .replace(/^\*\s+/gm, '')
+        // Clean up multiple newlines and spaces
+        .replace(/\n{2,}/g, ' ')
+        .replace(/\s{2,}/g, ' ')
         .trim();
 
-      // If still structured, just return first meaningful paragraph
-      const lines = cleaned.split('\n').filter(l => l.trim());
-      if (lines.length > 0) {
-        // Join lines into flowing prose
-        return lines.slice(0, 4).join(' ').replace(/\s+/g, ' ').trim();
+      // If there's meaningful content, return it
+      if (cleaned.length > 20) {
+        return cleaned;
       }
 
-      return cleaned;
+      // Fallback: return original but cleaned of markdown
+      return text.replace(/[#*_-]{2,}/g, ' ').replace(/\s+/g, ' ').trim();
     }
 
     // Show empty state
@@ -530,9 +580,7 @@
 
     // Show demo data
     function showDemo() {
-      const demoSummary = browserLang === 'en'
-        ? 'Persistent lower back pain for about two weeks, worse in the mornings. Has improved with warm compresses and is currently trying gentle stretches.'
-        : 'Dolor persistente en la parte baja de la espalda desde hace aproximadamente dos semanas, más intenso por las mañanas. Ha mejorado con compresas tibias y actualmente está probando estiramientos suaves.';
+      const demoSummary = 'Dolor persistente en la parte baja de la espalda desde hace aproximadamente dos semanas, más intenso por las mañanas. Ha mejorado con compresas tibias y actualmente está probando estiramientos suaves.';
 
       summaryText = demoSummary;
       renderSummary({
