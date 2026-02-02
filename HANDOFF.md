@@ -107,17 +107,48 @@ Link appears after AI generates a summary in WhatsApp.
 
 ### Working:
 - ✅ WhatsApp conversations via Chatwoot
-- ✅ AI responses with Claude
-- ✅ Summary generation in chat
-- ✅ Summary link after summaries: 📋 Ver mi resumen 👇 + URL
+- ✅ AI responses with Claude (Opus 4.5 for conversations, Sonnet for summaries)
+- ✅ Summary generation in chat with WhatsApp formatting
+- ✅ Summary link after summaries (localized): 📋 View my summary 👇 + URL
 - ✅ Landing page at carelog.vivebien.io/{userId}
 - ✅ Multi-language support (es, en, pt, fr)
+- ✅ Language auto-detection from user messages
+- ✅ Name extraction from conversations
+- ✅ WhatsApp bold formatting (*text*)
 
-### Recent Changes:
-1. Removed duplicate link instructions from AI prompt
-2. Link only on summary messages (looksLikeSummary detection)
-3. Format: 📋 Ver mi resumen 👇 + URL on new line
-4. URL: https://carelog.vivebien.io/{userId}
+### Recent Changes (Feb 2, 2026):
+
+#### WhatsApp Formatting
+- Fixed postProcess() to preserve WhatsApp bold (`*text*`) and italic (`_text_`)
+- Added format template with `📝 *Health Summary*`, `❓ *Questions for your visit*`, `*Would you like to:*`
+- Converts markdown `**bold**` to WhatsApp `*bold*`
+
+#### Language Detection
+- Improved English detection with expanded word list (50+ common words)
+- Counts individual word matches for better accuracy with short messages
+- Handles phrases like "I have a sty on my eye" correctly
+- Falls back to English for ties with high scores
+
+#### Name Extraction
+- Added pattern: "what name would you like me to use for you"
+- Removed onboarding phase restriction (works in any conversation phase)
+- Patterns support es, en, pt, fr languages
+
+#### Summary Generation
+- Summaries preserve user's original words (no translation of symptoms)
+- Only section headers are translated to user's language
+- Doctor-ready format with structured sections
+
+#### Landing Page (public/summary.html)
+- Multi-language localization (i18n object)
+- Logo with SVG fallback: `<img src="/Logo.png" onerror="this.src='/logo.svg'">`
+- User name display from API
+- Live updates badge
+- Clean summary display (removes structured data headers)
+
+### Known Issues:
+- Logo may not load on some deployments (SVG fallback works)
+- Need to deploy BOTH api and worker services after changes
 
 ## Testing
 
@@ -212,6 +243,77 @@ Alternative database access workflow for summary queries.
 Allows updating n8n workflows programmatically.
 
 **Workflow ID**: `KuemMBFSQcwHyBkXAP50R`
+
+## Key Functions Reference
+
+### Language Detection (src/worker/handlers/inbound.ts)
+```typescript
+detectLanguage(message: string): 'es' | 'en' | 'pt' | 'fr' | null
+```
+- Counts word matches for each language
+- Requires 2+ matches for confidence
+- Returns null if no clear winner
+
+### Name Extraction (src/worker/handlers/inbound.ts)
+```typescript
+extractUserName(userMessage: string, recentMessages: Message[]): string | null
+```
+- Checks if previous AI message asked for name
+- Validates name (1-4 words, 2-20 chars each, letters only)
+- Handles prefixes like "my name is", "me llamo", etc.
+
+### Post-Processing (src/domain/ai/service.ts)
+```typescript
+postProcess(content: string, userId?: string, language?: string): string
+```
+- Converts `**markdown**` to `*WhatsApp*` bold
+- Preserves `*text*` and `_text_` formatting
+- Adds summary link if looksLikeSummary() returns true
+- Truncates to 4000 chars (WhatsApp limit)
+
+### Summary Generation (src/domain/ai/service.ts)
+```typescript
+generateSummary(messages: Message[], currentSummary: string | null, language?: string): Promise<string>
+```
+- Uses Claude Sonnet for cost efficiency
+- Generates doctor-ready format with localized headers
+- Preserves user's original symptom descriptions
+
+## Troubleshooting
+
+### WhatsApp Bold Not Working
+1. Check postProcess() isn't stripping asterisks
+2. Verify AI prompt includes `*bold*` in format template
+3. Test with: `*test*` should render bold in WhatsApp
+
+### Landing Page Issues
+| Issue | Solution |
+|-------|----------|
+| Logo not loading | Check Logo.png exists in public/, SVG fallback should work |
+| Wrong language | Verify user.language in DB, check API returns it |
+| Name shows "Usuario" | Check name extraction patterns match AI's question |
+| No summary | Check memories table has health_summary for user |
+
+### Language Detection Not Working
+1. Check user message has 2+ matching words
+2. For English: verify common words like "I", "have", "the", "my" are in message
+3. Check detectLanguage() return value in logs
+
+### Summary Link Not Appearing
+1. Check looksLikeSummary() indicators match response
+2. Verify userId is passed to postProcess()
+3. Check response doesn't already contain carelog.vivebien.io
+
+## Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| ANTHROPIC_API_KEY | Claude API key |
+| DATABASE_URL | PostgreSQL connection string |
+| REDIS_URL | Redis connection string |
+| CHATWOOT_API_KEY | Chatwoot API token |
+| CHATWOOT_BASE_URL | Chatwoot instance URL |
+| PORT | API server port (default: 3000) |
 
 ## Notes
 - If summary link doesn't appear, check BOTH services are deployed

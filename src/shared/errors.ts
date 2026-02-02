@@ -162,6 +162,22 @@ export class ValidationError extends AppError {
 }
 
 // ============================================================================
+// Language/Localization Errors
+// ============================================================================
+
+export class LanguageDetectionError extends AppError {
+  constructor(message: string = 'Could not detect language') {
+    super(message, 400, 'LANGUAGE_DETECTION_FAILED');
+  }
+}
+
+export class UnsupportedLanguageError extends AppError {
+  constructor(language: string) {
+    super(`Unsupported language: ${language}`, 400, 'UNSUPPORTED_LANGUAGE');
+  }
+}
+
+// ============================================================================
 // Error Utilities
 // ============================================================================
 
@@ -186,4 +202,80 @@ export function toAppError(error: unknown): AppError {
   }
 
   return new AppError('Unknown error', 500, 'UNKNOWN_ERROR', false);
+}
+
+/**
+ * Check if error is retryable (transient)
+ */
+export function isRetryableError(error: unknown): boolean {
+  if (isAppError(error)) {
+    // Rate limits and service unavailable are retryable
+    if (error.statusCode === 429 || error.statusCode === 503) {
+      return true;
+    }
+    // External service errors might be transient
+    if (error instanceof ExternalServiceError) {
+      return true;
+    }
+  }
+
+  // Check for common transient error messages
+  if (error instanceof Error) {
+    const message = error.message.toLowerCase();
+    const retryablePatterns = [
+      'timeout',
+      'econnreset',
+      'econnrefused',
+      'network',
+      'temporarily unavailable',
+      'rate limit',
+      'too many requests',
+    ];
+    return retryablePatterns.some(pattern => message.includes(pattern));
+  }
+
+  return false;
+}
+
+/**
+ * Retry a function with exponential backoff
+ */
+export async function withRetry<T>(
+  fn: () => Promise<T>,
+  options: {
+    maxRetries?: number;
+    initialDelayMs?: number;
+    maxDelayMs?: number;
+    shouldRetry?: (error: unknown) => boolean;
+  } = {}
+): Promise<T> {
+  const {
+    maxRetries = 3,
+    initialDelayMs = 1000,
+    maxDelayMs = 10000,
+    shouldRetry = isRetryableError,
+  } = options;
+
+  let lastError: unknown;
+  let delay = initialDelayMs;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+
+      if (attempt === maxRetries || !shouldRetry(error)) {
+        throw error;
+      }
+
+      // Wait before retrying
+      await new Promise(resolve => setTimeout(resolve, delay));
+
+      // Exponential backoff with jitter
+      delay = Math.min(delay * 2 + Math.random() * 1000, maxDelayMs);
+    }
+  }
+
+  throw lastError;
 }
