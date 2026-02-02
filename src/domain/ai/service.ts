@@ -164,7 +164,7 @@ export class AIService {
    * Get the summary link text in the appropriate language
    */
   private getSummaryLinkText(language: string, userId: string): string {
-    const link = `https://carelog.vivebien.io/${userId}`;
+    const link = `https://carelog.vivebien.io/summary/${userId}`;
     const texts: Record<string, string> = {
       es: `También puedes verlo aquí: ${link}`,
       en: `You can also view it here: ${link}`,
