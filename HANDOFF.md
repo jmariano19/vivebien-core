@@ -1,178 +1,149 @@
-# ViveBien / Confianza - Project Handoff
+# ViveBien Core - Project Handoff
 
-## Quick Context
-**Confianza** (formerly Care Log) is a WhatsApp-based AI health companion that helps users track symptoms and prepare doctor-ready summaries between visits.
+## Project Overview
+**ViveBien Core** is a scalable backend service for a WhatsApp-based wellness platform. Users chat via WhatsApp to log health symptoms, and the AI assistant (named "Confianza") helps them prepare summaries for doctor visits.
 
----
-
-## 🔧 How Claude Has Access
-
-### 1. Database Access (via n8n)
-**Workflow:** `CareLog_Claude Database Access`
-**Workflow ID:** `AofV_qusW1Vz9XZQtIksN`
-
-Example query:
+## Architecture
 ```
-Execute workflow with inputs:
-{
-  "type": "webhook",
-  "webhookData": {
-    "body": {
-      "sql": "SELECT * FROM messages ORDER BY created_at DESC LIMIT 10"
-    }
-  }
-}
+WhatsApp → Chatwoot → n8n (thin relay) → vivebien-core API → BullMQ → Workers → Claude AI
+                                                ↓
+                                          PostgreSQL + Redis
 ```
 
-**Database Tables:**
-- `users` - User profiles (id, phone, language, created_at)
-- `messages` - Conversation history (id, user_id, role, content, created_at)
-- `conversation_state` - User state tracking (phase, onboarding_step, message_count)
-- `memories` - Health summaries (id, user_id, content, category='health_summary')
+### Flow:
+1. User sends WhatsApp message
+2. Chatwoot receives it, triggers webhook to n8n
+3. n8n forwards to vivebien-core-api at /ingest/chatwoot
+4. API queues job to BullMQ (Redis)
+5. vivebien-core-worker picks up job, processes with Claude AI
+6. Worker sends response back via Chatwoot API
+7. Summary is saved to memories table for landing page
 
-### 2. n8n Workflows (Only 2)
-| Workflow | Purpose |
-|----------|---------|
-| **Care Log - Chatwoot Relay** | Handles WhatsApp messages via Chatwoot |
-| **CareLog_Claude Database Access** | Database queries for Claude (ID: AofV_qusW1Vz9XZQtIksN) |
+## Tech Stack
+- **Runtime**: Node.js 20+, TypeScript
+- **Framework**: Fastify
+- **Queue**: BullMQ (Redis)
+- **Database**: PostgreSQL 16+
+- **Cache**: Redis 7+
+- **AI**: Anthropic Claude API
+- **Messaging**: Chatwoot (WhatsApp integration)
+- **Automation**: n8n (webhook relay)
 
-### 3. Code Access (Local Folder → GitHub)
-- **Local Path:** `/mnt/vivebien-project/vivebien-core/`
-- **GitHub Repo:** https://github.com/jmariano19/vivebien-core
+## Infrastructure
 
-**Workflow:**
-1. Edit files in `/mnt/vivebien-project/vivebien-core/src/...`
-2. `git add` + `git commit` + `git push`
-3. Deploy manually in Easypanel
+### Easypanel Services (projecto-1)
+| Service | Purpose |
+|---------|---------|
+| vivebien-core-api | API server, receives webhooks, serves landing page |
+| vivebien-core-worker | Processes messages, calls AI, sends responses |
+| vivebien-staging | Staging environment |
+| zep | Memory service (optional) |
 
-### 4. Deployment (Easypanel)
-- **API Service:** vivebien-core-api
-- **Dashboard:** carelog.vivebien.io
+**⚠️ IMPORTANT**: When deploying code changes, you must deploy BOTH vivebien-core-api AND vivebien-core-worker!
 
----
+### Database (PostgreSQL)
+- **Host**: 85.209.95.19:5432
+- **Database**: projecto-1
+- **User**: postgres
+- **Password**: bd894cefacb1c52998f3
 
-## 📁 Key Files
+### Key Tables
+| Table | Purpose |
+|-------|---------|
+| users | User records (id, phone, language, name) |
+| messages | Conversation history |
+| memories | Health summaries (category='health_summary') |
+| conversation_state | Current phase, message count |
 
+## Repository Structure
 ```
-src/domain/ai/service.ts          # Claude API calls, language detection, summary generation
-src/domain/conversation/service.ts # System prompt, templates, safety checks
-src/workers/ingest.worker.ts      # WhatsApp message processing
-src/config.ts                     # Environment variables
-Dockerfile                        # Container config (HEALTHCHECK NONE)
-package.json                      # Dependencies (@fastify/static v6.12.0)
+vivebien-project/
+├── src/
+│   ├── index.ts                 # API server entry point
+│   ├── api/routes/
+│   │   ├── ingest.ts            # Webhook endpoint (/ingest/chatwoot)
+│   │   ├── summary.ts           # Summary API (/api/summary/:userId)
+│   │   └── health.ts            # Health check
+│   ├── domain/
+│   │   ├── ai/service.ts        # AI service, postProcess(), summary link logic
+│   │   ├── conversation/service.ts  # System prompts, updateHealthSummary()
+│   │   └── user/service.ts      # User CRUD
+│   ├── worker/
+│   │   ├── index.ts             # Worker entry point
+│   │   └── handlers/inbound.ts  # Main message handler
+│   └── adapters/chatwoot/client.ts  # Chatwoot API client
+├── public/
+│   ├── index.html               # Admin dashboard
+│   └── summary.html             # Landing page (carelog.vivebien.io/{userId})
+├── Dockerfile
+└── package.json
 ```
 
----
+## Key Code Locations
 
-## 🤖 Current Configuration
+### Summary Link Feature
+Link appears after AI generates a summary in WhatsApp.
 
-### Agent Identity
-- **Name:** Confianza
-- **Description:** AI health companion
-- **Conversation Model:** Claude Opus 4.5 (`claude-opus-4-5-20251101`)
-- **Summary Model:** Claude Sonnet 4.5 (cost-effective)
+**Files:**
+1. src/domain/ai/service.ts
+   - postProcess() - Cleans AI response, adds summary link
+   - looksLikeSummary() - Detects if response is a summary
+   - getSummaryLinkText() - Returns localized link text
 
-### Supported Languages
-- Spanish (es) ✓
-- English (en) ✓
-- Portuguese (pt) ✓
-- French (fr) ✓
+2. src/domain/conversation/service.ts
+   - buildSystemPrompt() - Builds AI system prompt
+   - updateHealthSummary() - Saves summary to memories table
 
-### Onboarding Flow (7 Steps)
-1. 3-Message Open (greeting, boundary, invitation)
-2. Micro-Capture (what, when, pattern)
-3. Immediate "Aha" Output (mini summary)
-4. Name Request (optional, after value)
-5. Trust & Control message
-6. 3 Rails (log, prepare, summarize)
-7. Ongoing conversation
+3. src/worker/handlers/inbound.ts
+   - Main handler: load user → call AI → postProcess → send response
 
-### Safety Checks
-- Medical emergencies → Recommend urgent care
-- Crisis/self-harm → Escalate to crisis protocol
-- Red flags: chest pain, stroke symptoms, pregnancy emergencies
+### Landing Page
+- **URL**: https://carelog.vivebien.io/{userId}
+- **HTML**: public/summary.html
+- **API**: /api/summary/:userId
+- **Data**: memories table where category = 'health_summary'
 
----
+## Current State (Feb 2, 2026)
 
-## 🌐 Live URLs
+### Working:
+- ✅ WhatsApp conversations via Chatwoot
+- ✅ AI responses with Claude
+- ✅ Summary generation in chat
+- ✅ Summary link after summaries: 📋 Ver mi resumen 👇 + URL
+- ✅ Landing page at carelog.vivebien.io/{userId}
+- ✅ Multi-language support (es, en, pt, fr)
 
-| Service | URL |
-|---------|-----|
-| Dashboard | https://carelog.vivebien.io |
-| WhatsApp | Connected via Chatwoot |
+### Recent Changes:
+1. Removed duplicate link instructions from AI prompt
+2. Link only on summary messages (looksLikeSummary detection)
+3. Format: 📋 Ver mi resumen 👇 + URL on new line
+4. URL: https://carelog.vivebien.io/{userId}
 
----
+## Testing
 
-## ✅ What's Working
+### Test Phone: +12017370113
 
-- WhatsApp messages receiving replies
-- Multi-language support (ES, EN, PT, FR)
-- Agent renamed to "Confianza"
-- Claude Opus 4.5 for conversations
-- Dashboard showing health summaries
-- Doctor-ready summary format
-
----
-
-## 🎯 Next Focus Areas
-
-### Immediate
-1. Test language adaptation - Send "hello", "hola", "olá", "bonjour"
-2. Verify deployment is live
-
-### Short-term
-1. Onboarding polish - Fine-tune the 7-step flow
-2. Summary quality - Improve doctor-ready format
-3. Dashboard enhancements
-
-### Future
-1. Visit preparation mode
-2. Timeline view
-3. Export/share summaries
-4. Proactive reminders
-
----
-
-## 💬 Example SQL Queries
-
+### Clear Test Data:
 ```sql
--- Get recent messages
-SELECT * FROM messages ORDER BY created_at DESC LIMIT 10;
-
--- Get user's health summary
-SELECT content FROM memories
-WHERE user_id = '[user-id]' AND category = 'health_summary';
-
--- Check conversation state
-SELECT * FROM conversation_state WHERE user_id = '[user-id]';
-
--- Count messages per user
-SELECT user_id, COUNT(*) FROM messages GROUP BY user_id;
+DELETE FROM users WHERE phone IN ('+12017370113', '2017370113');
 ```
 
----
+### Quick Summary: Say "dame mi resumen" or "ver resumen"
 
-## 🔑 Important Notes
+## Deployment
 
-### Deployment
-- Run `npm run build` locally to check TypeScript errors before pushing
-- Easypanel pulls from GitHub main branch
-- Health check disabled (`HEALTHCHECK NONE` in Dockerfile)
+```bash
+cd ~/Desktop/vivebien-project
+git add -A && git commit -m "message" && git push
+```
 
-### Package Versions
-- `@fastify/static`: v6.12.0 (NOT v9.x - requires Fastify 5.x)
-- Fastify: 4.x
+Then in Easypanel deploy BOTH:
+1. vivebien-core-api → Deploy
+2. vivebien-core-worker → Deploy
 
----
-
-## 🚀 Quick Start for New Session
-
-1. **Tell Claude:** "Read the HANDOFF.md in vivebien-project folder"
-2. **Or paste this context** into a new conversation
-3. Claude will have access to:
-   - Database via n8n workflow `CareLog_Claude Database Access`
-   - Code via local folder `/mnt/vivebien-project/vivebien-core/`
-
----
-
-*Last updated: February 1, 2026*
+## Notes
+- If summary link doesn't appear, check BOTH services are deployed
+- If landing page shows "No summary yet", memories table may not have data
+- System prompt is in conversation/service.ts, not a file
+- AI assistant name: "Confianza"
+- GitHub: https://github.com/jmariano19/vivebien-core
