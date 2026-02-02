@@ -121,16 +121,11 @@ export class AIService {
     // Trim whitespace
     cleaned = cleaned.trim();
 
-    // Add summary link if this looks like a summary response and we have a userId
-    const isSummary = this.looksLikeSummary(cleaned);
-    console.log(`[postProcess] userId: ${userId}, isSummary: ${isSummary}, language: ${language}`);
-    if (userId && isSummary) {
+    // TEMPORARILY: Always add link to test if it appears
+    if (userId) {
       const linkText = this.getSummaryLinkText(language || 'es', userId);
-      console.log(`[postProcess] Adding link: ${linkText}`);
-      // Only add if not already present
-      if (!cleaned.includes('carelog.vivebien.io')) {
-        cleaned += '\n\n' + linkText;
-      }
+      console.log(`[postProcess] FORCE adding link: ${linkText}`);
+      cleaned += '\n\n' + linkText;
     }
 
     // Limit response length (WhatsApp has a 4096 character limit)
