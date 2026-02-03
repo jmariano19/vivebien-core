@@ -272,86 +272,61 @@ export class AIService {
     const languageNames: Record<string, string> = { es: 'Spanish', en: 'English', pt: 'Portuguese', fr: 'French' };
     const languageName = languageNames[detectedLang] || 'English';
 
-    const prompt = currentSummary
-      ? `You are Confianza. Update this doctor-ready health record based on recent entries.
+    // Simplified labels for cleaner summaries
+    const simpleLabels: Record<string, { concern: string; started: string; helps: string; worsens: string; meds: string }> = {
+      es: { concern: 'Motivo', started: 'Inicio', helps: 'Mejora con', worsens: 'Empeora con', meds: 'Medicamentos' },
+      en: { concern: 'Concern', started: 'Started', helps: 'Helps', worsens: 'Worsens', meds: 'Medications' },
+      pt: { concern: 'Queixa', started: 'Início', helps: 'Melhora com', worsens: 'Piora com', meds: 'Medicamentos' },
+      fr: { concern: 'Motif', started: 'Début', helps: 'Améliore', worsens: 'Aggrave', meds: 'Médicaments' },
+    };
+    const sl = simpleLabels[detectedLang] || simpleLabels.en!;
 
-CURRENT RECORD:
+    const prompt = currentSummary
+      ? `You are Constanza. Update this health note based on new information.
+
+CURRENT NOTE:
 ${currentSummary}
 
-RECENT ENTRIES:
+NEW INFORMATION:
 ${conversationText}
 
-Generate an updated doctor-ready record. Use this format (include only sections with information):
+Generate a SIMPLE, CLEAN health note. Use this format:
 
-${headers.mainConcern}
-[Primary symptom or health issue in one clear sentence]
-
-${headers.onset}
-[When it started, how long it has lasted]
-
-${headers.pattern}
-[How often, how severe, any patterns noticed]
-
-${headers.factors}
-- Helps: [what makes it better]
-- Worsens: [what makes it worse]
-
-${headers.medications}
-- [medication]: [dosage], [frequency]
-
-${headers.questions}
-- [question 1]
-- [question 2]
-- [question 3]
-
-${headers.timeline}
-- [date/time]: [what happened]
+${sl.concern}: [what's happening, in one sentence]
+${sl.started}: [when it began]
+${sl.helps}: [what makes it better, if known]
+${sl.worsens}: [what makes it worse, if known]
+${sl.meds}: [any medications, if mentioned]
 
 Rules:
-- Neutral, clinical language
-- No diagnosis certainty
-- Never invent data
-- Mark unknowns as "not provided" or omit section
-- Concise, scannable bullets
-- No emojis or exclamation marks
-- CRITICAL: Do NOT translate the user's original words. Keep symptoms, descriptions, and medical terms exactly as the user wrote them. Only use ${languageName} for section headers and structure.`
-      : `You are Confianza. Create a doctor-ready health record from this conversation.
+- Keep it SHORT and simple (no more than 5 lines)
+- Use the user's exact words when possible
+- ONLY include fields where information was actually provided
+- Do NOT include fields where information is unknown
+- No headers like "MOTIVO PRINCIPAL" - use simple labels
+- No bullet points or complex formatting
+- Write in ${languageName}`
+      : `You are Constanza. Create a simple health note from this conversation.
 
-ENTRIES:
+CONVERSATION:
 ${conversationText}
 
-Generate a structured doctor-ready record. Use this format (include only sections with information):
+Generate a SIMPLE, CLEAN health note. Use this format:
 
-${headers.mainConcern}
-[Primary symptom or health issue in one clear sentence]
-
-${headers.onset}
-[When it started, how long it has lasted]
-
-${headers.pattern}
-[How often, how severe, any patterns noticed]
-
-${headers.factors}
-- Helps: [what makes it better]
-- Worsens: [what makes it worse]
-
-${headers.medications}
-- [medication]: [dosage], [frequency]
-
-${headers.questions}
-- [question 1]
-- [question 2]
-- [question 3]
+${sl.concern}: [what's happening, in one sentence]
+${sl.started}: [when it began]
+${sl.helps}: [what makes it better, if known]
+${sl.worsens}: [what makes it worse, if known]
+${sl.meds}: [any medications, if mentioned]
 
 Rules:
-- Neutral, clinical language
-- No diagnosis certainty
-- Never invent data
-- Mark unknowns as "not provided" or omit section
-- Concise, scannable bullets
-- No emojis or exclamation marks
-- Only include sections where information exists
-- CRITICAL: Do NOT translate the user's original words. Keep symptoms, descriptions, and medical terms exactly as the user wrote them. Only use ${languageName} for section headers and structure.`;
+- Keep it SHORT and simple (no more than 5 lines)
+- Use the user's exact words when possible
+- ONLY include fields where information was actually provided
+- Do NOT include fields where information is unknown
+- No headers like "MOTIVO PRINCIPAL" - use simple labels
+- No bullet points or complex formatting
+- Write in ${languageName}`;
 
     try {
       // Use Sonnet for summaries (cost-effective for structured output)

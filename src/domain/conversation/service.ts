@@ -397,12 +397,12 @@ ${userLanguage ? `User's stored language preference: ${userLanguage}` : 'No stor
         pt: 'Confianza está temporariamente indisponível. Volte em breve.',
         fr: 'Confianza est temporairement indisponible. Revenez bientôt.',
       },
-      // Step 1: First Contact (No AI mention - Value First)
+      // Step 1: First Contact - Transparent AI introduction
       onboarding_greeting: {
-        es: 'Buenos días 👋\nTe ayudo a convertir lo que ha estado pasando con tu salud en una nota clara que puedes compartir con tu médico.\n¿Qué ha estado pasando últimamente?',
-        en: 'Good morning 👋\nI help you turn what\'s been happening with your health into a clear note you can share with your doctor.\nWhat\'s been going on lately?',
-        pt: 'Bom dia 👋\nAjudo você a transformar o que está acontecendo com sua saúde em uma nota clara que pode compartilhar com seu médico.\nO que tem acontecido ultimamente?',
-        fr: 'Bonjour 👋\nJe vous aide à transformer ce qui se passe avec votre santé en une note claire que vous pouvez partager avec votre médecin.\nQu\'est-ce qui se passe dernièrement?',
+        es: 'Hola 👋 Soy Constanza, tu agente de IA.\nTe ayudo a documentar lo que te pasa y organizarlo en una nota clara para tu próxima consulta.\nNo reemplazo médicos — te ayudo a llegar mejor preparado.\n¿Qué te gustaría registrar hoy?',
+        en: 'Hi 👋 I\'m Constanza, your AI agent.\nI help you document what\'s happening and organize it into a clear note for your next appointment.\nI don\'t replace doctors — I help you arrive better prepared.\nWhat would you like to log today?',
+        pt: 'Olá 👋 Sou Constanza, sua agente de IA.\nAjudo você a documentar o que está acontecendo e organizar em uma nota clara para sua próxima consulta.\nNão substituo médicos — ajudo você a chegar mais preparado.\nO que gostaria de registrar hoje?',
+        fr: 'Bonjour 👋 Je suis Constanza, votre agent IA.\nJe vous aide à documenter ce qui se passe et à l\'organiser en une note claire pour votre prochain rendez-vous.\nJe ne remplace pas les médecins — je vous aide à arriver mieux préparé.\nQue souhaitez-vous enregistrer aujourd\'hui?',
       },
       // Step 3: Summary Delivered Message
       summary_delivered: {
@@ -515,17 +515,17 @@ Si vous le souhaitez, je peux préparer un résumé de ce que vous m'avez dit po
   }
 
   private getDefaultSystemPrompt(): string {
-    return `You are CareLog, a health documentation assistant.
+    return `You are Constanza, a friendly AI health documentation assistant.
 
 ═══════════════════════════════════════════════════════════════
 CORE PRINCIPLE (NON-NEGOTIABLE)
 ═══════════════════════════════════════════════════════════════
-Trust is earned through usefulness BEFORE explanation.
+Be transparent, helpful, and conversational.
 
-The AI identity must be disclosed clearly and honestly — but ONLY AFTER
-the user has experienced value (a generated health summary).
+You are "Constanza" - an AI agent that helps users document their health concerns
+and organize them into clear notes for doctor visits.
 
-NEVER introduce the AI identity in the very first message.
+You DON'T replace doctors - you help users arrive better prepared.
 
 ═══════════════════════════════════════════════════════════════
 PRIMARY GOAL OF ONBOARDING
