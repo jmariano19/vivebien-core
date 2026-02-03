@@ -78,111 +78,173 @@
     }
 
     .header {
-      margin-top: 32px;
-      display: flex;
-      align-items: flex-end;
-      justify-content: space-between;
-      gap: 16px;
-    }
-    .header-left {
-      min-width: 0;
+      margin-top: 24px;
+      text-align: center;
     }
     h1 {
       margin: 0;
       font-family: "Lora", serif;
-      font-size: 21px;
+      font-size: 28px;
       font-weight: 500;
-      line-height: 28px;
+      line-height: 34px;
       color: #373737;
     }
     .subtitle {
-      margin-top: 4px;
+      margin-top: 6px;
       font-size: 15px;
       line-height: 20px;
       font-weight: 300;
       color: var(--muted);
     }
 
-    .actions {
+    /* Instruction banner */
+    .instruction-banner {
+      margin-top: 16px;
+      padding: 12px 16px;
+      background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%);
+      border-radius: 12px;
+      border-left: 4px solid var(--brand);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .instruction-banner .icon {
+      font-size: 20px;
+    }
+    .instruction-banner p {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 400;
+      color: #2e7d32;
+      line-height: 20px;
+    }
+
+    /* Action buttons row */
+    .actions-row {
+      margin-top: 16px;
       display: flex;
       gap: 10px;
-      flex-shrink: 0;
+      justify-content: center;
     }
     .action-btn {
-      height: 26px;
-      min-width: 32px;
-      padding: 0 10px;
-      background: var(--brand);
-      color: white;
-      border: none;
-      border-radius: 5px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.25);
-      font-size: 14px;
-      font-weight: 600;
+      height: 40px;
+      padding: 0 16px;
+      background: var(--card);
+      color: var(--text);
+      border: 1.5px solid #e0dcd6;
+      border-radius: 10px;
+      font-family: "Outfit", sans-serif;
+      font-size: 13px;
+      font-weight: 500;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 4px;
+      gap: 6px;
       cursor: pointer;
+      transition: all 0.2s;
     }
     .action-btn:hover {
+      border-color: var(--brand);
+      color: var(--brand);
+    }
+    .action-btn.primary {
+      background: var(--brand);
+      color: white;
+      border-color: var(--brand);
+    }
+    .action-btn.primary:hover {
       opacity: 0.9;
+    }
+    .action-btn .icon {
+      font-size: 16px;
+    }
+
+    /* Toast notification */
+    .toast {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: #333;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 25px;
+      font-size: 14px;
+      font-weight: 500;
+      opacity: 0;
+      transition: all 0.3s ease;
+      z-index: 1000;
+    }
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
     }
 
     .card {
-      margin-top: 18px;
+      margin-top: 16px;
       background: var(--card);
       border-radius: 15px;
-      padding: 18px 16px 14px;
-      max-height: 620px;
-      overflow-y: auto;
-      scrollbar-width: thin;
-      scrollbar-color: #d8d1c6 transparent;
-    }
-    .card::-webkit-scrollbar {
-      width: 6px;
-    }
-    .card::-webkit-scrollbar-track {
-      background: transparent;
-    }
-    .card::-webkit-scrollbar-thumb {
-      background: #d8d1c6;
-      border-radius: 6px;
+      padding: 20px 18px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
     }
 
     .section {
-      margin-bottom: 18px;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #f0ece6;
     }
     .section:last-child {
       margin-bottom: 0;
+      padding-bottom: 0;
+      border-bottom: none;
     }
     .section-title {
-      font-weight: 700;
-      font-size: 16px;
-      line-height: 40px;
+      font-weight: 600;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      margin-bottom: 8px;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
+    }
+    .section-title .icon {
+      font-size: 16px;
     }
     .body-text {
       font-size: 16px;
-      font-weight: 300;
-      line-height: 25px;
+      font-weight: 400;
+      line-height: 26px;
       margin: 0;
+      color: var(--text);
+    }
+    .body-text.highlight {
+      font-size: 18px;
+      font-weight: 500;
+      color: #1a1a1a;
     }
     .hpi-list {
-      margin: 4px 0 0;
+      margin: 8px 0 0;
     }
     .hpi-item {
-      margin: 0 0 6px;
-      line-height: 25px;
-      font-size: 16px;
+      margin: 0 0 10px;
+      line-height: 24px;
+      font-size: 15px;
+      display: flex;
+      gap: 8px;
     }
     .hpi-item:last-child {
       margin-bottom: 0;
     }
     .hpi-item strong {
-      font-weight: 700;
+      font-weight: 600;
+      color: var(--muted);
+      min-width: 100px;
+      flex-shrink: 0;
+    }
+    .hpi-item span {
+      color: var(--text);
     }
 
     .footer {
@@ -233,18 +295,41 @@
       }
       .page {
         width: 100%;
-        padding: 20px;
+        max-width: 100%;
+        padding: 20px 40px;
       }
-      .topbar, .actions {
-        display: none;
-      }
-      .card {
-        max-height: none;
-        box-shadow: none;
-        border: 1px solid #e0e0e0;
+      .topbar, .actions-row, .instruction-banner, .toast {
+        display: none !important;
       }
       .header {
         margin-top: 0;
+        padding-bottom: 16px;
+        border-bottom: 2px solid #333;
+        margin-bottom: 20px;
+      }
+      h1 {
+        font-size: 24px;
+      }
+      .card {
+        box-shadow: none;
+        padding: 0;
+        border: none;
+      }
+      .section {
+        page-break-inside: avoid;
+      }
+      .section-title {
+        font-size: 12px;
+        color: #333;
+      }
+      .body-text {
+        font-size: 14px;
+      }
+      .footer {
+        margin-top: 30px;
+        font-size: 11px;
+        border-top: 1px solid #ccc;
+        padding-top: 10px;
       }
     }
 
@@ -269,6 +354,9 @@
     </div>
   </div>
 
+  <!-- Toast notification -->
+  <div class="toast" id="toast"></div>
+
   <script>
     // Get userId from URL path
     const pathParts = window.location.pathname.split('/');
@@ -282,22 +370,27 @@
         loading: 'Cargando nota...',
         errorTitle: 'Nota no disponible',
         errorText: 'No se pudo cargar la información.',
-        motivo: 'Motivo de consulta:',
-        hpi: 'Historia del problema actual (HPI):',
-        sintomas: 'Síntomas asociados:',
-        medidas: 'Medidas realizadas por el paciente:',
-        objetivos: 'Preguntas / objetivos para la consulta:',
+        instruction: 'Muestra esta pantalla a tu médico durante la consulta',
+        copyBtn: 'Copiar',
+        shareBtn: 'Compartir',
+        printBtn: 'Imprimir',
+        copied: '✓ Copiado al portapapeles',
+        motivo: 'Motivo de consulta',
+        hpi: 'Historia del problema actual',
+        sintomas: 'Síntomas asociados',
+        medidas: 'Medidas realizadas',
+        objetivos: 'Preguntas para el médico',
         disclaimer: 'Este registro fue generado por CareLog como herramienta de preparación. No sustituye la evaluación médica profesional.',
         noReportados: 'No reportados.',
         defaultObjetivo: 'Evaluar la causa y definir recomendaciones adicionales de manejo.',
         hpiLabels: {
-          inicio: 'Inicio:',
-          duracion: 'Duración:',
-          localizacion: 'Localización:',
-          caracteristicas: 'Características:',
-          evolucion: 'Evolución:',
-          factoresAlivian: 'Factores que alivian:',
-          factoresAgravan: 'Factores que agravan:'
+          inicio: 'Inicio',
+          duracion: 'Duración',
+          localizacion: 'Localización',
+          caracteristicas: 'Características',
+          evolucion: 'Evolución',
+          factoresAlivian: 'Alivia',
+          factoresAgravan: 'Agrava'
         }
       },
       en: {
@@ -306,22 +399,27 @@
         loading: 'Loading note...',
         errorTitle: 'Note unavailable',
         errorText: 'Could not load the information.',
-        motivo: 'Chief Complaint:',
-        hpi: 'History of Present Illness (HPI):',
-        sintomas: 'Associated Symptoms:',
-        medidas: 'Patient Self-Care Measures:',
-        objetivos: 'Questions / Goals for Visit:',
+        instruction: 'Show this screen to your doctor during your visit',
+        copyBtn: 'Copy',
+        shareBtn: 'Share',
+        printBtn: 'Print',
+        copied: '✓ Copied to clipboard',
+        motivo: 'Chief Complaint',
+        hpi: 'History of Present Illness',
+        sintomas: 'Associated Symptoms',
+        medidas: 'Self-Care Measures',
+        objetivos: 'Questions for Doctor',
         disclaimer: 'This record was generated by CareLog as a preparation tool. It does not replace professional medical evaluation.',
         noReportados: 'None reported.',
         defaultObjetivo: 'Evaluate the cause and determine additional management recommendations.',
         hpiLabels: {
-          inicio: 'Onset:',
-          duracion: 'Duration:',
-          localizacion: 'Location:',
-          caracteristicas: 'Characteristics:',
-          evolucion: 'Course:',
-          factoresAlivian: 'Relieving factors:',
-          factoresAgravan: 'Aggravating factors:'
+          inicio: 'Onset',
+          duracion: 'Duration',
+          localizacion: 'Location',
+          caracteristicas: 'Character',
+          evolucion: 'Course',
+          factoresAlivian: 'Relieves',
+          factoresAgravan: 'Worsens'
         }
       },
       pt: {
@@ -330,22 +428,27 @@
         loading: 'Carregando nota...',
         errorTitle: 'Nota indisponível',
         errorText: 'Não foi possível carregar as informações.',
-        motivo: 'Queixa Principal:',
-        hpi: 'História da Doença Atual (HDA):',
-        sintomas: 'Sintomas Associados:',
-        medidas: 'Medidas Realizadas pelo Paciente:',
-        objetivos: 'Perguntas / Objetivos para a Consulta:',
+        instruction: 'Mostre esta tela ao seu médico durante a consulta',
+        copyBtn: 'Copiar',
+        shareBtn: 'Compartilhar',
+        printBtn: 'Imprimir',
+        copied: '✓ Copiado para a área de transferência',
+        motivo: 'Queixa Principal',
+        hpi: 'História da Doença Atual',
+        sintomas: 'Sintomas Associados',
+        medidas: 'Medidas Realizadas',
+        objetivos: 'Perguntas para o Médico',
         disclaimer: 'Este registro foi gerado pelo CareLog como ferramenta de preparação. Não substitui a avaliação médica profissional.',
         noReportados: 'Não relatados.',
         defaultObjetivo: 'Avaliar a causa e definir recomendações adicionais de manejo.',
         hpiLabels: {
-          inicio: 'Início:',
-          duracion: 'Duração:',
-          localizacion: 'Localização:',
-          caracteristicas: 'Características:',
-          evolucion: 'Evolução:',
-          factoresAlivian: 'Fatores que aliviam:',
-          factoresAgravan: 'Fatores que agravam:'
+          inicio: 'Início',
+          duracion: 'Duração',
+          localizacion: 'Localização',
+          caracteristicas: 'Características',
+          evolucion: 'Evolução',
+          factoresAlivian: 'Alivia',
+          factoresAgravan: 'Agrava'
         }
       },
       fr: {
@@ -354,22 +457,27 @@
         loading: 'Chargement...',
         errorTitle: 'Note indisponible',
         errorText: 'Impossible de charger les informations.',
-        motivo: 'Motif de consultation:',
-        hpi: 'Histoire de la maladie actuelle:',
-        sintomas: 'Symptômes associés:',
-        medidas: 'Mesures prises par le patient:',
-        objetivos: 'Questions / Objectifs pour la consultation:',
+        instruction: 'Montrez cet écran à votre médecin lors de la consultation',
+        copyBtn: 'Copier',
+        shareBtn: 'Partager',
+        printBtn: 'Imprimer',
+        copied: '✓ Copié dans le presse-papiers',
+        motivo: 'Motif de consultation',
+        hpi: 'Histoire de la maladie',
+        sintomas: 'Symptômes associés',
+        medidas: 'Mesures prises',
+        objetivos: 'Questions pour le médecin',
         disclaimer: 'Ce dossier a été généré par CareLog comme outil de préparation. Il ne remplace pas l\'évaluation médicale professionnelle.',
         noReportados: 'Non signalés.',
         defaultObjetivo: 'Évaluer la cause et définir des recommandations de prise en charge supplémentaires.',
         hpiLabels: {
-          inicio: 'Début:',
-          duracion: 'Durée:',
-          localizacion: 'Localisation:',
-          caracteristicas: 'Caractéristiques:',
-          evolucion: 'Évolution:',
-          factoresAlivian: 'Facteurs qui soulagent:',
-          factoresAgravan: 'Facteurs qui aggravent:'
+          inicio: 'Début',
+          duracion: 'Durée',
+          localizacion: 'Localisation',
+          caracteristicas: 'Caractéristiques',
+          evolucion: 'Évolution',
+          factoresAlivian: 'Soulage',
+          factoresAgravan: 'Aggrave'
         }
       }
     };
@@ -396,7 +504,7 @@
       const hpiFields = ['inicio', 'duracion', 'localizacion', 'caracteristicas', 'evolucion', 'factoresAlivian', 'factoresAgravan'];
       hpiFields.forEach(field => {
         if (note.hpi && note.hpi[field]) {
-          hpiHtml += `<div class="hpi-item"><strong>${t.hpiLabels[field]}</strong> ${escapeHtml(note.hpi[field])}</div>`;
+          hpiHtml += `<div class="hpi-item"><strong>${t.hpiLabels[field]}</strong> <span>${escapeHtml(note.hpi[field])}</span></div>`;
         }
       });
 
@@ -406,7 +514,7 @@
         const medidasText = note.medidas.join('. ');
         medidasHtml = `
           <div class="section">
-            <div class="section-title">💊 ${t.medidas}</div>
+            <div class="section-title"><span class="icon">💊</span> ${t.medidas}</div>
             <p class="body-text">${escapeHtml(medidasText)}</p>
           </div>
         `;
@@ -420,24 +528,36 @@
 
       content.innerHTML = `
         <div class="header">
-          <div class="header-left">
-            <div class="subtitle">${note.dateLabel || formatDate(new Date(), lang)}</div>
-          </div>
-          <div class="actions">
-            <button class="action-btn" id="shareBtn">↗</button>
-            <button class="action-btn" id="downloadBtn">⬇</button>
-          </div>
+          <h1>${escapeHtml(note.userName || 'Paciente')}</h1>
+          <div class="subtitle">${note.dateLabel || formatDate(new Date(), lang)}</div>
+        </div>
+
+        <div class="instruction-banner">
+          <span class="icon">👨‍⚕️</span>
+          <p>${t.instruction}</p>
+        </div>
+
+        <div class="actions-row">
+          <button class="action-btn primary" id="copyBtn">
+            <span class="icon">📋</span> ${t.copyBtn}
+          </button>
+          <button class="action-btn" id="shareBtn">
+            <span class="icon">↗</span> ${t.shareBtn}
+          </button>
+          <button class="action-btn" id="printBtn">
+            <span class="icon">🖨</span> ${t.printBtn}
+          </button>
         </div>
 
         <div class="card" id="doctorCard">
           <div class="section">
-            <div class="section-title">🥼 ${t.motivo}</div>
-            <p class="body-text">${escapeHtml(note.motivo || t.noReportados)}</p>
+            <div class="section-title"><span class="icon">🩺</span> ${t.motivo}</div>
+            <p class="body-text highlight">${escapeHtml(note.motivo || t.noReportados)}</p>
           </div>
 
           ${hpiHtml ? `
           <div class="section">
-            <div class="section-title">🗒️ ${t.hpi}</div>
+            <div class="section-title"><span class="icon">📋</span> ${t.hpi}</div>
             <div class="hpi-list">
               ${hpiHtml}
             </div>
@@ -445,14 +565,14 @@
           ` : ''}
 
           <div class="section">
-            <div class="section-title">😩 ${t.sintomas}</div>
+            <div class="section-title"><span class="icon">🤒</span> ${t.sintomas}</div>
             <p class="body-text">${escapeHtml(note.sintomasAsociados || t.noReportados)}</p>
           </div>
 
           ${medidasHtml}
 
           <div class="section">
-            <div class="section-title">🏥 ${t.objetivos}</div>
+            <div class="section-title"><span class="icon">❓</span> ${t.objetivos}</div>
             <p class="body-text">${escapeHtml(objetivosText)}</p>
           </div>
         </div>
@@ -473,7 +593,62 @@
       return div.innerHTML;
     }
 
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2500);
+    }
+
+    function generatePlainText() {
+      const t = translations[currentLang] || translations.es;
+      let text = `${doctorNote.userName || 'Paciente'}\n`;
+      text += `${doctorNote.dateLabel || formatDate(new Date(), currentLang)}\n\n`;
+
+      text += `${t.motivo.toUpperCase()}\n${doctorNote.motivo || t.noReportados}\n\n`;
+
+      if (doctorNote.hpi) {
+        text += `${t.hpi.toUpperCase()}\n`;
+        const hpiFields = ['inicio', 'duracion', 'localizacion', 'caracteristicas', 'evolucion', 'factoresAlivian', 'factoresAgravan'];
+        hpiFields.forEach(field => {
+          if (doctorNote.hpi[field]) {
+            text += `• ${t.hpiLabels[field]}: ${doctorNote.hpi[field]}\n`;
+          }
+        });
+        text += '\n';
+      }
+
+      text += `${t.sintomas.toUpperCase()}\n${doctorNote.sintomasAsociados || t.noReportados}\n\n`;
+
+      if (doctorNote.medidas && doctorNote.medidas.length > 0) {
+        text += `${t.medidas.toUpperCase()}\n${doctorNote.medidas.join('. ')}\n\n`;
+      }
+
+      text += `${t.objetivos.toUpperCase()}\n${doctorNote.objetivos || t.defaultObjetivo}\n\n`;
+      text += `---\n${t.disclaimer}`;
+
+      return text;
+    }
+
     function setupEventListeners() {
+      const t = translations[currentLang] || translations.es;
+
+      // Copy button
+      const copyBtn = document.getElementById('copyBtn');
+      if (copyBtn) {
+        copyBtn.addEventListener('click', async () => {
+          try {
+            const text = generatePlainText();
+            await navigator.clipboard.writeText(text);
+            showToast(t.copied);
+          } catch (err) {
+            console.error('Copy failed:', err);
+          }
+        });
+      }
+
       // Share button
       const shareBtn = document.getElementById('shareBtn');
       if (shareBtn) {
@@ -481,8 +656,8 @@
           if (navigator.share) {
             try {
               await navigator.share({
-                title: translations[currentLang].title,
-                text: doctorNote.motivo,
+                title: t.title,
+                text: generatePlainText(),
                 url: window.location.href
               });
             } catch (err) {
@@ -490,17 +665,15 @@
             }
           } else {
             await navigator.clipboard.writeText(window.location.href);
-            alert(currentLang === 'es' ? 'Enlace copiado' :
-                  currentLang === 'pt' ? 'Link copiado' :
-                  currentLang === 'fr' ? 'Lien copié' : 'Link copied');
+            showToast(t.copied);
           }
         });
       }
 
-      // Download button (print)
-      const downloadBtn = document.getElementById('downloadBtn');
-      if (downloadBtn) {
-        downloadBtn.addEventListener('click', () => {
+      // Print button
+      const printBtn = document.getElementById('printBtn');
+      if (printBtn) {
+        printBtn.addEventListener('click', () => {
           window.print();
         });
       }
