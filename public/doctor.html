@@ -243,46 +243,17 @@
     }
 
     /* Font size classes */
-    .card.font-small .section-title { font-size: 14px; }
-    .card.font-small .body-text, .card.font-small .hpi-item { font-size: 14px; line-height: 22px; }
+    .card.font-size-1 .section-title { font-size: 14px; line-height: 36px; }
+    .card.font-size-1 .body-text, .card.font-size-1 .hpi-item { font-size: 14px; line-height: 22px; }
 
-    .card.font-large .section-title { font-size: 18px; }
-    .card.font-large .body-text, .card.font-large .hpi-item { font-size: 18px; line-height: 28px; }
+    .card.font-size-2 .section-title { font-size: 16px; line-height: 40px; }
+    .card.font-size-2 .body-text, .card.font-size-2 .hpi-item { font-size: 16px; line-height: 25px; }
 
-    /* Font size dropdown */
-    .actions-wrapper {
-      position: relative;
-    }
-    .font-size-menu {
-      position: absolute;
-      top: 100%;
-      right: 0;
-      margin-top: 8px;
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      padding: 4px;
-      display: none;
-      z-index: 100;
-      min-width: 100px;
-    }
-    .font-size-menu.show {
-      display: block;
-    }
-    .font-size-menu button {
-      display: block;
-      width: 100%;
-      padding: 8px 12px;
-      border: none;
-      background: none;
-      font-size: 14px;
-      text-align: left;
-      cursor: pointer;
-      border-radius: 4px;
-    }
-    .font-size-menu button:hover {
-      background: #f0f0f0;
-    }
+    .card.font-size-3 .section-title { font-size: 18px; line-height: 44px; }
+    .card.font-size-3 .body-text, .card.font-size-3 .hpi-item { font-size: 18px; line-height: 28px; }
+
+    .card.font-size-4 .section-title { font-size: 20px; line-height: 48px; }
+    .card.font-size-4 .body-text, .card.font-size-4 .hpi-item { font-size: 20px; line-height: 30px; }
   </style>
 </head>
 <body>
@@ -459,21 +430,15 @@
             <h1>${t.title}</h1>
             <div class="subtitle">${note.dateLabel || formatDate(new Date(), lang)}</div>
           </div>
-          <div class="actions-wrapper">
-            <div class="actions">
-              <button class="action-btn" id="fontSizeBtn">A+ <span style="font-size: 12px;">˅</span></button>
-              <button class="action-btn" id="shareBtn">↗</button>
-              <button class="action-btn" id="downloadBtn">⬇</button>
-            </div>
-            <div class="font-size-menu" id="fontSizeMenu">
-              <button data-size="small">Pequeño</button>
-              <button data-size="normal">Normal</button>
-              <button data-size="large">Grande</button>
-            </div>
+          <div class="actions">
+            <button class="action-btn" id="fontDecBtn">A−</button>
+            <button class="action-btn" id="fontIncBtn">A+</button>
+            <button class="action-btn" id="shareBtn">↗</button>
+            <button class="action-btn" id="downloadBtn">⬇</button>
           </div>
         </div>
 
-        <div class="card" id="doctorCard">
+        <div class="card font-size-2" id="doctorCard">
           <div class="section">
             <div class="section-title">🥼 ${t.motivo}</div>
             <p class="body-text">${escapeHtml(note.motivo || t.noReportados)}</p>
@@ -517,32 +482,39 @@
       return div.innerHTML;
     }
 
+    let currentFontSize = 2; // Default size (1-4 scale)
+
     function setupEventListeners() {
-      // Font size toggle
-      const fontSizeBtn = document.getElementById('fontSizeBtn');
-      const fontSizeMenu = document.getElementById('fontSizeMenu');
+      // Font size controls
+      const fontDecBtn = document.getElementById('fontDecBtn');
+      const fontIncBtn = document.getElementById('fontIncBtn');
       const card = document.getElementById('doctorCard');
 
-      if (fontSizeBtn && fontSizeMenu) {
-        fontSizeBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          fontSizeMenu.classList.toggle('show');
-        });
+      function updateFontSize() {
+        card.classList.remove('font-size-1', 'font-size-2', 'font-size-3', 'font-size-4');
+        card.classList.add(`font-size-${currentFontSize}`);
+      }
 
-        fontSizeMenu.querySelectorAll('button').forEach(btn => {
-          btn.addEventListener('click', () => {
-            const size = btn.dataset.size;
-            card.classList.remove('font-small', 'font-large');
-            if (size === 'small') card.classList.add('font-small');
-            if (size === 'large') card.classList.add('font-large');
-            fontSizeMenu.classList.remove('show');
-          });
-        });
-
-        document.addEventListener('click', () => {
-          fontSizeMenu.classList.remove('show');
+      if (fontDecBtn) {
+        fontDecBtn.addEventListener('click', () => {
+          if (currentFontSize > 1) {
+            currentFontSize--;
+            updateFontSize();
+          }
         });
       }
+
+      if (fontIncBtn) {
+        fontIncBtn.addEventListener('click', () => {
+          if (currentFontSize < 4) {
+            currentFontSize++;
+            updateFontSize();
+          }
+        });
+      }
+
+      // Set initial font size
+      updateFontSize();
 
       // Share button
       const shareBtn = document.getElementById('shareBtn');
