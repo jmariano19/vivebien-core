@@ -92,12 +92,12 @@ Si quelque chose a changé, je peux l'ajouter à votre dossier.`,
       },
     };
 
-    const langTemplates = templates[language] || templates.en;
+    const langTemplates = templates[language] || templates.en!;
 
     if (name) {
-      return langTemplates.withName.replace('{name}', name);
+      return langTemplates!.withName.replace('{name}', name);
     }
-    return langTemplates.withoutName;
+    return langTemplates!.withoutName;
   }
 
   private getCheckinAcknowledgment(userResponse: string, language: string): { message: string; noteEntry: string } {
@@ -188,8 +188,8 @@ Si quelque chose a changé, je peux l'ajouter à votre dossier.`,
     else if (isBetter) responseType = 'better';
     else if (isWorse) responseType = 'worse';
 
-    const langResponses = responses[responseType]![language] || responses[responseType]!.en;
-    return langResponses;
+    const langResponses = responses[responseType]![language] || responses[responseType]!.en!;
+    return langResponses!;
   }
 
   // ============================================================================
@@ -425,7 +425,10 @@ Si quelque chose a changé, je peux l'ajouter à votre dossier.`,
     // Mark check-in as completed
     await this.updateCheckinStatus(userId, 'completed');
 
-    return response;
+    return {
+      acknowledgment: response.message,
+      noteEntry: response.noteEntry,
+    };
   }
 
   // ============================================================================
@@ -460,7 +463,7 @@ Si quelque chose a changé, je peux l'ajouter à votre dossier.`,
       ],
     };
 
-    const langPatterns = patterns[language] || patterns.en;
+    const langPatterns = patterns[language] || patterns.en!;
     const prefixes: Record<string, string> = {
       en: 'your ',
       es: 'tu ',
@@ -468,7 +471,7 @@ Si quelque chose a changé, je peux l'ajouter à votre dossier.`,
       fr: 'votre ',
     };
 
-    for (const pattern of langPatterns) {
+    for (const pattern of langPatterns!) {
       const match = summary.match(pattern);
       if (match) {
         const prefix = prefixes[language] || prefixes.en;
