@@ -38,6 +38,7 @@ redis.on('close', () => {
 // ============================================================================
 
 const QUEUE_NAME = 'vivebien-inbound';
+const CHECKIN_QUEUE_NAME = 'vivebien-checkin';
 
 export const inboundQueue = new Queue<InboundJobData>(QUEUE_NAME, {
   connection: redis,
@@ -57,6 +58,30 @@ export const inboundQueue = new Queue<InboundJobData>(QUEUE_NAME, {
     },
   },
 });
+
+// Check-in queue for 24-hour follow-ups (delayed jobs)
+let checkinQueue: Queue | null = null;
+
+export function getCheckinQueue(): Queue {
+  if (!checkinQueue) {
+    checkinQueue = new Queue(CHECKIN_QUEUE_NAME, {
+      connection: redis,
+      defaultJobOptions: {
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 5000,
+        },
+        removeOnComplete: true,
+        removeOnFail: {
+          count: 1000,
+          age: 86400 * 7, // Keep failed for 7 days
+        },
+      },
+    });
+  }
+  return checkinQueue;
+}
 
 // Queue events for monitoring
 export const queueEvents = new QueueEvents(QUEUE_NAME, {
@@ -143,6 +168,9 @@ export async function checkRedisHealth(): Promise<{
 
 export async function closeRedis(): Promise<void> {
   await inboundQueue.close();
+  if (checkinQueue) {
+    await checkinQueue.close();
+  }
   await queueEvents.close();
   await redis.quit();
   logger.info('Redis connections closed');

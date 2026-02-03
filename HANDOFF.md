@@ -162,6 +162,50 @@ if (userId.includes('.')) {
 - Only section headers are translated to user's language
 - Doctor-ready format with structured sections
 
+### 24-Hour Check-in Feature (NEW)
+
+Automated follow-up 24 hours after a user receives their first summary. Purpose: retention through calm continuity.
+
+**Files:**
+- `src/domain/checkin/service.ts` - Main check-in logic, templates, scheduling
+- `src/worker/handlers/checkin.ts` - Job handler and response processing
+- `src/worker/checkin-processor.ts` - BullMQ job processor
+- `migrations/001_add_checkin_fields.sql` - Database migration
+
+**How it works:**
+1. After sending a summary (detected by `carelog.vivebien.io` link), a check-in is scheduled for +24h
+2. When the job fires, it checks if user has been inactive since the summary
+3. If inactive, sends a personalized check-in message
+4. User's response updates the health summary with a follow-up entry
+
+**State fields in conversation_state:**
+| Field | Purpose |
+|-------|---------|
+| checkin_status | 'not_scheduled', 'scheduled', 'sent', 'canceled', 'completed' |
+| checkin_scheduled_for | Timestamp when check-in should fire |
+| last_summary_created_at | When last summary was generated |
+| last_user_message_at | For inactivity detection |
+| last_bot_message_at | For active conversation detection |
+| case_label | e.g., "your eye" for personalized message |
+
+**Cancellation conditions:**
+- User sent ANY message after summary
+- Active conversation in last 6 hours
+- New summary created (reschedules)
+
+**Message templates (in CheckinService):**
+```
+Hi {name} 👋
+Just checking in.
+How is {case_label} feeling today compared to yesterday?
+If anything has changed, I can add it to your note.
+```
+
+**Before deploying:** Run the migration:
+```sql
+-- See migrations/001_add_checkin_fields.sql
+```
+
 ### Known Issues:
 - Need to deploy BOTH api and worker services after changes (use `deploy` command)
 

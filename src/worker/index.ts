@@ -1,11 +1,13 @@
 import { Worker, Job } from 'bullmq';
 import { redis, closeRedis } from '../infra/queue/client';
 import { processJob } from './processor';
+import { processCheckinJob } from './checkin-processor';
 import { config } from '../config';
 import { logger } from '../infra/logging/logger';
 import { db } from '../infra/db/client';
 
 const QUEUE_NAME = 'vivebien-inbound';
+const CHECKIN_QUEUE_NAME = 'vivebien-checkin';
 
 const worker = new Worker(QUEUE_NAME, processJob, {
   connection: redis,
@@ -19,6 +21,27 @@ const worker = new Worker(QUEUE_NAME, processJob, {
       return Math.min(Math.pow(2, attemptsMade) * 1000, 16000);
     },
   },
+});
+
+// Check-in worker for 24-hour follow-ups
+const checkinWorker = new Worker(CHECKIN_QUEUE_NAME, processCheckinJob, {
+  connection: redis,
+  concurrency: 2, // Low concurrency for check-ins
+  maxStalledCount: 2,
+  stalledInterval: 60000,
+  lockDuration: 60000, // 1 minute should be enough for a check-in
+});
+
+checkinWorker.on('ready', () => {
+  logger.info({ queue: CHECKIN_QUEUE_NAME }, 'Check-in worker ready');
+});
+
+checkinWorker.on('completed', (job: Job) => {
+  logger.info({ jobId: job.id, userId: job.data.userId }, 'Check-in job completed');
+});
+
+checkinWorker.on('failed', (job: Job | undefined, err: Error) => {
+  logger.error({ jobId: job?.id, userId: job?.data?.userId, error: err.message }, 'Check-in job failed');
 });
 
 // Event handlers
@@ -73,6 +96,7 @@ const shutdown = async (signal: string) => {
     }, 30000);
 
     await worker.close();
+    await checkinWorker.close();
     clearTimeout(timeout);
 
     await db.end();

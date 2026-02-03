@@ -4,9 +4,12 @@ import { UserService } from '../../domain/user/service';
 import { CreditService } from '../../domain/credits/service';
 import { ConversationService } from '../../domain/conversation/service';
 import { AIService } from '../../domain/ai/service';
+import { CheckinService } from '../../domain/checkin/service';
 import { ChatwootClient } from '../../adapters/chatwoot/client';
 import { db } from '../../infra/db/client';
+import { getCheckinQueue } from '../../infra/queue/client';
 import { logExecution } from '../../infra/logging/logger';
+import { processCheckinResponse } from './checkin';
 
 /**
  * Detect if the AI asked for the user's name and extract it from the response
@@ -177,6 +180,15 @@ const conversationService = new ConversationService(db);
 const aiService = new AIService();
 const chatwootClient = new ChatwootClient();
 
+// Lazy-loaded check-in service (needs queue which may not be initialized yet)
+let checkinService: CheckinService | null = null;
+function getCheckinService(): CheckinService {
+  if (!checkinService) {
+    checkinService = new CheckinService(db, getCheckinQueue());
+  }
+  return checkinService;
+}
+
 export async function handleInboundMessage(
   data: InboundJobData,
   logger: Logger
@@ -192,6 +204,26 @@ export async function handleInboundMessage(
   );
 
   logger.info({ userId: user.id, isNew: user.isNew }, 'User loaded');
+
+  // Step 1.5: Update last user message timestamp and check for check-in response
+  const checkinSvc = getCheckinService();
+  await checkinSvc.updateLastUserMessageAt(user.id);
+
+  // Check if this is a response to a 24h check-in
+  const checkinResponse = await processCheckinResponse(user.id, message, conversationId, logger);
+  if (checkinResponse.isCheckinResponse && checkinResponse.acknowledgment) {
+    // Send the acknowledgment and skip the full AI flow
+    await chatwootClient.sendMessage(conversationId, checkinResponse.acknowledgment);
+    await checkinSvc.updateLastBotMessageAt(user.id);
+
+    logger.info({ userId: user.id }, 'Processed check-in response');
+
+    return {
+      status: 'completed',
+      correlationId,
+      action: 'checkin_response_processed',
+    };
+  }
 
   // Step 2: Check credits (idempotent)
   const creditCheck = await logExecution(
@@ -350,6 +382,24 @@ export async function handleInboundMessage(
       'Failed to update health summary - data may be inconsistent'
     );
   });
+
+  // Step 15: Schedule 24h check-in if this is a summary handoff message
+  // Detect summary handoff by looking for the summary link in the response
+  if (cleanedResponse.includes('carelog.vivebien.io')) {
+    try {
+      // Extract case label from the AI response for personalized check-in
+      const caseLabel = checkinSvc.extractCaseLabel(cleanedResponse, user.language);
+
+      await checkinSvc.scheduleCheckin(user.id, conversationId, caseLabel || undefined);
+      logger.info({ userId: user.id, caseLabel }, '24h check-in scheduled after summary');
+    } catch (err) {
+      logger.error({ err, userId: user.id }, 'Failed to schedule check-in');
+      // Non-blocking - don't fail the message processing
+    }
+  }
+
+  // Update last bot message timestamp
+  await checkinSvc.updateLastBotMessageAt(user.id);
 
   return {
     status: 'completed',

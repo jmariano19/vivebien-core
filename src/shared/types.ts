@@ -79,6 +79,27 @@ export type ConversationPhase =
   | 'completed'
   | 'crisis';
 
+// ============================================================================
+// Check-in Types (24-hour follow-up)
+// ============================================================================
+
+export type CheckinStatus =
+  | 'not_scheduled'
+  | 'scheduled'
+  | 'sent'
+  | 'canceled'
+  | 'completed';
+
+export interface CheckinState {
+  userId: string;
+  status: CheckinStatus;
+  scheduledFor?: Date;
+  lastSummaryCreatedAt?: Date;
+  lastUserMessageAt?: Date;
+  lastBotMessageAt?: Date;
+  caseLabel?: string; // e.g., "your eye", "your back"
+}
+
 export interface Message {
   role: 'user' | 'assistant' | 'system';
   content: string;
