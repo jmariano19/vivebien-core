@@ -490,16 +490,9 @@
       document.getElementById('summaryContent').textContent = summary;
     }
 
-    // Clean summary for display - creates a simple, readable format
+    // Clean summary for display - creates a simple, patient-friendly format
     function cleanSummaryForDisplay(text) {
-      // Extract key information from structured summary
-      const sections = {
-        concern: '',
-        when: '',
-        details: ''
-      };
-
-      // Normalize text
+      // Normalize text first
       let normalized = text
         .replace(/\*\*/g, '')
         .replace(/\*([^*]+)\*/g, '$1')
@@ -507,85 +500,88 @@
         .replace(/---+/g, '\n')
         .trim();
 
-      // Split into lines for parsing
-      const lines = normalized.split('\n').map(l => l.trim()).filter(l => l);
+      // Extract key pieces of information
+      let problem = '';
+      let timing = '';
+      let helping = '';
 
-      // Extract main concern (first substantial content after header)
-      const concernHeaders = /^(MOTIVO PRINCIPAL|MAIN CONCERN|QUEIXA PRINCIPAL|MOTIF PRINCIPAL|Concern)/i;
-      const onsetHeaders = /^(INICIO|ONSET|INÍCIO|DÉBUT|Started|Duration|When)/i;
-      const patternHeaders = /^(PATRÓN|PATTERN|PADRÃO|SCHÉMA|SEVERIDAD|SEVERITY)/i;
-      const factorsHeaders = /^(QUÉ AYUDA|WHAT HELPS|O QUE|CE QUI|Helps|Worsens|Treatment)/i;
-      const skipHeaders = /^(MEDICAMENTOS|MEDICATIONS|CURRENT MEDICATIONS|PREGUNTAS|QUESTIONS|CRONOLOGÍA|TIMELINE|Health Record|Registro de Salud|Patient Name|Nombre del Paciente)/i;
-      const disclaimers = /(Record generated|preparation tool|medical advice|registro fue generado|No sustituye|Not provided|No proporcionado)/i;
+      // Patterns to find main issue
+      const mainIssueMatch = normalized.match(/(?:sty|orzuelo|stye|eye|ojo|pain|dolor|headache|head|stomach|back|throat|fever|cough|rash)[\w\s,]*/i);
+      if (mainIssueMatch) {
+        problem = mainIssueMatch[0].trim();
+      }
 
-      let currentSection = 'concern';
+      // Find timing info
+      const timingMatch = normalized.match(/(?:around|about|approximately|hace|desde|for|started|began|comenzó)\s*\d+\s*(?:days?|días?|hours?|horas?|weeks?|semanas?|ago)?/i);
+      if (timingMatch) {
+        timing = timingMatch[0].trim();
+      }
 
+      // Find what's helping
+      const helpingMatch = normalized.match(/(?:warm compresses|compresas tibias|helping|ayuda|relief|alivio|better|mejor)[^.]*\.?/i);
+      if (helpingMatch) {
+        helping = helpingMatch[0].trim();
+      }
+
+      // Build a simple, friendly summary
+      const lines = normalized.split('\n').map(l => l.trim()).filter(l => l.length > 5);
+
+      // Remove clinical/technical phrases and headers
+      const skipPatterns = [
+        /^(MOTIVO|MAIN|QUEIXA|MOTIF|INICIO|ONSET|INÍCIO|DÉBUT|PATRÓN|PATTERN)/i,
+        /^(QUÉ AYUDA|WHAT HELPS|MEDICAMENTOS|MEDICATIONS|PREGUNTAS|QUESTIONS|CRONOLOGÍA|TIMELINE)/i,
+        /^(Patient Name|Nombre|Health Record|Registro)/i,
+        /(Record generated|preparation tool|medical advice|Not provided|No proporcionado)/i,
+        /^(Concern|Started|Duration|Location|Helps|Worsens):/i,
+      ];
+
+      let cleanLines = [];
       for (const line of lines) {
-        // Skip headers, disclaimers, and bullet markers
-        if (skipHeaders.test(line) || disclaimers.test(line)) continue;
-        if (line === '-' || line.length < 3) continue;
+        let skip = skipPatterns.some(p => p.test(line));
+        if (skip) continue;
 
-        // Detect section changes
-        if (concernHeaders.test(line)) { currentSection = 'concern'; continue; }
-        if (onsetHeaders.test(line)) { currentSection = 'when'; continue; }
-        if (patternHeaders.test(line) || factorsHeaders.test(line)) { currentSection = 'details'; continue; }
-
-        // Clean the line
-        let cleanLine = line
+        // Clean up the line
+        let clean = line
           .replace(/^[-•]\s*/, '')
-          .replace(/^(Concern|Started|Duration|When|Helps|Worsens):\s*/i, '')
-          .replace(/^(Progresión|Tratamiento intentado|Efectividad):\s*/i, '')
-          .replace(/^(Patient Name|Nombre del Paciente):\s*/i, '')
-          .replace(/^(Location|Localización):\s*/i, '')
+          .replace(/Patient reports (having )?/gi, '')
+          .replace(/patient /gi, '')
+          .replace(/\breports\b/gi, '')
+          .replace(/\bapproximately\b/gi, 'about')
+          .replace(/\bOngoing\b/gi, 'still happening')
+          .replace(/\bpresent\b/gi, 'there')
           .trim();
 
-        // Skip lines that are just "Not provided" or patient name
-        if (/^(Not provided|No proporcionado)$/i.test(cleanLine)) continue;
-        if (/^Patient Name:/i.test(line)) continue;
-
-        if (!cleanLine || cleanLine.length < 3) continue;
-
-        // Add to appropriate section
-        if (currentSection === 'concern' && !sections.concern) {
-          sections.concern = cleanLine;
-        } else if (currentSection === 'when' && sections.when.length < 100) {
-          sections.when += (sections.when ? ' ' : '') + cleanLine;
-        } else if (currentSection === 'details' && sections.details.length < 150) {
-          sections.details += (sections.details ? ' ' : '') + cleanLine;
+        if (clean.length > 5 && !cleanLines.includes(clean)) {
+          cleanLines.push(clean);
         }
       }
 
-      // Build clean output
-      let result = '';
-
-      if (sections.concern) {
-        result = sections.concern;
+      // Build friendly output
+      if (cleanLines.length === 0) {
+        return 'Your health summary will appear here as you share more details.';
       }
 
-      if (sections.when) {
-        result += (result ? '\n\n' : '') + sections.when;
+      // Take the most relevant lines and make them flow
+      let result = cleanLines.slice(0, 4).join('. ');
+
+      // Clean up sentence structure
+      result = result
+        .replace(/\.\s*\./g, '.')
+        .replace(/\s{2,}/g, ' ')
+        .replace(/\. ([a-z])/g, (m, c) => '. ' + c.toUpperCase())
+        .trim();
+
+      // Ensure it ends with a period
+      if (result && !result.endsWith('.') && !result.endsWith('?')) {
+        result += '.';
       }
 
-      if (sections.details) {
-        result += (result ? '\n\n' : '') + sections.details;
+      // Capitalize first letter
+      if (result) {
+        result = result.charAt(0).toUpperCase() + result.slice(1);
       }
 
-      // Fallback: if no sections extracted, do basic cleanup
-      if (!result) {
-        result = normalized
-          .replace(/\b(MOTIVO PRINCIPAL|MAIN CONCERN|INICIO|ONSET|PATRÓN|PATTERN|QUÉ AYUDA|WHAT HELPS|MEDICAMENTOS|MEDICATIONS|PREGUNTAS|QUESTIONS|CRONOLOGÍA|TIMELINE)\b[^\n]*/gi, '')
-          .replace(/(Record generated|preparation tool|medical advice|registro fue generado|No sustituye)[^\n]*/gi, '')
-          .replace(/Health Record for \w+/gi, '')
-          .replace(/\n{2,}/g, '\n\n')
-          .replace(/^\s*[-•]\s*/gm, '')
-          .trim();
-
-        if (result.length > 300) {
-          result = result.substring(0, 300) + '...';
-        }
-      }
-
-      return result || 'No summary available';
+      return result || 'Your health summary will appear here as you share more details.';
     }
 
     // Show empty state
