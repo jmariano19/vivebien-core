@@ -29,8 +29,7 @@
     }
 
     .page {
-      width: 100%;
-      max-width: 420px;
+      width: 402px;
       min-height: 100vh;
       padding: 14px 16px 28px;
     }
@@ -55,10 +54,10 @@
       color: var(--text);
     }
     .back-icon {
-      width: 12px;
-      height: 12px;
-      border-left: 2px solid currentColor;
-      border-bottom: 2px solid currentColor;
+      width: 18px;
+      height: 18px;
+      border-left: 2px solid var(--muted);
+      border-bottom: 2px solid var(--muted);
       transform: rotate(45deg);
     }
     .brand {
@@ -104,13 +103,13 @@
       flex-shrink: 0;
     }
     .action-btn {
-      height: 32px;
+      height: 26px;
       min-width: 32px;
       padding: 0 10px;
       background: var(--brand);
       color: white;
       border: none;
-      border-radius: 6px;
+      border-radius: 5px;
       box-shadow: 0 2px 4px rgba(0,0,0,0.25);
       font-size: 14px;
       font-weight: 600;
@@ -119,18 +118,9 @@
       justify-content: center;
       gap: 4px;
       cursor: pointer;
-      transition: transform 0.1s, box-shadow 0.1s;
     }
     .action-btn:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 3px 6px rgba(0,0,0,0.3);
-    }
-    .action-btn:active {
-      transform: translateY(0);
-    }
-    .action-btn svg {
-      width: 16px;
-      height: 16px;
+      opacity: 0.9;
     }
 
     .card {
@@ -138,7 +128,20 @@
       background: var(--card);
       border-radius: 15px;
       padding: 18px 16px 14px;
-      box-shadow: var(--shadow);
+      max-height: 620px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: #d8d1c6 transparent;
+    }
+    .card::-webkit-scrollbar {
+      width: 6px;
+    }
+    .card::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .card::-webkit-scrollbar-thumb {
+      background: #d8d1c6;
+      border-radius: 6px;
     }
 
     .section {
@@ -155,9 +158,6 @@
       align-items: center;
       gap: 8px;
     }
-    .section-icon {
-      font-size: 18px;
-    }
     .body-text {
       font-size: 16px;
       font-weight: 300;
@@ -171,38 +171,18 @@
       margin: 0 0 6px;
       line-height: 25px;
       font-size: 16px;
-      font-weight: 300;
     }
     .hpi-item:last-child {
       margin-bottom: 0;
     }
     .hpi-item strong {
-      font-weight: 600;
-    }
-    .measures-list {
-      margin: 4px 0 0;
-      padding-left: 0;
-      list-style: none;
-    }
-    .measures-list li {
-      margin: 0 0 6px;
-      line-height: 25px;
-      font-size: 16px;
-      font-weight: 300;
-      padding-left: 16px;
-      position: relative;
-    }
-    .measures-list li::before {
-      content: "•";
-      position: absolute;
-      left: 0;
-      color: var(--brand);
+      font-weight: 700;
     }
 
     .footer {
       margin-top: 18px;
       text-align: center;
-      font-size: 14px;
+      font-size: 15px;
       line-height: 20px;
       font-weight: 300;
       color: var(--muted);
@@ -246,13 +226,14 @@
         background: white;
       }
       .page {
-        max-width: none;
+        width: 100%;
         padding: 20px;
       }
       .topbar, .actions {
         display: none;
       }
       .card {
+        max-height: none;
         box-shadow: none;
         border: 1px solid #e0e0e0;
       }
@@ -261,7 +242,17 @@
       }
     }
 
-    /* Font size controls */
+    /* Font size classes */
+    .card.font-small .section-title { font-size: 14px; }
+    .card.font-small .body-text, .card.font-small .hpi-item { font-size: 14px; line-height: 22px; }
+
+    .card.font-large .section-title { font-size: 18px; }
+    .card.font-large .body-text, .card.font-large .hpi-item { font-size: 18px; line-height: 28px; }
+
+    /* Font size dropdown */
+    .actions-wrapper {
+      position: relative;
+    }
     .font-size-menu {
       position: absolute;
       top: 100%;
@@ -270,9 +261,10 @@
       background: white;
       border-radius: 8px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      padding: 8px;
+      padding: 4px;
       display: none;
       z-index: 100;
+      min-width: 100px;
     }
     .font-size-menu.show {
       display: block;
@@ -280,7 +272,7 @@
     .font-size-menu button {
       display: block;
       width: 100%;
-      padding: 8px 16px;
+      padding: 8px 12px;
       border: none;
       background: none;
       font-size: 14px;
@@ -291,18 +283,6 @@
     .font-size-menu button:hover {
       background: #f0f0f0;
     }
-    .actions-wrapper {
-      position: relative;
-    }
-
-    /* Font size classes */
-    .card.font-small { font-size: 14px; }
-    .card.font-small .section-title { font-size: 14px; }
-    .card.font-small .body-text, .card.font-small .hpi-item, .card.font-small .measures-list li { font-size: 14px; }
-
-    .card.font-large { font-size: 18px; }
-    .card.font-large .section-title { font-size: 18px; }
-    .card.font-large .body-text, .card.font-large .hpi-item, .card.font-large .measures-list li { font-size: 18px; }
   </style>
 </head>
 <body>
@@ -310,10 +290,10 @@
     <div class="topbar">
       <a class="back" id="backButton">
         <div class="back-icon"></div>
-        <span id="backText">Volver</span>
+        <span id="backText">Back</span>
       </a>
       <div class="brand">
-        <img src="/carelog-logo.png" alt="CareLog" onerror="this.style.display='none'" />
+        <img src="/carelog-logo.png" alt="CareLog logo" />
       </div>
       <div></div>
     </div>
@@ -457,15 +437,14 @@
         }
       });
 
-      // Build measures list (only if has items)
+      // Build measures text
       let medidasHtml = '';
       if (note.medidas && note.medidas.length > 0) {
+        const medidasText = note.medidas.join('. ');
         medidasHtml = `
           <div class="section">
-            <div class="section-title"><span class="section-icon">💊</span> ${t.medidas}</div>
-            <ul class="measures-list">
-              ${note.medidas.map(m => `<li>${escapeHtml(m)}</li>`).join('')}
-            </ul>
+            <div class="section-title">💊 ${t.medidas}</div>
+            <p class="body-text">${escapeHtml(medidasText)}</p>
           </div>
         `;
       }
@@ -473,9 +452,7 @@
       // Determine objetivos text
       let objetivosText = note.objetivos;
       if (!objetivosText) {
-        // Auto-fill with default based on motivo
-        const motivoShort = note.motivo ? note.motivo.split('.')[0].toLowerCase() : '';
-        objetivosText = t.defaultObjetivo.replace('{motivo}', motivoShort);
+        objetivosText = t.defaultObjetivo;
       }
 
       content.innerHTML = `
@@ -486,19 +463,9 @@
           </div>
           <div class="actions-wrapper">
             <div class="actions">
-              <button class="action-btn" id="fontSizeBtn" title="Tamaño de texto">
-                A<span style="font-size: 10px; margin-left: 2px;">+</span>
-              </button>
-              <button class="action-btn" id="shareBtn" title="Compartir">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13"/>
-                </svg>
-              </button>
-              <button class="action-btn" id="downloadBtn" title="Descargar">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
-                </svg>
-              </button>
+              <button class="action-btn" id="fontSizeBtn">A+ <span style="font-size: 12px;">˅</span></button>
+              <button class="action-btn" id="shareBtn">↗</button>
+              <button class="action-btn" id="downloadBtn">⬇</button>
             </div>
             <div class="font-size-menu" id="fontSizeMenu">
               <button data-size="small">Pequeño</button>
@@ -510,13 +477,13 @@
 
         <div class="card" id="doctorCard">
           <div class="section">
-            <div class="section-title"><span class="section-icon">🩺</span> ${t.motivo}</div>
+            <div class="section-title">🥼 ${t.motivo}</div>
             <p class="body-text">${escapeHtml(note.motivo || t.noReportados)}</p>
           </div>
 
           ${hpiHtml ? `
           <div class="section">
-            <div class="section-title"><span class="section-icon">📋</span> ${t.hpi}</div>
+            <div class="section-title">🗒️ ${t.hpi}</div>
             <div class="hpi-list">
               ${hpiHtml}
             </div>
@@ -524,14 +491,14 @@
           ` : ''}
 
           <div class="section">
-            <div class="section-title"><span class="section-icon">😣</span> ${t.sintomas}</div>
+            <div class="section-title">😩 ${t.sintomas}</div>
             <p class="body-text">${escapeHtml(note.sintomasAsociados || t.noReportados)}</p>
           </div>
 
           ${medidasHtml}
 
           <div class="section">
-            <div class="section-title"><span class="section-icon">🎯</span> ${t.objetivos}</div>
+            <div class="section-title">🏥 ${t.objetivos}</div>
             <p class="body-text">${escapeHtml(objetivosText)}</p>
           </div>
         </div>
@@ -591,11 +558,9 @@
                 url: window.location.href
               });
             } catch (err) {
-              // User cancelled or error
               console.log('Share cancelled');
             }
           } else {
-            // Fallback: copy URL to clipboard
             await navigator.clipboard.writeText(window.location.href);
             alert(currentLang === 'es' ? 'Enlace copiado' :
                   currentLang === 'pt' ? 'Link copiado' :
@@ -625,7 +590,6 @@
 
     // Back button
     document.getElementById('backButton').addEventListener('click', () => {
-      // Go back to summary page
       window.location.href = `/${userId}`;
     });
 
