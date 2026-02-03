@@ -77,6 +77,13 @@ async function bootstrap() {
   // Serve summary landing page for /:userId URLs
   app.get('/:userId', async (request, reply) => {
     const { userId } = request.params as { userId: string };
+
+    // Skip requests with file extensions - let static file handler serve those
+    if (userId.includes('.')) {
+      // Pass to next handler (static files)
+      return reply.callNotFound();
+    }
+
     // Only serve for UUID-like paths (avoid conflicts with other routes)
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (uuidRegex.test(userId)) {
