@@ -228,7 +228,55 @@ I don't replace medical care. I help you prepare for it by organizing what you s
 - ✅ One-command deployment via webhook triggers
 - ✅ Summary sync/update via PUT /api/summary/:userId
 
-### Recent Changes (Feb 3, 2026):
+### Recent Changes (Feb 3, 2026 - Evening):
+
+#### AI Identity Update - "Constanza"
+- Changed AI name from "Confianza" to "Constanza"
+- New transparent intro message:
+  ```
+  Hola 👋 Soy Constanza, tu agente de IA.
+  Te ayudo a documentar lo que te pasa y organizarlo en una nota clara para tu próxima consulta.
+  No reemplazo médicos — te ayudo a llegar mejor preparado.
+  ¿Qué te gustaría registrar hoy?
+  ```
+- Updated system prompt for transparent AI approach
+- Files changed: `src/domain/conversation/service.ts`, `src/domain/ai/service.ts`
+
+#### Simplified Summary Format
+- Changed from complex headers (MOTIVO PRINCIPAL, PATRÓN/SEVERIDAD) to simple labels
+- New format: `Motivo:`, `Inicio:`, `Mejora con:`, `Empeora con:`, `Medicamentos:`
+- Max 5 lines, cleaner and more readable
+- File: `src/domain/ai/service.ts` (generateSummary function)
+
+#### Optimization & Scalability Work
+- Created `/public/js/carelog-utils.js` - shared utilities for all pages
+- Created `/migrations/002_optimization_indexes.sql` - database indexes
+- Created `/OPTIMIZATION_REPORT.md` - detailed optimization documentation
+
+**Database Indexes Added:**
+- `idx_users_phone` (UNIQUE) - Critical for phone lookups
+- `idx_messages_user_created` - Conversation history
+- `idx_memories_user_category_created` - Summary retrieval
+- Foreign key constraints for data integrity
+
+**Run migration:**
+```bash
+psql $DATABASE_URL < migrations/002_optimization_indexes.sql
+```
+
+#### Display Bug Fixes
+- Fixed "no proporcionado is helping" display bug
+- Fixed History page showing raw markdown (`**MOTIVO PRINCIPAL**`)
+- Added comprehensive header cleaning across all pages
+- Files: `summary.html`, `history.html`, `suggest.html`
+
+#### QA Documentation
+- Created `/QA_CHECKLIST.md` - Testing guide for Claude QA
+- Created `/SYNC_ANALYSIS.md` - Data sync flow documentation
+
+---
+
+### Recent Changes (Feb 3, 2026 - Earlier):
 
 #### New Pages Added
 
