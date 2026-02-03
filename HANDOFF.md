@@ -103,7 +103,7 @@ Link appears after AI generates a summary in WhatsApp.
 - **API**: /api/summary/:userId
 - **Data**: memories table where category = 'health_summary'
 
-## Current State (Feb 2, 2026)
+## Current State (Feb 3, 2026)
 
 ### Working:
 - ✅ WhatsApp conversations via Chatwoot
@@ -113,10 +113,38 @@ Link appears after AI generates a summary in WhatsApp.
 - ✅ Landing page at carelog.vivebien.io/{userId}
 - ✅ Multi-language support (es, en, pt, fr)
 - ✅ Language auto-detection from user messages
-- ✅ Name extraction from conversations
+- ✅ Name extraction from conversations (including proactive name sharing)
 - ✅ WhatsApp bold formatting (*text*)
+- ✅ Static file serving (logo, assets)
+- ✅ One-command deployment via webhook triggers
 
-### Recent Changes (Feb 2, 2026):
+### Recent Changes (Feb 3, 2026):
+
+#### Static File Routing Fix (src/index.ts)
+- **Root cause**: The `/:userId` catch-all route was intercepting static file requests (like `/Logo1.png`) and returning 404
+- **Fix**: Added check to skip requests with file extensions, passing them to the static file handler
+```typescript
+if (userId.includes('.')) {
+  return reply.callNotFound();
+}
+```
+
+#### Landing Page Summary Display (public/summary.html)
+- Rewrote `cleanSummaryForDisplay()` to handle single-line format with `---` separators
+- Removes all structured headers (MOTIVO PRINCIPAL, INICIO, PATRÓN, etc.)
+- Removes field labels and disclaimers
+- Strips WhatsApp `*asterisk*` formatting for clean web display
+
+#### Proactive Name Extraction (src/worker/handlers/inbound.ts)
+- Now detects when users introduce themselves without being asked
+- Patterns: "mi nombre es X", "my name is X", "me llamo X", etc.
+- Works in any conversation phase, not just when AI asks
+
+#### Logo Update
+- Logo file renamed to `Logo1.png`
+- Reference: `<img src="/Logo1.png" alt="CareLog" onerror="this.onerror=null; this.src='/logo.svg';">`
+
+### Previous Changes (Feb 2, 2026):
 
 #### WhatsApp Formatting
 - Fixed postProcess() to preserve WhatsApp bold (`*text*`) and italic (`_text_`)
@@ -129,26 +157,13 @@ Link appears after AI generates a summary in WhatsApp.
 - Handles phrases like "I have a sty on my eye" correctly
 - Falls back to English for ties with high scores
 
-#### Name Extraction
-- Added pattern: "what name would you like me to use for you"
-- Removed onboarding phase restriction (works in any conversation phase)
-- Patterns support es, en, pt, fr languages
-
 #### Summary Generation
 - Summaries preserve user's original words (no translation of symptoms)
 - Only section headers are translated to user's language
 - Doctor-ready format with structured sections
 
-#### Landing Page (public/summary.html)
-- Multi-language localization (i18n object)
-- Logo with SVG fallback: `<img src="/Logo.png" onerror="this.src='/logo.svg'">`
-- User name display from API
-- Live updates badge
-- Clean summary display (removes structured data headers)
-
 ### Known Issues:
-- Logo may not load on some deployments (SVG fallback works)
-- Need to deploy BOTH api and worker services after changes
+- Need to deploy BOTH api and worker services after changes (use `deploy` command)
 
 ## Testing
 
@@ -193,6 +208,40 @@ DELETE FROM users WHERE phone IN ('+12017370113', '12017370113', '2017370113') R
 ### Quick Summary: Say "dame mi resumen" or "ver resumen"
 
 ## Deployment
+
+### One-Command Deploy (Recommended)
+
+Add this function to your `~/.zshrc` or `~/.bashrc`:
+
+```bash
+deploy() {
+  cd ~/Desktop/vivebien-project && \
+  git add -A && \
+  git commit -m "${1:-Update}" && \
+  git push && \
+  echo "🚀 Deploying API..." && \
+  curl -s "http://85.209.95.19:3000/api/deploy/1642a4c845b117889b4b6cbe0172ecc90b03500666da6e22" && \
+  echo "🚀 Deploying Worker..." && \
+  curl -s "http://85.209.95.19:3000/api/deploy/27730fe51447b7b37aad06851ccb0470e5b62421badd9548" && \
+  echo "✅ Done! Both services deploying."
+}
+```
+
+Then reload: `source ~/.zshrc`
+
+**Usage:**
+```bash
+deploy "Your commit message here"
+```
+
+### Deployment Webhook URLs (Easypanel)
+
+| Service | Webhook URL |
+|---------|-------------|
+| vivebien-core-api | `http://85.209.95.19:3000/api/deploy/1642a4c845b117889b4b6cbe0172ecc90b03500666da6e22` |
+| vivebien-core-worker | `http://85.209.95.19:3000/api/deploy/27730fe51447b7b37aad06851ccb0470e5b62421badd9548` |
+
+### Manual Deployment
 
 ```bash
 cd ~/Desktop/vivebien-project
@@ -258,9 +307,10 @@ detectLanguage(message: string): 'es' | 'en' | 'pt' | 'fr' | null
 ```typescript
 extractUserName(userMessage: string, recentMessages: Message[]): string | null
 ```
-- Checks if previous AI message asked for name
+- **Proactive detection**: Extracts name when user says "mi nombre es X", "my name is X", etc.
+- **Reactive detection**: Checks if previous AI message asked for name
 - Validates name (1-4 words, 2-20 chars each, letters only)
-- Handles prefixes like "my name is", "me llamo", etc.
+- Supports es, en, pt, fr languages
 
 ### Post-Processing (src/domain/ai/service.ts)
 ```typescript
@@ -289,10 +339,11 @@ generateSummary(messages: Message[], currentSummary: string | null, language?: s
 ### Landing Page Issues
 | Issue | Solution |
 |-------|----------|
-| Logo not loading | Check Logo.png exists in public/, SVG fallback should work |
+| Logo not loading | Check `/:userId` route skips file extensions (see static file routing fix). Verify Logo1.png exists in public/ |
 | Wrong language | Verify user.language in DB, check API returns it |
-| Name shows "Usuario" | Check name extraction patterns match AI's question |
+| Name shows "Usuario" | Check name extraction patterns match AI's question, or user didn't provide name proactively |
 | No summary | Check memories table has health_summary for user |
+| Summary shows raw structured data | Check `cleanSummaryForDisplay()` in summary.html handles the format |
 
 ### Language Detection Not Working
 1. Check user message has 2+ matching words
