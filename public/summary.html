@@ -515,8 +515,8 @@
       const onsetHeaders = /^(INICIO|ONSET|INÍCIO|DÉBUT|Started|Duration|When)/i;
       const patternHeaders = /^(PATRÓN|PATTERN|PADRÃO|SCHÉMA|SEVERIDAD|SEVERITY)/i;
       const factorsHeaders = /^(QUÉ AYUDA|WHAT HELPS|O QUE|CE QUI|Helps|Worsens|Treatment)/i;
-      const skipHeaders = /^(MEDICAMENTOS|MEDICATIONS|PREGUNTAS|QUESTIONS|CRONOLOGÍA|TIMELINE|Health Record|Registro de Salud)/i;
-      const disclaimers = /(Record generated|preparation tool|medical advice|registro fue generado|No sustituye)/i;
+      const skipHeaders = /^(MEDICAMENTOS|MEDICATIONS|CURRENT MEDICATIONS|PREGUNTAS|QUESTIONS|CRONOLOGÍA|TIMELINE|Health Record|Registro de Salud|Patient Name|Nombre del Paciente)/i;
+      const disclaimers = /(Record generated|preparation tool|medical advice|registro fue generado|No sustituye|Not provided|No proporcionado)/i;
 
       let currentSection = 'concern';
 
@@ -535,7 +535,13 @@
           .replace(/^[-•]\s*/, '')
           .replace(/^(Concern|Started|Duration|When|Helps|Worsens):\s*/i, '')
           .replace(/^(Progresión|Tratamiento intentado|Efectividad):\s*/i, '')
+          .replace(/^(Patient Name|Nombre del Paciente):\s*/i, '')
+          .replace(/^(Location|Localización):\s*/i, '')
           .trim();
+
+        // Skip lines that are just "Not provided" or patient name
+        if (/^(Not provided|No proporcionado)$/i.test(cleanLine)) continue;
+        if (/^Patient Name:/i.test(line)) continue;
 
         if (!cleanLine || cleanLine.length < 3) continue;
 
