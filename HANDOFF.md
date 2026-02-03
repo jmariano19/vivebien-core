@@ -103,11 +103,61 @@ Link appears after AI generates a summary in WhatsApp.
 - **API**: /api/summary/:userId
 - **Data**: memories table where category = 'health_summary'
 
+## CareLog Onboarding Flow
+
+### Core Principle
+**Trust is earned through usefulness BEFORE explanation.**
+
+The AI identity is disclosed clearly and honestly — but ONLY AFTER the user has experienced value (a generated health summary). Never introduce the AI identity in the very first message.
+
+### Flow Sequence (5 Steps)
+
+| Step | Trigger | What Happens |
+|------|---------|--------------|
+| **1. First Contact** | User sends first message ("hi", "hola", anything) | Greeting + value prop. NO AI mention. NO disclaimers. NO name request. |
+| **2. Intake** | After user shares concern | Ask 1 question at a time: when started, location, what helps/worsens |
+| **3. Summary** | Enough info collected | Generate doctor-ready summary. This is the VALUE MOMENT. |
+| **4. AI Disclosure** | After summary delivered | "Just to be clear — I'm an AI tool, not a doctor." |
+| **5. Name Request** | After AI disclosure | "What name would you like me to use? (Totally optional.)" |
+
+### First Contact Message (No AI)
+```
+Good morning 👋
+I help you turn what's been happening with your health into a clear note you can share with your doctor.
+What's been going on lately?
+```
+
+### Post-Summary Message
+```
+I've put this into a clear health note for you.
+It's now saved, so you don't have to rely on memory if this changes or if you see a doctor later.
+```
+
+### AI Disclosure Message
+```
+Just to be clear — I'm an AI tool, not a doctor.
+I don't replace medical care. I help you prepare for it by organizing what you share into a clear record.
+```
+
+### Key Files
+- `src/domain/conversation/service.ts` - System prompt with full onboarding flow
+- Templates: `onboarding_greeting`, `summary_delivered`, `ai_disclosure`, `ask_name`
+
+### Behavioral Guardrails
+- Never imply you are human
+- Never imply you are a clinician
+- Never provide diagnosis or treatment recommendations
+- Never lead with "I'm an AI"
+- Let usefulness establish trust first
+
+---
+
 ## Current State (Feb 3, 2026)
 
 ### Working:
 - ✅ WhatsApp conversations via Chatwoot
 - ✅ AI responses with Claude (Opus 4.5 for conversations, Sonnet for summaries)
+- ✅ CareLog onboarding flow (value-first, AI disclosure after summary)
 - ✅ Summary generation in chat with WhatsApp formatting
 - ✅ Summary link after summaries (localized): 📋 View my summary 👇 + URL
 - ✅ Landing page at carelog.vivebien.io/{userId}
@@ -414,5 +464,5 @@ generateSummary(messages: Message[], currentSummary: string | null, language?: s
 - If summary link doesn't appear, check BOTH services are deployed
 - If landing page shows "No summary yet", memories table may not have data
 - System prompt is in conversation/service.ts, not a file
-- AI assistant name: "Confianza"
+- Product name: "CareLog" (AI tool for health documentation)
 - GitHub: https://github.com/jmariano19/vivebien-core
