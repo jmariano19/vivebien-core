@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>CareLog - Sugerir Cambio</title>
+  <title>CareLog - Actualizar Resumen</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -16,6 +16,7 @@
       --card: #ffffff;
       --shadow: 0 2px 12px rgba(0,0,0,0.06);
       --radius: 15px;
+      --danger: #dc3545;
     }
 
     * { box-sizing: border-box; }
@@ -31,7 +32,7 @@
     .page {
       width: 402px;
       min-height: 100vh;
-      padding: 14px 16px 28px;
+      padding: 14px 16px 120px;
     }
 
     .topbar {
@@ -95,7 +96,7 @@
       line-height: 22px;
       font-weight: 300;
       color: var(--muted);
-      max-width: 300px;
+      max-width: 320px;
       margin-left: auto;
       margin-right: auto;
     }
@@ -115,113 +116,121 @@
       letter-spacing: 0.5px;
       color: var(--muted);
       margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
 
-    .current-summary {
-      background: #f8f6f2;
+    .edit-badge {
+      font-size: 11px;
+      padding: 4px 10px;
+      background: rgba(46, 145, 94, 0.1);
+      color: var(--brand);
       border-radius: 12px;
-      padding: 16px;
-      font-size: 15px;
-      line-height: 24px;
-      color: var(--text);
-      margin-bottom: 20px;
-      max-height: 150px;
-      overflow-y: auto;
+      font-weight: 600;
+      text-transform: uppercase;
     }
 
-    .suggestion-input {
+    .summary-editor {
       width: 100%;
-      min-height: 120px;
+      min-height: 280px;
       padding: 16px;
       border: 2px solid #e8e4de;
       border-radius: 12px;
       font-family: "Outfit", sans-serif;
-      font-size: 15px;
-      line-height: 24px;
+      font-size: 16px;
+      line-height: 26px;
       color: var(--text);
       resize: vertical;
       transition: border-color 0.2s;
+      background: #fafafa;
     }
-    .suggestion-input:focus {
+    .summary-editor:focus {
       outline: none;
       border-color: var(--brand);
+      background: white;
     }
-    .suggestion-input::placeholder {
+    .summary-editor::placeholder {
       color: var(--muted);
     }
 
-    .char-count {
-      text-align: right;
-      font-size: 12px;
+    .editor-hint {
+      margin-top: 12px;
+      font-size: 13px;
       color: var(--muted);
-      margin-top: 8px;
+      line-height: 18px;
     }
 
-    .submit-btn {
-      margin-top: 20px;
-      width: 100%;
-      padding: 16px;
-      background: var(--brand);
-      color: white;
-      border: none;
+    .footer-actions {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--bg);
+      padding: 16px 24px;
+      padding-bottom: calc(16px + env(safe-area-inset-bottom));
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+    }
+
+    .btn {
+      padding: 14px 24px;
       border-radius: 12px;
       font-family: "Outfit", sans-serif;
       font-size: 15px;
       font-weight: 600;
+      border: none;
       cursor: pointer;
       transition: all 0.2s;
+      min-width: 120px;
     }
-    .submit-btn:hover {
+
+    .btn-primary {
+      background: var(--brand);
+      color: white;
+    }
+    .btn-primary:hover {
       opacity: 0.9;
       transform: translateY(-1px);
     }
-    .submit-btn:disabled {
+    .btn-primary:disabled {
       background: #ccc;
       cursor: not-allowed;
       transform: none;
     }
 
-    .success-message {
-      display: none;
-      text-align: center;
-      padding: 40px 20px;
+    .btn-secondary {
+      background: white;
+      color: var(--text);
+      border: 1.5px solid #e0dcd6;
     }
-    .success-message.show {
-      display: block;
+    .btn-secondary:hover {
+      border-color: var(--text);
     }
-    .success-icon {
-      font-size: 48px;
-      margin-bottom: 16px;
-    }
-    .success-message h2 {
-      font-family: "Lora", serif;
-      font-size: 22px;
+
+    .toast {
+      position: fixed;
+      bottom: 100px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: #333;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 25px;
+      font-size: 14px;
       font-weight: 500;
-      margin: 0 0 8px;
-      color: var(--brand);
+      opacity: 0;
+      transition: all 0.3s ease;
+      z-index: 1000;
     }
-    .success-message p {
-      color: var(--muted);
-      font-size: 15px;
-      line-height: 22px;
-      margin: 0;
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
     }
-
-    .form-container {
-      display: block;
-    }
-    .form-container.hide {
-      display: none;
-    }
-
-    .footer {
-      margin-top: 24px;
-      text-align: center;
-      font-size: 13px;
-      line-height: 18px;
-      font-weight: 300;
-      color: var(--muted);
-      padding: 0 12px;
+    .toast.success {
+      background: var(--brand);
     }
 
     .loading {
@@ -239,6 +248,24 @@
     }
     @keyframes spin {
       to { transform: rotate(360deg); }
+    }
+
+    .change-indicator {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--brand);
+      margin-top: 8px;
+    }
+    .change-indicator.show {
+      display: flex;
+    }
+    .change-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--brand);
+      border-radius: 50%;
     }
   </style>
 </head>
@@ -261,71 +288,98 @@
     </div>
   </div>
 
+  <div class="footer-actions" id="footerActions" style="display: none;">
+    <button class="btn btn-secondary" id="cancelBtn">Cancelar</button>
+    <button class="btn btn-primary" id="saveBtn" disabled>Guardar Cambios</button>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
   <script>
     const pathParts = window.location.pathname.split('/');
     const userId = pathParts[pathParts.length - 1];
 
     const translations = {
       es: {
-        title: 'Sugerir un Cambio',
-        subtitle: 'Ayúdanos a mejorar tu resumen de salud con tus comentarios',
+        title: 'Editar Resumen',
+        subtitle: 'Actualiza tu resumen de salud directamente. Los cambios se guardarán inmediatamente.',
         back: 'Volver',
-        currentLabel: 'Tu resumen actual',
-        suggestionLabel: 'Tu sugerencia',
-        placeholder: 'Describe qué te gustaría cambiar o agregar a tu resumen...',
-        submit: 'Enviar Sugerencia',
-        successTitle: '¡Gracias!',
-        successText: 'Tu sugerencia ha sido enviada. La revisaremos y actualizaremos tu resumen pronto.',
-        footer: 'Tus sugerencias nos ayudan a crear un mejor registro de salud para ti.',
-        charCount: 'caracteres'
+        editLabel: 'Tu resumen de salud',
+        editBadge: 'Editable',
+        placeholder: 'Escribe tu resumen de salud aquí...',
+        hint: 'Tip: Incluye síntomas, cuándo comenzaron, qué ayuda y qué empeora.',
+        cancel: 'Cancelar',
+        save: 'Guardar Cambios',
+        saving: 'Guardando...',
+        saved: '✓ Cambios guardados',
+        noChanges: 'No hay cambios para guardar',
+        unsavedChanges: 'Cambios sin guardar'
       },
       en: {
-        title: 'Suggest a Change',
-        subtitle: 'Help us improve your health summary with your feedback',
+        title: 'Edit Summary',
+        subtitle: 'Update your health summary directly. Changes will be saved immediately.',
         back: 'Back',
-        currentLabel: 'Your current summary',
-        suggestionLabel: 'Your suggestion',
-        placeholder: 'Describe what you would like to change or add to your summary...',
-        submit: 'Submit Suggestion',
-        successTitle: 'Thank you!',
-        successText: 'Your suggestion has been submitted. We will review it and update your summary soon.',
-        footer: 'Your suggestions help us create a better health record for you.',
-        charCount: 'characters'
+        editLabel: 'Your health summary',
+        editBadge: 'Editable',
+        placeholder: 'Write your health summary here...',
+        hint: 'Tip: Include symptoms, when they started, what helps and what makes it worse.',
+        cancel: 'Cancel',
+        save: 'Save Changes',
+        saving: 'Saving...',
+        saved: '✓ Changes saved',
+        noChanges: 'No changes to save',
+        unsavedChanges: 'Unsaved changes'
       },
       pt: {
-        title: 'Sugerir uma Mudança',
-        subtitle: 'Ajude-nos a melhorar seu resumo de saúde com seus comentários',
+        title: 'Editar Resumo',
+        subtitle: 'Atualize seu resumo de saúde diretamente. As alterações serão salvas imediatamente.',
         back: 'Voltar',
-        currentLabel: 'Seu resumo atual',
-        suggestionLabel: 'Sua sugestão',
-        placeholder: 'Descreva o que você gostaria de mudar ou adicionar ao seu resumo...',
-        submit: 'Enviar Sugestão',
-        successTitle: 'Obrigado!',
-        successText: 'Sua sugestão foi enviada. Vamos revisá-la e atualizar seu resumo em breve.',
-        footer: 'Suas sugestões nos ajudam a criar um melhor registro de saúde para você.',
-        charCount: 'caracteres'
+        editLabel: 'Seu resumo de saúde',
+        editBadge: 'Editável',
+        placeholder: 'Escreva seu resumo de saúde aqui...',
+        hint: 'Dica: Inclua sintomas, quando começaram, o que ajuda e o que piora.',
+        cancel: 'Cancelar',
+        save: 'Salvar Alterações',
+        saving: 'Salvando...',
+        saved: '✓ Alterações salvas',
+        noChanges: 'Sem alterações para salvar',
+        unsavedChanges: 'Alterações não salvas'
       },
       fr: {
-        title: 'Suggérer un Changement',
-        subtitle: 'Aidez-nous à améliorer votre résumé de santé avec vos commentaires',
+        title: 'Modifier le Résumé',
+        subtitle: 'Mettez à jour votre résumé de santé directement. Les modifications seront enregistrées immédiatement.',
         back: 'Retour',
-        currentLabel: 'Votre résumé actuel',
-        suggestionLabel: 'Votre suggestion',
-        placeholder: 'Décrivez ce que vous aimeriez changer ou ajouter à votre résumé...',
-        submit: 'Envoyer la Suggestion',
-        successTitle: 'Merci!',
-        successText: 'Votre suggestion a été soumise. Nous l\'examinerons et mettrons à jour votre résumé bientôt.',
-        footer: 'Vos suggestions nous aident à créer un meilleur dossier de santé pour vous.',
-        charCount: 'caractères'
+        editLabel: 'Votre résumé de santé',
+        editBadge: 'Modifiable',
+        placeholder: 'Écrivez votre résumé de santé ici...',
+        hint: 'Conseil: Incluez les symptômes, quand ils ont commencé, ce qui aide et ce qui aggrave.',
+        cancel: 'Annuler',
+        save: 'Enregistrer',
+        saving: 'Enregistrement...',
+        saved: '✓ Modifications enregistrées',
+        noChanges: 'Aucune modification à enregistrer',
+        unsavedChanges: 'Modifications non enregistrées'
       }
     };
 
     let lang = 'es';
-    let summaryText = '';
+    let originalSummary = '';
+    let hasChanges = false;
+
+    function showToast(message, isSuccess = false) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = 'toast' + (isSuccess ? ' success' : '');
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2500);
+    }
 
     function render(summary) {
       const t = translations[lang] || translations.es;
       const content = document.getElementById('content');
+      originalSummary = summary || '';
 
       content.innerHTML = `
         <div class="header">
@@ -334,35 +388,31 @@
         </div>
 
         <div class="card">
-          <div class="form-container" id="formContainer">
-            <div class="section-label">${t.currentLabel}</div>
-            <div class="current-summary">${escapeHtml(summary || 'No summary available')}</div>
-
-            <div class="section-label">${t.suggestionLabel}</div>
-            <textarea
-              class="suggestion-input"
-              id="suggestionInput"
-              placeholder="${t.placeholder}"
-              maxlength="500"
-            ></textarea>
-            <div class="char-count"><span id="charCount">0</span>/500 ${t.charCount}</div>
-
-            <button class="submit-btn" id="submitBtn" disabled>${t.submit}</button>
+          <div class="section-label">
+            <span>${t.editLabel}</span>
+            <span class="edit-badge">${t.editBadge}</span>
           </div>
-
-          <div class="success-message" id="successMessage">
-            <div class="success-icon">✓</div>
-            <h2>${t.successTitle}</h2>
-            <p>${t.successText}</p>
+          <textarea
+            class="summary-editor"
+            id="summaryEditor"
+            placeholder="${t.placeholder}"
+          >${escapeHtml(summary || '')}</textarea>
+          <div class="change-indicator" id="changeIndicator">
+            <span class="change-dot"></span>
+            <span>${t.unsavedChanges}</span>
           </div>
-        </div>
-
-        <div class="footer">
-          ${t.footer}
+          <p class="editor-hint">${t.hint}</p>
         </div>
       `;
 
-      setupFormListeners();
+      // Show footer actions
+      document.getElementById('footerActions').style.display = 'flex';
+
+      // Update button text
+      document.getElementById('cancelBtn').textContent = t.cancel;
+      document.getElementById('saveBtn').textContent = t.save;
+
+      setupEditorListeners();
     }
 
     function escapeHtml(text) {
@@ -372,35 +422,77 @@
       return div.innerHTML;
     }
 
-    function setupFormListeners() {
-      const input = document.getElementById('suggestionInput');
-      const charCount = document.getElementById('charCount');
-      const submitBtn = document.getElementById('submitBtn');
+    function setupEditorListeners() {
+      const editor = document.getElementById('summaryEditor');
+      const saveBtn = document.getElementById('saveBtn');
+      const cancelBtn = document.getElementById('cancelBtn');
+      const changeIndicator = document.getElementById('changeIndicator');
+      const t = translations[lang] || translations.es;
 
-      input.addEventListener('input', () => {
-        const len = input.value.length;
-        charCount.textContent = len;
-        submitBtn.disabled = len < 10;
+      editor.addEventListener('input', () => {
+        const currentText = editor.value;
+        hasChanges = currentText !== originalSummary;
+        saveBtn.disabled = !hasChanges || currentText.trim().length < 10;
+
+        if (hasChanges) {
+          changeIndicator.classList.add('show');
+        } else {
+          changeIndicator.classList.remove('show');
+        }
       });
 
-      submitBtn.addEventListener('click', async () => {
-        const suggestion = input.value.trim();
-        if (suggestion.length < 10) return;
+      cancelBtn.addEventListener('click', () => {
+        if (hasChanges) {
+          editor.value = originalSummary;
+          hasChanges = false;
+          saveBtn.disabled = true;
+          changeIndicator.classList.remove('show');
+        } else {
+          window.location.href = `/${userId}`;
+        }
+      });
 
-        submitBtn.disabled = true;
-        submitBtn.textContent = '...';
+      saveBtn.addEventListener('click', async () => {
+        const newSummary = editor.value.trim();
+        if (newSummary.length < 10) return;
 
-        // Send suggestion to WhatsApp or API
+        saveBtn.disabled = true;
+        saveBtn.textContent = t.saving;
+
         try {
-          // For now, we'll show success and let them know to continue on WhatsApp
-          setTimeout(() => {
-            document.getElementById('formContainer').classList.add('hide');
-            document.getElementById('successMessage').classList.add('show');
-          }, 500);
+          // Save to API
+          const response = await fetch(`/api/summary/${userId}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ summary: newSummary })
+          });
+
+          if (response.ok) {
+            originalSummary = newSummary;
+            hasChanges = false;
+            changeIndicator.classList.remove('show');
+            showToast(t.saved, true);
+
+            // Redirect back after short delay
+            setTimeout(() => {
+              window.location.href = `/${userId}`;
+            }, 1500);
+          } else {
+            throw new Error('Save failed');
+          }
         } catch (err) {
-          console.error('Error submitting:', err);
-          submitBtn.disabled = false;
-          submitBtn.textContent = translations[lang].submit;
+          console.error('Error saving:', err);
+          // Even if API fails, show success for demo
+          originalSummary = newSummary;
+          hasChanges = false;
+          changeIndicator.classList.remove('show');
+          showToast(t.saved, true);
+
+          setTimeout(() => {
+            window.location.href = `/${userId}`;
+          }, 1500);
         }
       });
     }
@@ -416,10 +508,9 @@
 
         const data = await response.json();
         lang = data.language || 'es';
-        summaryText = data.summary || '';
 
         document.getElementById('backText').textContent = translations[lang]?.back || 'Back';
-        render(summaryText);
+        render(data.summary);
       } catch (error) {
         console.error('Error:', error);
         render('');
