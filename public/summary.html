@@ -679,20 +679,71 @@
         }
       }
 
+      // Handle corruption: if whatWorsens contains embedded "Helps:" text, extract it
+      if (fields.whatWorsens && fields.whatWorsens.includes('Helps:')) {
+        const embeddedHelps = fields.whatWorsens.match(/Helps?:\s*([^,.\n]+)/i);
+        if (embeddedHelps && !fields.whatHelps) {
+          fields.whatHelps = cleanFieldValue(embeddedHelps[1]);
+        }
+        // Remove the embedded Helps part from whatWorsens
+        fields.whatWorsens = cleanFieldValue(fields.whatWorsens.replace(/[\-•]?\s*Helps?:\s*[^,.\n]+/gi, ''));
+      }
+
+      // Validate and clean: if field value is just garbage labels, clear it
+      for (const key of Object.keys(fields)) {
+        const val = fields[key];
+        if (val && /^[\s\/\-•]*$/i.test(val)) {
+          fields[key] = '';
+        }
+        // Clear if it's just "WORSENS" or "HELPS" without meaningful content
+        if (val && /^(\/?\s*WORSENS|\/?\s*HELPS|\.not much)$/i.test(val.trim())) {
+          fields[key] = '';
+        }
+      }
+
       return fields;
     }
 
     // Clean a field value
     function cleanFieldValue(value) {
       if (!value) return '';
-      return value
-        .replace(/^[\-•*\s]+/, '')
-        .replace(/[\-•*\s]+$/, '')
+
+      let cleaned = value
+        // Remove repeated label patterns (corruption from multiple saves)
+        .replace(/(What worsens:\s*)+/gi, '')
+        .replace(/(What helps:\s*)+/gi, '')
+        .replace(/(Medications:\s*)+/gi, '')
+        .replace(/(Started:\s*)+/gi, '')
+        .replace(/(Location:\s*)+/gi, '')
+        .replace(/(Symptoms:\s*)+/gi, '')
+        .replace(/(Main concern:\s*)+/gi, '')
+        // Remove embedded labels that don't belong (multiple patterns for reliability)
+        .replace(/- Helps?:\s*/gi, '')
+        .replace(/• Helps?:\s*/gi, '')
+        .replace(/- Worsens?:\s*/gi, '')
+        .replace(/• Worsens?:\s*/gi, '')
+        .replace(/Helps?:\s*/gi, '')
+        .replace(/Worsens?:\s*/gi, '')
+        // Remove WORSENS/HELPS as standalone labels
+        .replace(/^\s*\/?\s*WORSENS\s*/gi, '')
+        .replace(/^\s*\/?\s*HELPS\s*/gi, '')
+        // Standard cleanup
+        .replace(/^[\-•*\s\/]+/, '')
+        .replace(/[\-•*\s\/]+$/, '')
         .replace(/Patient reports (having )?/gi, '')
         .replace(/\bpatient\b/gi, '')
         .replace(/\breports\b/gi, '')
         .replace(/\bapproximately\b/gi, 'about')
+        // Clean up multiple spaces
+        .replace(/\s+/g, ' ')
         .trim();
+
+      // If the result is just garbage or too short, return empty
+      if (cleaned.length < 2 || /^[\.\,\s\-\/]+$/.test(cleaned)) {
+        return '';
+      }
+
+      return cleaned;
     }
 
     // Show empty state
