@@ -354,7 +354,7 @@
                 ${data.motivo || 'Health Update'}
                 <span class="badge">${t.current}</span>
               </div>
-              <div class="timeline-content">${escapeHtml(truncate(data.summary, 120))}</div>
+              <div class="timeline-content">${escapeHtml(truncate(cleanForDisplay(data.summary), 120))}</div>
             </div>
           </div>
         `;
@@ -417,6 +417,59 @@
       if (!text) return '';
       if (text.length <= maxLength) return text;
       return text.substring(0, maxLength).trim() + '...';
+    }
+
+    // Clean summary for display - remove markdown and extract meaningful content
+    function cleanForDisplay(text) {
+      if (!text) return '';
+
+      // Remove markdown formatting
+      let cleaned = text
+        .replace(/\*\*([^*]+)\*\*/g, '$1')  // **bold** -> bold
+        .replace(/\*([^*]+)\*/g, '$1')       // *italic* -> italic
+        .replace(/^#+\s*/gm, '')              // # headers
+        .replace(/---+/g, ' ')                // --- dividers
+        .replace(/📝|❓|•/g, '')              // emojis/bullets
+
+      // Remove section headers (multi-language)
+      const headers = [
+        'MOTIVO PRINCIPAL', 'MAIN CONCERN', 'QUEIXA PRINCIPAL', 'MOTIF PRINCIPAL',
+        'INICIO', 'ONSET', 'INÍCIO', 'DÉBUT', 'DURACIÓN', 'DURATION',
+        'LOCALIZACIÓN', 'LOCATION', 'LOCALIZAÇÃO',
+        'QUÉ AYUDA', 'WHAT HELPS', 'O QUE AJUDA',
+        'EMPEORA', 'WORSENS', 'PIORA', 'AGGRAVE',
+        'MEDICAMENTOS', 'MEDICATIONS', 'MÉDICAMENTS',
+        'SÍNTOMAS', 'SYMPTOMS', 'SINTOMAS',
+        'Main concern', 'Started', 'Location', 'Symptoms', 'What helps', 'What worsens', 'Medications', 'Notes',
+        'Registro de Salud'
+      ];
+      headers.forEach(h => {
+        cleaned = cleaned.replace(new RegExp(h + '[:\\s]*', 'gi'), '');
+      });
+
+      // Remove placeholder values
+      cleaned = cleaned
+        .replace(/no\s*proporcionado/gi, '')
+        .replace(/not\s*provided/gi, '')
+        .replace(/usuario\s*reporta\s*["']?/gi, '')
+        .replace(/patient\s*reports?\s*/gi, '')
+        .replace(/["']\s*$/g, '')
+
+      // Clean up whitespace and punctuation
+      cleaned = cleaned
+        .replace(/\s+/g, ' ')
+        .replace(/^\s*[-–—]\s*/gm, '')
+        .replace(/\s*[-–—]\s*$/gm, '')
+        .replace(/\.\s*\./g, '.')
+        .replace(/,\s*,/g, ',')
+        .trim();
+
+      // Capitalize first letter
+      if (cleaned.length > 0) {
+        cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+      }
+
+      return cleaned || 'Health information recorded';
     }
 
     document.getElementById('backButton').addEventListener('click', () => {

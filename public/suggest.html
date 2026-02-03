@@ -595,14 +595,50 @@
     // Clean a field value
     function cleanFieldValue(value) {
       if (!value) return '';
-      return value
-        .replace(/^[\-•*\s]+/, '')
-        .replace(/[\-•*\s]+$/, '')
+
+      let cleaned = value
+        // Remove repeated label patterns (corruption from multiple saves)
+        .replace(/(What worsens:\s*)+/gi, '')
+        .replace(/(What helps:\s*)+/gi, '')
+        .replace(/(Medications:\s*)+/gi, '')
+        .replace(/(Started:\s*)+/gi, '')
+        .replace(/(Location:\s*)+/gi, '')
+        .replace(/(Symptoms:\s*)+/gi, '')
+        .replace(/(Main concern:\s*)+/gi, '')
+        // Remove embedded labels
+        .replace(/- Helps?:\s*/gi, '')
+        .replace(/- Worsens?:\s*/gi, '')
+        .replace(/Helps?:\s*/gi, '')
+        .replace(/Worsens?:\s*/gi, '')
+        // Remove standalone labels
+        .replace(/^\s*\/?\s*WORSENS\s*/gi, '')
+        .replace(/^\s*\/?\s*HELPS\s*/gi, '')
+        // Standard cleanup
+        .replace(/^[\-•*\s\/]+/, '')
+        .replace(/[\-•*\s\/]+$/, '')
+        // Remove AI text prefixes (English and Spanish)
         .replace(/Patient reports (having )?/gi, '')
         .replace(/\bpatient\b/gi, '')
         .replace(/\breports\b/gi, '')
+        .replace(/usuario\s*reporta\s*["']?/gi, '')
+        .replace(/["']\s*$/g, '')
+        // Clean placeholders
+        .replace(/^no\s*proporcionado$/i, '')
+        .replace(/^not\s*provided$/i, '')
+        .replace(/^n\/a$/i, '')
+        .replace(/^none$/i, '')
+        .replace(/^ninguno$/i, '')
+        // Other cleanup
         .replace(/\bapproximately\b/gi, 'about')
+        .replace(/\s+/g, ' ')
         .trim();
+
+      // If the result is just garbage, return empty
+      if (cleaned.length < 2 || /^[\.\,\s\-\/]+$/.test(cleaned)) {
+        return '';
+      }
+
+      return cleaned;
     }
 
     function render(data) {
