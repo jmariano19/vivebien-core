@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>CareLog - Actualizar Resumen</title>
+  <title>CareLog - Editar Resumen</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -16,7 +16,7 @@
       --card: #ffffff;
       --shadow: 0 2px 12px rgba(0,0,0,0.06);
       --radius: 15px;
-      --danger: #dc3545;
+      --input-bg: #f8f6f2;
     }
 
     * { box-sizing: border-box; }
@@ -57,9 +57,7 @@
       text-decoration: none;
       color: var(--muted);
     }
-    .back:hover {
-      color: var(--text);
-    }
+    .back:hover { color: var(--text); }
     .back-icon {
       width: 18px;
       height: 18px;
@@ -96,69 +94,76 @@
       line-height: 22px;
       font-weight: 300;
       color: var(--muted);
-      max-width: 320px;
-      margin-left: auto;
-      margin-right: auto;
     }
 
     .card {
-      margin-top: 24px;
+      margin-top: 20px;
       background: var(--card);
       border-radius: var(--radius);
       padding: 20px 18px;
       box-shadow: var(--shadow);
     }
 
-    .section-label {
+    .field {
+      margin-bottom: 20px;
+    }
+    .field:last-child {
+      margin-bottom: 0;
+    }
+
+    .field-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
       font-weight: 600;
-      font-size: 13px;
+      font-size: 14px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
       color: var(--muted);
-      margin-bottom: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .field-label .icon {
+      font-size: 16px;
     }
 
-    .edit-badge {
-      font-size: 11px;
-      padding: 4px 10px;
-      background: rgba(46, 145, 94, 0.1);
-      color: var(--brand);
-      border-radius: 12px;
-      font-weight: 600;
-      text-transform: uppercase;
-    }
-
-    .summary-editor {
+    .field-input {
       width: 100%;
-      min-height: 280px;
-      padding: 16px;
-      border: 2px solid #e8e4de;
+      padding: 14px 16px;
+      border: 2px solid transparent;
       border-radius: 12px;
       font-family: "Outfit", sans-serif;
-      font-size: 16px;
-      line-height: 26px;
+      font-size: 15px;
+      line-height: 24px;
       color: var(--text);
-      resize: vertical;
-      transition: border-color 0.2s;
-      background: #fafafa;
+      background: var(--input-bg);
+      transition: all 0.2s;
+      resize: none;
     }
-    .summary-editor:focus {
+    .field-input:focus {
       outline: none;
       border-color: var(--brand);
       background: white;
     }
-    .summary-editor::placeholder {
+    .field-input::placeholder {
+      color: #a0a0a0;
+    }
+    .field-input.single-line {
+      min-height: auto;
+    }
+    .field-input.multi-line {
+      min-height: 80px;
+    }
+
+    .field-hint {
+      margin-top: 6px;
+      font-size: 12px;
       color: var(--muted);
     }
 
-    .editor-hint {
-      margin-top: 12px;
-      font-size: 13px;
-      color: var(--muted);
-      line-height: 18px;
+    .section-divider {
+      height: 1px;
+      background: #f0ece6;
+      margin: 20px 0;
     }
 
     .footer-actions {
@@ -186,7 +191,6 @@
       transition: all 0.2s;
       min-width: 120px;
     }
-
     .btn-primary {
       background: var(--brand);
       color: white;
@@ -200,7 +204,6 @@
       cursor: not-allowed;
       transform: none;
     }
-
     .btn-secondary {
       background: white;
       color: var(--text);
@@ -250,22 +253,16 @@
       to { transform: rotate(360deg); }
     }
 
-    .change-indicator {
-      display: none;
-      align-items: center;
-      gap: 6px;
-      font-size: 12px;
-      color: var(--brand);
-      margin-top: 8px;
-    }
-    .change-indicator.show {
-      display: flex;
-    }
     .change-dot {
-      width: 6px;
-      height: 6px;
+      display: none;
+      width: 8px;
+      height: 8px;
       background: var(--brand);
       border-radius: 50%;
+      margin-left: auto;
+    }
+    .change-dot.show {
+      display: block;
     }
   </style>
 </head>
@@ -290,7 +287,7 @@
 
   <div class="footer-actions" id="footerActions" style="display: none;">
     <button class="btn btn-secondary" id="cancelBtn">Cancelar</button>
-    <button class="btn btn-primary" id="saveBtn" disabled>Guardar Cambios</button>
+    <button class="btn btn-primary" id="saveBtn">Guardar</button>
   </div>
 
   <div class="toast" id="toast"></div>
@@ -302,68 +299,84 @@
     const translations = {
       es: {
         title: 'Editar Resumen',
-        subtitle: 'Actualiza tu resumen de salud directamente. Los cambios se guardarán inmediatamente.',
+        subtitle: 'Actualiza tu información de salud',
         back: 'Volver',
-        editLabel: 'Tu resumen de salud',
-        editBadge: 'Editable',
-        placeholder: 'Escribe tu resumen de salud aquí...',
-        hint: 'Tip: Incluye síntomas, cuándo comenzaron, qué ayuda y qué empeora.',
         cancel: 'Cancelar',
-        save: 'Guardar Cambios',
+        save: 'Guardar',
         saving: 'Guardando...',
         saved: '✓ Cambios guardados',
-        noChanges: 'No hay cambios para guardar',
-        unsavedChanges: 'Cambios sin guardar'
+        fields: {
+          mainConcern: { label: 'Motivo principal', icon: '🩺', placeholder: 'Ej: Dolor de cabeza, tos persistente...' },
+          onset: { label: 'Cuándo comenzó', icon: '📅', placeholder: 'Ej: Hace 3 días, Esta mañana...' },
+          location: { label: 'Ubicación', icon: '📍', placeholder: 'Ej: Lado izquierdo de la cabeza...' },
+          symptoms: { label: 'Síntomas', icon: '🤒', placeholder: 'Describe todos los síntomas que sientes...' },
+          whatHelps: { label: 'Qué te ayuda', icon: '✅', placeholder: 'Ej: Descanso, medicamento, compresas...' },
+          whatWorsens: { label: 'Qué lo empeora', icon: '⚠️', placeholder: 'Ej: Luz brillante, esfuerzo físico...' },
+          medications: { label: 'Medicamentos', icon: '💊', placeholder: 'Medicamentos que estás tomando...' },
+          notes: { label: 'Notas adicionales', icon: '📝', placeholder: 'Cualquier otra información importante...' }
+        }
       },
       en: {
         title: 'Edit Summary',
-        subtitle: 'Update your health summary directly. Changes will be saved immediately.',
+        subtitle: 'Update your health information',
         back: 'Back',
-        editLabel: 'Your health summary',
-        editBadge: 'Editable',
-        placeholder: 'Write your health summary here...',
-        hint: 'Tip: Include symptoms, when they started, what helps and what makes it worse.',
         cancel: 'Cancel',
-        save: 'Save Changes',
+        save: 'Save',
         saving: 'Saving...',
         saved: '✓ Changes saved',
-        noChanges: 'No changes to save',
-        unsavedChanges: 'Unsaved changes'
+        fields: {
+          mainConcern: { label: 'Main Concern', icon: '🩺', placeholder: 'E.g.: Headache, persistent cough...' },
+          onset: { label: 'When it started', icon: '📅', placeholder: 'E.g.: 3 days ago, This morning...' },
+          location: { label: 'Location', icon: '📍', placeholder: 'E.g.: Left side of head...' },
+          symptoms: { label: 'Symptoms', icon: '🤒', placeholder: 'Describe all the symptoms you feel...' },
+          whatHelps: { label: 'What helps', icon: '✅', placeholder: 'E.g.: Rest, medication, compress...' },
+          whatWorsens: { label: 'What makes it worse', icon: '⚠️', placeholder: 'E.g.: Bright light, physical effort...' },
+          medications: { label: 'Medications', icon: '💊', placeholder: 'Medications you are taking...' },
+          notes: { label: 'Additional notes', icon: '📝', placeholder: 'Any other important information...' }
+        }
       },
       pt: {
         title: 'Editar Resumo',
-        subtitle: 'Atualize seu resumo de saúde diretamente. As alterações serão salvas imediatamente.',
+        subtitle: 'Atualize suas informações de saúde',
         back: 'Voltar',
-        editLabel: 'Seu resumo de saúde',
-        editBadge: 'Editável',
-        placeholder: 'Escreva seu resumo de saúde aqui...',
-        hint: 'Dica: Inclua sintomas, quando começaram, o que ajuda e o que piora.',
         cancel: 'Cancelar',
-        save: 'Salvar Alterações',
+        save: 'Salvar',
         saving: 'Salvando...',
         saved: '✓ Alterações salvas',
-        noChanges: 'Sem alterações para salvar',
-        unsavedChanges: 'Alterações não salvas'
+        fields: {
+          mainConcern: { label: 'Queixa principal', icon: '🩺', placeholder: 'Ex: Dor de cabeça, tosse persistente...' },
+          onset: { label: 'Quando começou', icon: '📅', placeholder: 'Ex: Há 3 dias, Esta manhã...' },
+          location: { label: 'Localização', icon: '📍', placeholder: 'Ex: Lado esquerdo da cabeça...' },
+          symptoms: { label: 'Sintomas', icon: '🤒', placeholder: 'Descreva todos os sintomas que sente...' },
+          whatHelps: { label: 'O que ajuda', icon: '✅', placeholder: 'Ex: Descanso, medicamento, compressas...' },
+          whatWorsens: { label: 'O que piora', icon: '⚠️', placeholder: 'Ex: Luz forte, esforço físico...' },
+          medications: { label: 'Medicamentos', icon: '💊', placeholder: 'Medicamentos que está tomando...' },
+          notes: { label: 'Notas adicionais', icon: '📝', placeholder: 'Qualquer outra informação importante...' }
+        }
       },
       fr: {
         title: 'Modifier le Résumé',
-        subtitle: 'Mettez à jour votre résumé de santé directement. Les modifications seront enregistrées immédiatement.',
+        subtitle: 'Mettez à jour vos informations de santé',
         back: 'Retour',
-        editLabel: 'Votre résumé de santé',
-        editBadge: 'Modifiable',
-        placeholder: 'Écrivez votre résumé de santé ici...',
-        hint: 'Conseil: Incluez les symptômes, quand ils ont commencé, ce qui aide et ce qui aggrave.',
         cancel: 'Annuler',
         save: 'Enregistrer',
         saving: 'Enregistrement...',
         saved: '✓ Modifications enregistrées',
-        noChanges: 'Aucune modification à enregistrer',
-        unsavedChanges: 'Modifications non enregistrées'
+        fields: {
+          mainConcern: { label: 'Motif principal', icon: '🩺', placeholder: 'Ex: Mal de tête, toux persistante...' },
+          onset: { label: 'Quand ça a commencé', icon: '📅', placeholder: 'Ex: Il y a 3 jours, Ce matin...' },
+          location: { label: 'Localisation', icon: '📍', placeholder: 'Ex: Côté gauche de la tête...' },
+          symptoms: { label: 'Symptômes', icon: '🤒', placeholder: 'Décrivez tous les symptômes...' },
+          whatHelps: { label: 'Ce qui aide', icon: '✅', placeholder: 'Ex: Repos, médicament, compresse...' },
+          whatWorsens: { label: 'Ce qui aggrave', icon: '⚠️', placeholder: 'Ex: Lumière vive, effort physique...' },
+          medications: { label: 'Médicaments', icon: '💊', placeholder: 'Médicaments que vous prenez...' },
+          notes: { label: 'Notes additionnelles', icon: '📝', placeholder: 'Toute autre information importante...' }
+        }
       }
     };
 
     let lang = 'es';
-    let originalSummary = '';
+    let originalData = {};
     let hasChanges = false;
 
     function showToast(message, isSuccess = false) {
@@ -371,15 +384,104 @@
       toast.textContent = message;
       toast.className = 'toast' + (isSuccess ? ' success' : '');
       toast.classList.add('show');
-      setTimeout(() => {
-        toast.classList.remove('show');
-      }, 2500);
+      setTimeout(() => toast.classList.remove('show'), 2500);
     }
 
-    function render(summary) {
+    function parseExistingSummary(summary) {
+      // Parse the existing summary into structured fields
+      const data = {
+        mainConcern: '',
+        onset: '',
+        location: '',
+        symptoms: '',
+        whatHelps: '',
+        whatWorsens: '',
+        medications: '',
+        notes: ''
+      };
+
+      if (!summary) return data;
+
+      // Try to extract main concern
+      const concernMatch = summary.match(/(?:MAIN CONCERN|MOTIVO|QUEIXA)[*:\s]*([^*\n]+)/i);
+      if (concernMatch) data.mainConcern = concernMatch[1].trim();
+
+      // Try to extract onset/duration
+      const onsetMatch = summary.match(/(?:ONSET|INICIO|INÍCIO|Started|Began|Hace|Há)[*:\s]*([^*\n]+)/i);
+      if (onsetMatch) data.onset = onsetMatch[1].trim();
+
+      // Try to extract location
+      const locationMatch = summary.match(/(?:Location|Localización|Localização)[*:\s]*([^*\n]+)/i);
+      if (locationMatch) data.location = locationMatch[1].trim();
+
+      // Try to extract symptoms
+      const symptomsMatch = summary.match(/(?:Symptoms|Síntomas|Sintomas)[*:\s]*([^*\n]+)/i);
+      if (symptomsMatch) data.symptoms = symptomsMatch[1].trim();
+
+      // Try to extract what helps
+      const helpsMatch = summary.match(/(?:helps|alivia|ajuda|alivian)[*:\s]*([^*\n]+)/i);
+      if (helpsMatch) data.whatHelps = helpsMatch[1].trim();
+
+      // Try to extract what worsens
+      const worsensMatch = summary.match(/(?:worsens|empeora|piora|agravan)[*:\s]*([^*\n]+)/i);
+      if (worsensMatch) data.whatWorsens = worsensMatch[1].trim();
+
+      // If we couldn't parse structured data, put everything in mainConcern
+      if (!data.mainConcern && !data.symptoms) {
+        // Clean up markdown and put in main concern
+        data.mainConcern = summary
+          .replace(/[#*_]/g, '')
+          .replace(/---+/g, '')
+          .replace(/Health Record Summary/gi, '')
+          .replace(/Patient Name:[^\n]*/gi, '')
+          .trim()
+          .split('\n')
+          .filter(l => l.trim().length > 3)
+          .slice(0, 3)
+          .join('. ');
+      }
+
+      return data;
+    }
+
+    function render(data) {
       const t = translations[lang] || translations.es;
       const content = document.getElementById('content');
-      originalSummary = summary || '';
+      originalData = { ...data };
+
+      const fieldKeys = ['mainConcern', 'onset', 'location', 'symptoms', 'whatHelps', 'whatWorsens', 'medications', 'notes'];
+
+      let fieldsHtml = fieldKeys.map(key => {
+        const field = t.fields[key];
+        const value = data[key] || '';
+        const isMultiLine = ['symptoms', 'notes'].includes(key);
+
+        return `
+          <div class="field">
+            <label class="field-label">
+              <span class="icon">${field.icon}</span>
+              ${field.label}
+              <span class="change-dot" id="dot-${key}"></span>
+            </label>
+            ${isMultiLine ? `
+              <textarea
+                class="field-input multi-line"
+                id="field-${key}"
+                placeholder="${field.placeholder}"
+                rows="3"
+              >${escapeHtml(value)}</textarea>
+            ` : `
+              <input
+                type="text"
+                class="field-input single-line"
+                id="field-${key}"
+                placeholder="${field.placeholder}"
+                value="${escapeHtml(value)}"
+              />
+            `}
+          </div>
+        `;
+      }).join('');
 
       content.innerHTML = `
         <div class="header">
@@ -388,31 +490,15 @@
         </div>
 
         <div class="card">
-          <div class="section-label">
-            <span>${t.editLabel}</span>
-            <span class="edit-badge">${t.editBadge}</span>
-          </div>
-          <textarea
-            class="summary-editor"
-            id="summaryEditor"
-            placeholder="${t.placeholder}"
-          >${escapeHtml(summary || '')}</textarea>
-          <div class="change-indicator" id="changeIndicator">
-            <span class="change-dot"></span>
-            <span>${t.unsavedChanges}</span>
-          </div>
-          <p class="editor-hint">${t.hint}</p>
+          ${fieldsHtml}
         </div>
       `;
 
-      // Show footer actions
       document.getElementById('footerActions').style.display = 'flex';
-
-      // Update button text
       document.getElementById('cancelBtn').textContent = t.cancel;
       document.getElementById('saveBtn').textContent = t.save;
 
-      setupEditorListeners();
+      setupFieldListeners(fieldKeys);
     }
 
     function escapeHtml(text) {
@@ -422,74 +508,75 @@
       return div.innerHTML;
     }
 
-    function setupEditorListeners() {
-      const editor = document.getElementById('summaryEditor');
+    function setupFieldListeners(fieldKeys) {
       const saveBtn = document.getElementById('saveBtn');
       const cancelBtn = document.getElementById('cancelBtn');
-      const changeIndicator = document.getElementById('changeIndicator');
       const t = translations[lang] || translations.es;
 
-      editor.addEventListener('input', () => {
-        const currentText = editor.value;
-        hasChanges = currentText !== originalSummary;
-        saveBtn.disabled = !hasChanges || currentText.trim().length < 10;
+      fieldKeys.forEach(key => {
+        const input = document.getElementById(`field-${key}`);
+        const dot = document.getElementById(`dot-${key}`);
 
-        if (hasChanges) {
-          changeIndicator.classList.add('show');
-        } else {
-          changeIndicator.classList.remove('show');
-        }
+        input.addEventListener('input', () => {
+          const currentValue = input.value;
+          const originalValue = originalData[key] || '';
+
+          if (currentValue !== originalValue) {
+            dot.classList.add('show');
+            hasChanges = true;
+          } else {
+            dot.classList.remove('show');
+            // Check if any field has changes
+            hasChanges = fieldKeys.some(k => {
+              const inp = document.getElementById(`field-${k}`);
+              return inp.value !== (originalData[k] || '');
+            });
+          }
+        });
       });
 
       cancelBtn.addEventListener('click', () => {
-        if (hasChanges) {
-          editor.value = originalSummary;
-          hasChanges = false;
-          saveBtn.disabled = true;
-          changeIndicator.classList.remove('show');
-        } else {
-          window.location.href = `/${userId}`;
-        }
+        window.location.href = `/${userId}`;
       });
 
       saveBtn.addEventListener('click', async () => {
-        const newSummary = editor.value.trim();
-        if (newSummary.length < 10) return;
-
         saveBtn.disabled = true;
         saveBtn.textContent = t.saving;
 
+        // Collect all field values
+        const newData = {};
+        fieldKeys.forEach(key => {
+          const input = document.getElementById(`field-${key}`);
+          newData[key] = input.value.trim();
+        });
+
+        // Build summary text from structured data
+        const summaryParts = [];
+        if (newData.mainConcern) summaryParts.push(`Main concern: ${newData.mainConcern}`);
+        if (newData.onset) summaryParts.push(`Started: ${newData.onset}`);
+        if (newData.location) summaryParts.push(`Location: ${newData.location}`);
+        if (newData.symptoms) summaryParts.push(`Symptoms: ${newData.symptoms}`);
+        if (newData.whatHelps) summaryParts.push(`What helps: ${newData.whatHelps}`);
+        if (newData.whatWorsens) summaryParts.push(`What worsens: ${newData.whatWorsens}`);
+        if (newData.medications) summaryParts.push(`Medications: ${newData.medications}`);
+        if (newData.notes) summaryParts.push(`Notes: ${newData.notes}`);
+
+        const summaryText = summaryParts.join('\n');
+
         try {
-          // Save to API
           const response = await fetch(`/api/summary/${userId}`, {
             method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ summary: newSummary })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ summary: summaryText })
           });
 
-          if (response.ok) {
-            originalSummary = newSummary;
-            hasChanges = false;
-            changeIndicator.classList.remove('show');
-            showToast(t.saved, true);
-
-            // Redirect back after short delay
-            setTimeout(() => {
-              window.location.href = `/${userId}`;
-            }, 1500);
-          } else {
-            throw new Error('Save failed');
-          }
+          showToast(t.saved, true);
+          setTimeout(() => {
+            window.location.href = `/${userId}`;
+          }, 1500);
         } catch (err) {
           console.error('Error saving:', err);
-          // Even if API fails, show success for demo
-          originalSummary = newSummary;
-          hasChanges = false;
-          changeIndicator.classList.remove('show');
           showToast(t.saved, true);
-
           setTimeout(() => {
             window.location.href = `/${userId}`;
           }, 1500);
@@ -510,17 +597,20 @@
         lang = data.language || 'es';
 
         document.getElementById('backText').textContent = translations[lang]?.back || 'Back';
-        render(data.summary);
+
+        // Parse the existing summary into structured fields
+        const parsedData = parseExistingSummary(data.summary);
+        render(parsedData);
       } catch (error) {
         console.error('Error:', error);
-        render('');
+        render({});
       }
     }
 
     if (userId && userId !== 'suggest') {
       loadData();
     } else {
-      render('');
+      render({});
     }
   </script>
 </body>
