@@ -482,43 +482,119 @@
 
       if (!summary) return data;
 
-      // Try to extract main concern
-      const concernMatch = summary.match(/(?:MAIN CONCERN|MOTIVO|QUEIXA)[*:\s]*([^*\n]+)/i);
-      if (concernMatch) data.mainConcern = concernMatch[1].trim();
+      // First check if this is our structured format from previous updates
+      // Format: "Main concern: X\nStarted: Y\nLocation: Z\n..."
+      const isStructured = /^(Main concern|Started|Location|Symptoms|What helps|What worsens|Medications|Notes):/im.test(summary);
 
-      // Try to extract onset/duration
-      const onsetMatch = summary.match(/(?:ONSET|INICIO|INÍCIO|Started|Began|Hace|Há)[*:\s]*([^*\n]+)/i);
-      if (onsetMatch) data.onset = onsetMatch[1].trim();
+      if (isStructured) {
+        const lines = summary.split('\n');
+        for (const line of lines) {
+          const match = line.match(/^(Main concern|Started|Location|Symptoms|What helps|What worsens|Medications|Notes):\s*(.+)/i);
+          if (match) {
+            const key = match[1].toLowerCase();
+            let value = match[2].trim();
 
-      // Try to extract location
-      const locationMatch = summary.match(/(?:Location|Localización|Localização)[*:\s]*([^*\n]+)/i);
-      if (locationMatch) data.location = locationMatch[1].trim();
+            // Clean up the value
+            value = value
+              .replace(/Patient reports (having )?/gi, '')
+              .replace(/\bpatient\b/gi, '')
+              .replace(/\breports\b/gi, '')
+              .trim();
 
-      // Try to extract symptoms
-      const symptomsMatch = summary.match(/(?:Symptoms|Síntomas|Sintomas)[*:\s]*([^*\n]+)/i);
-      if (symptomsMatch) data.symptoms = symptomsMatch[1].trim();
+            if (key === 'main concern') data.mainConcern = value;
+            else if (key === 'started') data.onset = value;
+            else if (key === 'location') data.location = value;
+            else if (key === 'symptoms') data.symptoms = value;
+            else if (key === 'what helps') data.whatHelps = value;
+            else if (key === 'what worsens') data.whatWorsens = value;
+            else if (key === 'medications') data.medications = value;
+            else if (key === 'notes') data.notes = value;
+          }
+        }
+        return data;
+      }
 
-      // Try to extract what helps
-      const helpsMatch = summary.match(/(?:helps|alivia|ajuda|alivian)[*:\s]*([^*\n]+)/i);
-      if (helpsMatch) data.whatHelps = helpsMatch[1].trim();
+      // Try legacy patterns for AI-generated summaries
+      // Main concern patterns
+      const concernPatterns = [
+        /(?:MAIN CONCERN|Main concern|MOTIVO|Motivo principal|QUEIXA)[*:\s]*([^*\n]+)/i,
+        /(?:having|has|with)\s+(?:a\s+)?([^,.\n]+(?:pain|ache|sty|infection|issue|problem)[^,.\n]*)/i,
+      ];
+      for (const pattern of concernPatterns) {
+        const match = summary.match(pattern);
+        if (match && match[1]) {
+          data.mainConcern = match[1].trim().replace(/Patient reports (having )?/gi, '');
+          break;
+        }
+      }
 
-      // Try to extract what worsens
-      const worsensMatch = summary.match(/(?:worsens|empeora|piora|agravan)[*:\s]*([^*\n]+)/i);
-      if (worsensMatch) data.whatWorsens = worsensMatch[1].trim();
+      // Onset patterns
+      const onsetPatterns = [
+        /(?:Started|ONSET|INICIO|INÍCIO|Began):\s*([^*\n]+)/i,
+        /(?:for|since|hace|desde)\s+(about\s+)?(\d+\s*(?:days?|hours?|weeks?|días?|horas?|semanas?))/i,
+        /(\d+\s*(?:days?|hours?|weeks?|días?|horas?|semanas?))\s*ago/i,
+      ];
+      for (const pattern of onsetPatterns) {
+        const match = summary.match(pattern);
+        if (match) {
+          data.onset = (match[2] || match[1]).trim();
+          break;
+        }
+      }
 
-      // If we couldn't parse structured data, put everything in mainConcern
-      if (!data.mainConcern && !data.symptoms) {
-        // Clean up markdown and put in main concern
-        data.mainConcern = summary
+      // Location patterns
+      const locationPatterns = [
+        /(?:Location|Ubicación|Localização|Localización):\s*([^*\n]+)/i,
+        /(?:on|in|at)\s+(?:the\s+)?(?:left|right|upper|lower)?\s*(eye|head|back|stomach|chest|arm|leg|throat|ear)[^,.\n]*/i,
+      ];
+      for (const pattern of locationPatterns) {
+        const match = summary.match(pattern);
+        if (match && match[1]) {
+          data.location = match[1].trim();
+          break;
+        }
+      }
+
+      // What helps patterns
+      const helpsPatterns = [
+        /(?:What helps|Qué ayuda|O que ajuda|helps):\s*([^*\n]+)/i,
+        /(warm compresses|cold compresses|rest|medication|sleep|compresas)[^,.\n]*/i,
+      ];
+      for (const pattern of helpsPatterns) {
+        const match = summary.match(pattern);
+        if (match && match[1]) {
+          data.whatHelps = match[1].trim();
+          break;
+        }
+      }
+
+      // What worsens patterns
+      const worsensPatterns = [
+        /(?:What worsens|Qué empeora|O que piora|worsens|makes it worse):\s*([^*\n]+)/i,
+      ];
+      for (const pattern of worsensPatterns) {
+        const match = summary.match(pattern);
+        if (match && match[1]) {
+          data.whatWorsens = match[1].trim();
+          break;
+        }
+      }
+
+      // If we still couldn't parse main concern, extract from text
+      if (!data.mainConcern) {
+        const cleaned = summary
           .replace(/[#*_]/g, '')
-          .replace(/---+/g, '')
+          .replace(/---+/g, ' ')
           .replace(/Health Record Summary/gi, '')
           .replace(/Patient Name:[^\n]*/gi, '')
-          .trim()
-          .split('\n')
-          .filter(l => l.trim().length > 3)
-          .slice(0, 3)
-          .join('. ');
+          .replace(/Patient reports (having )?/gi, '')
+          .trim();
+
+        // Take first meaningful sentence
+        const sentences = cleaned.split(/[.!?]+/).filter(s => s.trim().length > 10);
+        if (sentences.length > 0) {
+          data.mainConcern = sentences[0].trim();
+        }
       }
 
       return data;

@@ -504,8 +504,40 @@
     function cleanSummaryForDisplay(text) {
       if (!text) return 'Your health summary will appear here as you share more details.';
 
-      // Check if this is a structured format from the Edit page
-      // Format: "Main concern: X\nStarted: Y\nLocation: Z\n..."
+      // First, aggressively clean up any messy/corrupted text
+      let cleaned = text
+        // Remove markdown
+        .replace(/\*\*/g, '')
+        .replace(/\*([^*]+)\*/g, '$1')
+        .replace(/^#{1,3}\s+/gm, '')
+        .replace(/---+/g, ' ')
+        // Remove repeated labels like "What worsens: What worsens: What worsens:"
+        .replace(/(What worsens:\s*)+/gi, '')
+        .replace(/(What helps:\s*)+/gi, '')
+        .replace(/(Symptoms:\s*)+/gi, '')
+        .replace(/(Location:\s*)+/gi, '')
+        .replace(/(Started:\s*)+/gi, '')
+        .replace(/(Main concern:\s*)+/gi, '')
+        .replace(/(Medications:\s*)+/gi, '')
+        .replace(/(Notes:\s*)+/gi, '')
+        // Remove clinical phrases
+        .replace(/Patient reports (having )?/gi, '')
+        .replace(/patient reports /gi, '')
+        .replace(/\bpatient\b/gi, '')
+        .replace(/\breports\b/gi, '')
+        .replace(/\bapproximately\b/gi, 'about')
+        // Remove artifacts
+        .replace(/\/ WORSENS/gi, '')
+        .replace(/- Helps:/gi, '')
+        .replace(/helps\.\s*helps/gi, 'helps')
+        .replace(/makes it worse\.\s*makes it worse/gi, 'makes it worse')
+        // Clean up punctuation mess
+        .replace(/\.\s*\./g, '.')
+        .replace(/,\s*,/g, ',')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      // Check if this is a structured format from the Update page
       const isStructured = /^(Main concern|Started|Location|Symptoms|What helps|What worsens|Medications|Notes):/im.test(text);
 
       if (isStructured) {
@@ -517,8 +549,14 @@
           const match = line.match(/^(Main concern|Started|Location|Symptoms|What helps|What worsens|Medications|Notes):\s*(.+)/i);
           if (match) {
             const key = match[1].toLowerCase().replace(/\s+/g, '_');
-            const value = match[2].trim();
-            if (value) {
+            let value = match[2].trim();
+            // Clean the value
+            value = value
+              .replace(/Patient reports (having )?/gi, '')
+              .replace(/\bpatient\b/gi, '')
+              .replace(/\breports\b/gi, '')
+              .trim();
+            if (value && value.length > 1) {
               fields[key] = value;
             }
           }
@@ -528,15 +566,23 @@
         const parts = [];
 
         if (fields.main_concern) {
-          parts.push(fields.main_concern);
+          // Capitalize first letter
+          let concern = fields.main_concern;
+          concern = concern.charAt(0).toUpperCase() + concern.slice(1);
+          parts.push(concern);
         }
 
         if (fields.started) {
-          parts.push(`Started ${fields.started.toLowerCase()}`);
+          let started = fields.started.toLowerCase();
+          if (!started.startsWith('started') && !started.startsWith('about') && !started.match(/^\d/)) {
+            parts.push(`Started ${started}`);
+          } else {
+            parts.push(started.charAt(0).toUpperCase() + started.slice(1));
+          }
         }
 
         if (fields.location) {
-          parts.push(`Located in ${fields.location.toLowerCase()}`);
+          parts.push(`Location: ${fields.location}`);
         }
 
         if (fields.symptoms) {
@@ -544,7 +590,7 @@
         }
 
         if (fields.what_helps) {
-          parts.push(`${fields.what_helps} helps`);
+          parts.push(`${fields.what_helps} is helping`);
         }
 
         if (fields.what_worsens) {
@@ -559,95 +605,62 @@
           parts.push(fields.notes);
         }
 
-        if (parts.length === 0) {
-          return 'Your health summary will appear here as you share more details.';
+        if (parts.length > 0) {
+          let result = parts.join('. ');
+
+          // Final cleanup
+          result = result
+            .replace(/\.\s*\./g, '.')
+            .replace(/\s{2,}/g, ' ')
+            .trim();
+
+          if (!result.endsWith('.') && !result.endsWith('?')) {
+            result += '.';
+          }
+
+          return result;
         }
-
-        // Join with periods
-        let result = parts.join('. ');
-
-        // Clean up
-        result = result
-          .replace(/\.\s*\./g, '.')
-          .replace(/\s{2,}/g, ' ')
-          .trim();
-
-        if (!result.endsWith('.') && !result.endsWith('?')) {
-          result += '.';
-        }
-
-        // Capitalize first letter
-        result = result.charAt(0).toUpperCase() + result.slice(1);
-
-        return result;
       }
 
-      // Original parsing for non-structured summaries
-      let normalized = text
-        .replace(/\*\*/g, '')
-        .replace(/\*([^*]+)\*/g, '$1')
-        .replace(/^#{1,3}\s+/gm, '')
-        .replace(/---+/g, '\n')
-        .trim();
+      // For non-structured or fallback: extract meaningful content
+      // Split into sentences and filter out junk
+      let sentences = cleaned.split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 3);
 
-      // Build a simple, friendly summary
-      const lines = normalized.split('\n').map(l => l.trim()).filter(l => l.length > 5);
-
-      // Remove clinical/technical phrases and headers
-      const skipPatterns = [
+      // Remove sentences that are just labels or fragments
+      const junkPatterns = [
         /^(MOTIVO|MAIN|QUEIXA|MOTIF|INICIO|ONSET|INÍCIO|DÉBUT|PATRÓN|PATTERN)/i,
-        /^(QUÉ AYUDA|WHAT HELPS|MEDICAMENTOS|MEDICATIONS|PREGUNTAS|QUESTIONS|CRONOLOGÍA|TIMELINE)/i,
+        /^(QUÉ AYUDA|WHAT HELPS|MEDICAMENTOS|MEDICATIONS|PREGUNTAS|QUESTIONS)/i,
         /^(Patient Name|Nombre|Health Record|Registro)/i,
-        /(Record generated|preparation tool|medical advice|Not provided|No proporcionado)/i,
+        /(Record generated|preparation tool|medical advice|Not provided)/i,
+        /^(helps|worsens|location|started|symptoms|notes)$/i,
+        /^-+$/,
       ];
 
-      let cleanLines = [];
-      for (const line of lines) {
-        let skip = skipPatterns.some(p => p.test(line));
-        if (skip) continue;
+      let goodSentences = sentences.filter(s => {
+        return !junkPatterns.some(p => p.test(s)) && s.length > 5;
+      });
 
-        // Clean up the line
-        let clean = line
-          .replace(/^[-•]\s*/, '')
-          .replace(/Patient reports (having )?/gi, '')
-          .replace(/patient /gi, '')
-          .replace(/\breports\b/gi, '')
-          .replace(/\bapproximately\b/gi, 'about')
-          .replace(/\bOngoing\b/gi, 'still happening')
-          .replace(/\bpresent\b/gi, 'there')
-          .trim();
-
-        if (clean.length > 5 && !cleanLines.includes(clean)) {
-          cleanLines.push(clean);
-        }
-      }
-
-      // Build friendly output
-      if (cleanLines.length === 0) {
+      // Take up to 4 good sentences
+      if (goodSentences.length === 0) {
         return 'Your health summary will appear here as you share more details.';
       }
 
-      // Take the most relevant lines and make them flow
-      let result = cleanLines.slice(0, 4).join('. ');
+      let result = goodSentences.slice(0, 4).join('. ');
 
-      // Clean up sentence structure
+      // Final cleanup
       result = result
         .replace(/\.\s*\./g, '.')
         .replace(/\s{2,}/g, ' ')
-        .replace(/\. ([a-z])/g, (m, c) => '. ' + c.toUpperCase())
         .trim();
 
-      // Ensure it ends with a period
-      if (result && !result.endsWith('.') && !result.endsWith('?')) {
+      if (!result.endsWith('.') && !result.endsWith('?')) {
         result += '.';
       }
 
       // Capitalize first letter
-      if (result) {
-        result = result.charAt(0).toUpperCase() + result.slice(1);
-      }
+      result = result.charAt(0).toUpperCase() + result.slice(1);
 
-      return result || 'Your health summary will appear here as you share more details.';
+      return result;
     }
 
     // Show empty state
