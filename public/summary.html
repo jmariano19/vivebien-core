@@ -609,7 +609,12 @@
 
     // Next appointment action
     function nextAppointment() {
-      alert('Próximamente: Programar cita');
+      if (!userId || userId === 'preview' || userId === 'summary.html') {
+        alert('Esta función estará disponible cuando tengas un resumen guardado.');
+        return;
+      }
+      // Navigate to the appointment page
+      window.location.href = `/appointment/${userId}`;
     }
 
     // Suggest a change
