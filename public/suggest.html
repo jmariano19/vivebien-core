@@ -264,6 +264,81 @@
     .change-dot.show {
       display: block;
     }
+
+    /* Medication chips */
+    .medication-container {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .medication-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .medication-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #e8f5ee;
+      color: var(--brand);
+      padding: 8px 12px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .medication-chip .remove-med {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.1);
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: var(--muted);
+      transition: all 0.2s;
+    }
+    .medication-chip .remove-med:hover {
+      background: rgba(0,0,0,0.2);
+      color: var(--text);
+    }
+    .add-medication-row {
+      display: flex;
+      gap: 8px;
+    }
+    .add-medication-row input {
+      flex: 1;
+    }
+    .add-med-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      border: none;
+      background: var(--brand);
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+    .add-med-btn:hover {
+      opacity: 0.9;
+      transform: scale(1.05);
+    }
+    .add-med-btn:active {
+      transform: scale(0.95);
+    }
+    .empty-meds {
+      color: var(--muted);
+      font-size: 14px;
+      font-style: italic;
+    }
   </style>
 </head>
 <body>
@@ -312,7 +387,7 @@
           symptoms: { label: 'Síntomas', icon: '🤒', placeholder: 'Describe todos los síntomas que sientes...' },
           whatHelps: { label: 'Qué te ayuda', icon: '✅', placeholder: 'Ej: Descanso, medicamento, compresas...' },
           whatWorsens: { label: 'Qué lo empeora', icon: '⚠️', placeholder: 'Ej: Luz brillante, esfuerzo físico...' },
-          medications: { label: 'Medicamentos', icon: '💊', placeholder: 'Medicamentos que estás tomando...' },
+          medications: { label: 'Medicamentos', icon: '💊', placeholder: 'Agregar medicamento...', empty: 'Sin medicamentos agregados' },
           notes: { label: 'Notas adicionales', icon: '📝', placeholder: 'Cualquier otra información importante...' }
         }
       },
@@ -331,7 +406,7 @@
           symptoms: { label: 'Symptoms', icon: '🤒', placeholder: 'Describe all the symptoms you feel...' },
           whatHelps: { label: 'What helps', icon: '✅', placeholder: 'E.g.: Rest, medication, compress...' },
           whatWorsens: { label: 'What makes it worse', icon: '⚠️', placeholder: 'E.g.: Bright light, physical effort...' },
-          medications: { label: 'Medications', icon: '💊', placeholder: 'Medications you are taking...' },
+          medications: { label: 'Medications', icon: '💊', placeholder: 'Add a medication...', empty: 'No medications added' },
           notes: { label: 'Additional notes', icon: '📝', placeholder: 'Any other important information...' }
         }
       },
@@ -350,7 +425,7 @@
           symptoms: { label: 'Sintomas', icon: '🤒', placeholder: 'Descreva todos os sintomas que sente...' },
           whatHelps: { label: 'O que ajuda', icon: '✅', placeholder: 'Ex: Descanso, medicamento, compressas...' },
           whatWorsens: { label: 'O que piora', icon: '⚠️', placeholder: 'Ex: Luz forte, esforço físico...' },
-          medications: { label: 'Medicamentos', icon: '💊', placeholder: 'Medicamentos que está tomando...' },
+          medications: { label: 'Medicamentos', icon: '💊', placeholder: 'Adicionar medicamento...', empty: 'Nenhum medicamento adicionado' },
           notes: { label: 'Notas adicionais', icon: '📝', placeholder: 'Qualquer outra informação importante...' }
         }
       },
@@ -369,7 +444,7 @@
           symptoms: { label: 'Symptômes', icon: '🤒', placeholder: 'Décrivez tous les symptômes...' },
           whatHelps: { label: 'Ce qui aide', icon: '✅', placeholder: 'Ex: Repos, médicament, compresse...' },
           whatWorsens: { label: 'Ce qui aggrave', icon: '⚠️', placeholder: 'Ex: Lumière vive, effort physique...' },
-          medications: { label: 'Médicaments', icon: '💊', placeholder: 'Médicaments que vous prenez...' },
+          medications: { label: 'Médicaments', icon: '💊', placeholder: 'Ajouter un médicament...', empty: 'Aucun médicament ajouté' },
           notes: { label: 'Notes additionnelles', icon: '📝', placeholder: 'Toute autre information importante...' }
         }
       }
@@ -378,6 +453,7 @@
     let lang = 'es';
     let originalData = {};
     let hasChanges = false;
+    let medications = [];
 
     function showToast(message, isSuccess = false) {
       const toast = document.getElementById('toast');
@@ -449,12 +525,46 @@
       const content = document.getElementById('content');
       originalData = { ...data };
 
+      // Parse medications into array
+      if (data.medications) {
+        medications = data.medications.split(',').map(m => m.trim()).filter(m => m);
+      } else {
+        medications = [];
+      }
+
       const fieldKeys = ['mainConcern', 'onset', 'location', 'symptoms', 'whatHelps', 'whatWorsens', 'medications', 'notes'];
 
       let fieldsHtml = fieldKeys.map(key => {
         const field = t.fields[key];
         const value = data[key] || '';
         const isMultiLine = ['symptoms', 'notes'].includes(key);
+        const isMedications = key === 'medications';
+
+        if (isMedications) {
+          return `
+            <div class="field">
+              <label class="field-label">
+                <span class="icon">${field.icon}</span>
+                ${field.label}
+                <span class="change-dot" id="dot-${key}"></span>
+              </label>
+              <div class="medication-container">
+                <div class="medication-chips" id="medication-chips">
+                  ${medications.length === 0 ? `<span class="empty-meds">${field.empty}</span>` : ''}
+                </div>
+                <div class="add-medication-row">
+                  <input
+                    type="text"
+                    class="field-input single-line"
+                    id="new-medication-input"
+                    placeholder="${field.placeholder}"
+                  />
+                  <button type="button" class="add-med-btn" id="add-med-btn">+</button>
+                </div>
+              </div>
+            </div>
+          `;
+        }
 
         return `
           <div class="field">
@@ -498,7 +608,81 @@
       document.getElementById('cancelBtn').textContent = t.cancel;
       document.getElementById('saveBtn').textContent = t.save;
 
+      renderMedicationChips();
+      setupMedicationHandlers();
       setupFieldListeners(fieldKeys);
+    }
+
+    function renderMedicationChips() {
+      const t = translations[lang] || translations.es;
+      const container = document.getElementById('medication-chips');
+      if (!container) return;
+
+      if (medications.length === 0) {
+        container.innerHTML = `<span class="empty-meds">${t.fields.medications.empty}</span>`;
+      } else {
+        container.innerHTML = medications.map((med, idx) => `
+          <span class="medication-chip">
+            ${escapeHtml(med)}
+            <button type="button" class="remove-med" data-idx="${idx}">×</button>
+          </span>
+        `).join('');
+      }
+
+      // Check for changes
+      const originalMeds = (originalData.medications || '').split(',').map(m => m.trim()).filter(m => m);
+      const currentMeds = medications.join(',');
+      const originalMedsStr = originalMeds.join(',');
+      const dot = document.getElementById('dot-medications');
+      if (dot) {
+        if (currentMeds !== originalMedsStr) {
+          dot.classList.add('show');
+          hasChanges = true;
+        } else {
+          dot.classList.remove('show');
+        }
+      }
+    }
+
+    function setupMedicationHandlers() {
+      const addBtn = document.getElementById('add-med-btn');
+      const input = document.getElementById('new-medication-input');
+      const chipsContainer = document.getElementById('medication-chips');
+
+      if (!addBtn || !input) return;
+
+      function addMedication() {
+        const value = input.value.trim();
+        if (value && !medications.includes(value)) {
+          medications.push(value);
+          input.value = '';
+          renderMedicationChips();
+          setupRemoveHandlers();
+        }
+        input.focus();
+      }
+
+      addBtn.addEventListener('click', addMedication);
+      input.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          addMedication();
+        }
+      });
+
+      setupRemoveHandlers();
+    }
+
+    function setupRemoveHandlers() {
+      const removeButtons = document.querySelectorAll('.remove-med');
+      removeButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const idx = parseInt(btn.dataset.idx);
+          medications.splice(idx, 1);
+          renderMedicationChips();
+          setupRemoveHandlers();
+        });
+      });
     }
 
     function escapeHtml(text) {
@@ -514,8 +698,12 @@
       const t = translations[lang] || translations.es;
 
       fieldKeys.forEach(key => {
+        if (key === 'medications') return; // Medications handled separately
+
         const input = document.getElementById(`field-${key}`);
         const dot = document.getElementById(`dot-${key}`);
+
+        if (!input) return;
 
         input.addEventListener('input', () => {
           const currentValue = input.value;
@@ -528,8 +716,12 @@
             dot.classList.remove('show');
             // Check if any field has changes
             hasChanges = fieldKeys.some(k => {
+              if (k === 'medications') {
+                const originalMeds = (originalData.medications || '').split(',').map(m => m.trim()).filter(m => m);
+                return medications.join(',') !== originalMeds.join(',');
+              }
               const inp = document.getElementById(`field-${k}`);
-              return inp.value !== (originalData[k] || '');
+              return inp && inp.value !== (originalData[k] || '');
             });
           }
         });
@@ -546,8 +738,12 @@
         // Collect all field values
         const newData = {};
         fieldKeys.forEach(key => {
-          const input = document.getElementById(`field-${key}`);
-          newData[key] = input.value.trim();
+          if (key === 'medications') {
+            newData[key] = medications.join(', ');
+          } else {
+            const input = document.getElementById(`field-${key}`);
+            newData[key] = input.value.trim();
+          }
         });
 
         // Build summary text from structured data
