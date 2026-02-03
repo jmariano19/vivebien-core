@@ -1,5 +1,5 @@
 import { FastifyInstance, FastifyPluginAsync } from 'fastify';
-import { queryOne, queryMany } from '../../infra/db/client';
+import { queryOne, queryMany, query } from '../../infra/db/client';
 import { NotFoundError } from '../../shared/errors';
 
 export const summaryRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
@@ -65,6 +65,72 @@ export const summaryRoutes: FastifyPluginAsync = async (app: FastifyInstance) =>
       summary: summary.content,
       updatedAt: summary.created_at,
     };
+  });
+
+  /**
+   * Update health summary by user ID
+   * URL: PUT /api/summary/:userId
+   */
+  app.put('/:userId', async (request, reply) => {
+    const { userId } = request.params as { userId: string };
+    const { summary } = request.body as { summary: string };
+
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(userId)) {
+      return reply.status(400).send({ error: 'Invalid user ID format' });
+    }
+
+    if (!summary || typeof summary !== 'string') {
+      return reply.status(400).send({ error: 'Summary is required' });
+    }
+
+    // Verify user exists
+    const user = await queryOne<{ id: string }>(
+      `SELECT id FROM users WHERE id = $1`,
+      [userId]
+    );
+
+    if (!user) {
+      return reply.status(404).send({ error: 'User not found' });
+    }
+
+    try {
+      // Check if a health_summary already exists for this user
+      const existingSummary = await queryOne<{ id: string }>(
+        `SELECT id FROM memories
+         WHERE user_id = $1 AND category = 'health_summary'
+         ORDER BY created_at DESC LIMIT 1`,
+        [userId]
+      );
+
+      if (existingSummary) {
+        // Update existing summary
+        await query(
+          `UPDATE memories
+           SET content = $1, created_at = NOW()
+           WHERE id = $2`,
+          [summary.trim(), existingSummary.id]
+        );
+      } else {
+        // Insert new summary
+        await query(
+          `INSERT INTO memories (user_id, category, content, created_at)
+           VALUES ($1, 'health_summary', $2, NOW())`,
+          [userId, summary.trim()]
+        );
+      }
+
+      return {
+        success: true,
+        message: 'Summary updated successfully',
+        updatedAt: new Date().toISOString(),
+      };
+    } catch (err) {
+      const error = err as Error;
+      console.error('Error updating summary:', error.message);
+      return reply.status(500).send({ error: 'Failed to update summary' });
+    }
   });
 
   /**

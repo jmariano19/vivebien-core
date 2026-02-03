@@ -380,6 +380,7 @@
         save: 'Guardar',
         saving: 'Guardando...',
         saved: '✓ Cambios guardados',
+        error: 'Error al guardar',
         fields: {
           mainConcern: { label: 'Motivo principal', icon: '🩺', placeholder: 'Ej: Dolor de cabeza, tos persistente...' },
           onset: { label: 'Cuándo comenzó', icon: '📅', placeholder: 'Ej: Hace 3 días, Esta mañana...' },
@@ -399,6 +400,7 @@
         save: 'Save',
         saving: 'Saving...',
         saved: '✓ Changes saved',
+        error: 'Error saving changes',
         fields: {
           mainConcern: { label: 'Main Concern', icon: '🩺', placeholder: 'E.g.: Headache, persistent cough...' },
           onset: { label: 'When it started', icon: '📅', placeholder: 'E.g.: 3 days ago, This morning...' },
@@ -418,6 +420,7 @@
         save: 'Salvar',
         saving: 'Salvando...',
         saved: '✓ Alterações salvas',
+        error: 'Erro ao salvar',
         fields: {
           mainConcern: { label: 'Queixa principal', icon: '🩺', placeholder: 'Ex: Dor de cabeça, tosse persistente...' },
           onset: { label: 'Quando começou', icon: '📅', placeholder: 'Ex: Há 3 dias, Esta manhã...' },
@@ -437,6 +440,7 @@
         save: 'Enregistrer',
         saving: 'Enregistrement...',
         saved: '✓ Modifications enregistrées',
+        error: 'Erreur lors de l\'enregistrement',
         fields: {
           mainConcern: { label: 'Motif principal', icon: '🩺', placeholder: 'Ex: Mal de tête, toux persistante...' },
           onset: { label: 'Quand ça a commencé', icon: '📅', placeholder: 'Ex: Il y a 3 jours, Ce matin...' },
@@ -766,16 +770,19 @@
             body: JSON.stringify({ summary: summaryText })
           });
 
+          if (!response.ok) {
+            throw new Error('Failed to save');
+          }
+
           showToast(t.saved, true);
           setTimeout(() => {
             window.location.href = `/${userId}`;
           }, 1500);
         } catch (err) {
           console.error('Error saving:', err);
-          showToast(t.saved, true);
-          setTimeout(() => {
-            window.location.href = `/${userId}`;
-          }, 1500);
+          saveBtn.disabled = false;
+          saveBtn.textContent = t.save;
+          showToast(t.error || 'Error saving changes', false);
         }
       });
     }
