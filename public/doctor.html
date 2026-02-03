@@ -242,18 +242,6 @@
       }
     }
 
-    /* Font size classes */
-    .card.font-size-1 .section-title { font-size: 14px; line-height: 36px; }
-    .card.font-size-1 .body-text, .card.font-size-1 .hpi-item { font-size: 14px; line-height: 22px; }
-
-    .card.font-size-2 .section-title { font-size: 16px; line-height: 40px; }
-    .card.font-size-2 .body-text, .card.font-size-2 .hpi-item { font-size: 16px; line-height: 25px; }
-
-    .card.font-size-3 .section-title { font-size: 18px; line-height: 44px; }
-    .card.font-size-3 .body-text, .card.font-size-3 .hpi-item { font-size: 18px; line-height: 28px; }
-
-    .card.font-size-4 .section-title { font-size: 20px; line-height: 48px; }
-    .card.font-size-4 .body-text, .card.font-size-4 .hpi-item { font-size: 20px; line-height: 30px; }
   </style>
 </head>
 <body>
@@ -431,14 +419,12 @@
             <div class="subtitle">${note.dateLabel || formatDate(new Date(), lang)}</div>
           </div>
           <div class="actions">
-            <button class="action-btn" id="fontDecBtn">A−</button>
-            <button class="action-btn" id="fontIncBtn">A+</button>
             <button class="action-btn" id="shareBtn">↗</button>
             <button class="action-btn" id="downloadBtn">⬇</button>
           </div>
         </div>
 
-        <div class="card font-size-2" id="doctorCard">
+        <div class="card" id="doctorCard">
           <div class="section">
             <div class="section-title">🥼 ${t.motivo}</div>
             <p class="body-text">${escapeHtml(note.motivo || t.noReportados)}</p>
@@ -482,40 +468,7 @@
       return div.innerHTML;
     }
 
-    let currentFontSize = 2; // Default size (1-4 scale)
-
     function setupEventListeners() {
-      // Font size controls
-      const fontDecBtn = document.getElementById('fontDecBtn');
-      const fontIncBtn = document.getElementById('fontIncBtn');
-      const card = document.getElementById('doctorCard');
-
-      function updateFontSize() {
-        card.classList.remove('font-size-1', 'font-size-2', 'font-size-3', 'font-size-4');
-        card.classList.add(`font-size-${currentFontSize}`);
-      }
-
-      if (fontDecBtn) {
-        fontDecBtn.addEventListener('click', () => {
-          if (currentFontSize > 1) {
-            currentFontSize--;
-            updateFontSize();
-          }
-        });
-      }
-
-      if (fontIncBtn) {
-        fontIncBtn.addEventListener('click', () => {
-          if (currentFontSize < 4) {
-            currentFontSize++;
-            updateFontSize();
-          }
-        });
-      }
-
-      // Set initial font size
-      updateFontSize();
-
       // Share button
       const shareBtn = document.getElementById('shareBtn');
       if (shareBtn) {
