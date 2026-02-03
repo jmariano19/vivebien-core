@@ -507,48 +507,85 @@
       // First, detect the format type and parse accordingly
       const fields = parseAnyFormat(text);
 
+      // Helper to check if a field value is actually meaningful content
+      function isValidField(value) {
+        if (!value || value.length < 3) return false;
+        // Filter out placeholder/empty indicators
+        const invalidPatterns = [
+          /^no\s*proporcionado/i,
+          /^not\s*provided/i,
+          /^n\/a$/i,
+          /^none$/i,
+          /^ninguno/i,
+          /^no\s*aplica/i,
+          /^usuario\s*reporta/i,
+          /^patient\s*reports?/i,
+          /^-+$/,
+          /^\.+$/,
+        ];
+        return !invalidPatterns.some(p => p.test(value.trim()));
+      }
+
+      // Clean a display value
+      function cleanDisplayValue(value) {
+        if (!value) return '';
+        return value
+          .replace(/^usuario\s*reporta\s*["']?/i, '')
+          .replace(/["']$/g, '')
+          .replace(/^patient\s*reports?\s*/i, '')
+          .trim();
+      }
+
       // Build a natural, flowing summary from parsed fields
       const parts = [];
 
-      if (fields.mainConcern) {
-        let concern = fields.mainConcern.charAt(0).toUpperCase() + fields.mainConcern.slice(1);
+      if (isValidField(fields.mainConcern)) {
+        let concern = cleanDisplayValue(fields.mainConcern);
+        concern = concern.charAt(0).toUpperCase() + concern.slice(1);
         parts.push(concern);
       }
 
-      if (fields.started) {
-        let started = fields.started;
-        if (!/^\d|^about|^started|^hace|^há/i.test(started)) {
-          parts.push(`Started ${started.toLowerCase()}`);
-        } else {
-          parts.push(started.charAt(0).toUpperCase() + started.slice(1));
+      if (isValidField(fields.started)) {
+        let started = cleanDisplayValue(fields.started);
+        // Only add timing info if it looks like a time expression
+        if (/\d|days?|hours?|weeks?|días?|horas?|semanas?|ago|hace|há/i.test(started)) {
+          if (!/^(hace|há|about|\d)/i.test(started)) {
+            parts.push(`Started ${started.toLowerCase()}`);
+          } else {
+            parts.push(started.charAt(0).toUpperCase() + started.slice(1));
+          }
         }
       }
 
-      if (fields.location) {
+      if (isValidField(fields.location)) {
+        let location = cleanDisplayValue(fields.location);
         // Only add if not already in main concern
-        if (!fields.mainConcern || !fields.mainConcern.toLowerCase().includes(fields.location.toLowerCase())) {
-          parts.push(`Location: ${fields.location}`);
+        if (!fields.mainConcern || !fields.mainConcern.toLowerCase().includes(location.toLowerCase())) {
+          parts.push(`Location: ${location}`);
         }
       }
 
-      if (fields.symptoms) {
-        parts.push(fields.symptoms);
+      if (isValidField(fields.symptoms)) {
+        parts.push(cleanDisplayValue(fields.symptoms));
       }
 
-      if (fields.whatHelps) {
-        parts.push(`${fields.whatHelps} is helping`);
+      if (isValidField(fields.whatHelps)) {
+        let helps = cleanDisplayValue(fields.whatHelps);
+        parts.push(`${helps} is helping`);
       }
 
-      if (fields.whatWorsens) {
-        parts.push(`${fields.whatWorsens} makes it worse`);
+      if (isValidField(fields.whatWorsens)) {
+        let worsens = cleanDisplayValue(fields.whatWorsens);
+        parts.push(`${worsens} makes it worse`);
       }
 
-      if (fields.medications) {
-        parts.push(`Taking: ${fields.medications}`);
+      if (isValidField(fields.medications)) {
+        let meds = cleanDisplayValue(fields.medications);
+        parts.push(`Taking: ${meds}`);
       }
 
-      if (fields.notes) {
-        parts.push(fields.notes);
+      if (isValidField(fields.notes)) {
+        parts.push(cleanDisplayValue(fields.notes));
       }
 
       if (parts.length > 0) {
