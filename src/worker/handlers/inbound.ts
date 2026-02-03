@@ -10,6 +10,7 @@ import { logExecution } from '../../infra/logging/logger';
 
 /**
  * Detect if the AI asked for the user's name and extract it from the response
+ * Also handles proactive name sharing (when user introduces themselves without being asked)
  * Returns the name if found, null otherwise
  */
 function extractUserName(userMessage: string, recentMessages: Message[]): string | null {
@@ -18,10 +19,6 @@ function extractUserName(userMessage: string, recentMessages: Message[]): string
     .slice()
     .reverse()
     .find(m => m.role === 'assistant');
-
-  if (!lastAssistantMessage) {
-    return null;
-  }
 
   // Name request patterns in multiple languages
   const nameRequestPatterns = [
@@ -39,10 +36,37 @@ function extractUserName(userMessage: string, recentMessages: Message[]): string
     /quel est votre nom/i,
   ];
 
-  const askedForName = nameRequestPatterns.some(pattern =>
+  const askedForName = lastAssistantMessage && nameRequestPatterns.some(pattern =>
     pattern.test(lastAssistantMessage.content)
   );
 
+  // Proactive name sharing patterns (user introduces themselves without being asked)
+  const proactiveNamePatterns = [
+    /\b(mi nombre es|me llamo|soy)\s+([A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+)?)/i,
+    /\b(my name is|i'm|i am)\s+([A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+)?)/i,
+    /\b(meu nome é|me chamo)\s+([A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+)?)/i,
+    /\b(je m'appelle|je suis)\s+([A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+)?)/i,
+  ];
+
+  // Try proactive extraction first
+  for (const pattern of proactiveNamePatterns) {
+    const match = userMessage.match(pattern);
+    if (match && match[2]) {
+      const extractedName = match[2].trim();
+      // Validate and capitalize
+      const words = extractedName.split(/\s+/);
+      if (words.length >= 1 && words.length <= 4) {
+        const isValidName = words.every(word => /^[\p{L}]{2,20}$/u.test(word));
+        if (isValidName) {
+          return words
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(' ');
+        }
+      }
+    }
+  }
+
+  // If AI didn't ask for name and no proactive pattern found, return null
   if (!askedForName) {
     return null;
   }
