@@ -603,32 +603,14 @@
       });
     }
 
-    // Copy for doctor
-    async function copyForDoctor() {
-      if (!summaryText) return;
-
-      const lang = getLang();
-      const textToCopy = summaryText + '\n\n---\n' + lang.footer;
-
-      try {
-        await navigator.clipboard.writeText(textToCopy);
-
-        const btn = document.getElementById('doctorBtn');
-        const original = btn.textContent;
-        btn.textContent = lang.copied;
-
-        setTimeout(() => {
-          btn.textContent = original;
-        }, 2000);
-      } catch (err) {
-        const textarea = document.createElement('textarea');
-        textarea.value = textToCopy;
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
-        alert(lang.copied);
+    // Navigate to doctor view
+    function copyForDoctor() {
+      if (!userId || userId === 'preview' || userId === 'summary.html') {
+        alert('Esta función estará disponible cuando tengas un resumen guardado.');
+        return;
       }
+      // Navigate to the doctor view page
+      window.location.href = `/doctor/${userId}`;
     }
 
     // Next appointment action

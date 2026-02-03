@@ -7,6 +7,7 @@ import { healthRoutes } from './api/routes/health';
 import { ingestRoutes } from './api/routes/ingest';
 import { adminRoutes } from './api/routes/admin';
 import { summaryRoutes } from './api/routes/summary';
+import { doctorRoutes } from './api/routes/doctor';
 import { correlationMiddleware } from './api/middleware/correlation';
 import { logger } from './infra/logging/logger';
 import { db } from './infra/db/client';
@@ -73,6 +74,19 @@ async function bootstrap() {
   await app.register(ingestRoutes);
   await app.register(adminRoutes, { prefix: '/admin' });
   await app.register(summaryRoutes, { prefix: '/api/summary' });
+  await app.register(doctorRoutes, { prefix: '/api/doctor' });
+
+  // Serve doctor view page for /doctor/:userId URLs
+  app.get('/doctor/:userId', async (request, reply) => {
+    const { userId } = request.params as { userId: string };
+
+    // Only serve for UUID-like paths
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (uuidRegex.test(userId)) {
+      return reply.sendFile('doctor.html');
+    }
+    return reply.status(404).send({ error: 'Not found' });
+  });
 
   // Serve summary landing page for /:userId URLs
   app.get('/:userId', async (request, reply) => {

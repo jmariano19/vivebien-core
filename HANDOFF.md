@@ -97,11 +97,44 @@ Link appears after AI generates a summary in WhatsApp.
 3. src/worker/handlers/inbound.ts
    - Main handler: load user → call AI → postProcess → send response
 
-### Landing Page
+### Landing Page (Patient Summary)
 - **URL**: https://carelog.vivebien.io/{userId}
 - **HTML**: public/summary.html
 - **API**: /api/summary/:userId
 - **Data**: memories table where category = 'health_summary'
+
+### Doctor View Page (NEW)
+- **URL**: https://carelog.vivebien.io/doctor/{userId}
+- **HTML**: public/doctor.html
+- **API**: /api/doctor/:userId
+- **Purpose**: Clinically-formatted, doctor-ready handoff document
+
+**User Flow:**
+1. Patient views summary at `/{userId}`
+2. Taps "Version para tu Doctor" CTA button
+3. Navigates to `/doctor/{userId}`
+4. Sees structured clinical note with sections:
+   - Motivo de consulta (Chief Complaint)
+   - Historia del problema actual (HPI)
+   - Síntomas asociados
+   - Medidas realizadas
+   - Preguntas/objetivos para la consulta
+
+**Template Rules (Non-negotiable):**
+- Exactly ONE HPI section
+- No patient-chat tone or emojis in content
+- No medical advice, diagnosis, or prognosis
+- "Síntomas asociados" always present (shows "No reportados" if empty)
+- "Preguntas/objetivos" expresses intent, never repeats symptoms
+- Missing data: omit line OR use "No reportados"
+- Always includes footer disclaimer
+
+**Features:**
+- Font size controls (A+ button)
+- Share button (Web Share API or clipboard fallback)
+- Download/print button
+- Mobile-first, printable layout
+- Multi-language support (es, en, pt, fr)
 
 ## CareLog Onboarding Flow
 
@@ -161,6 +194,7 @@ I don't replace medical care. I help you prepare for it by organizing what you s
 - ✅ Summary generation in chat with WhatsApp formatting
 - ✅ Summary link after summaries (localized): 📋 View my summary 👇 + URL
 - ✅ Landing page at carelog.vivebien.io/{userId}
+- ✅ Doctor view page at carelog.vivebien.io/doctor/{userId}
 - ✅ Multi-language support (es, en, pt, fr)
 - ✅ Language auto-detection from user messages
 - ✅ Name extraction from conversations (including proactive name sharing)
