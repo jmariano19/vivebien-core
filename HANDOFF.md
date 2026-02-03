@@ -59,10 +59,11 @@ WhatsApp → Chatwoot → n8n (thin relay) → vivebien-core API → BullMQ → 
 ```
 vivebien-project/
 ├── src/
-│   ├── index.ts                 # API server entry point
+│   ├── index.ts                 # API server entry point + page routes
 │   ├── api/routes/
 │   │   ├── ingest.ts            # Webhook endpoint (/ingest/chatwoot)
-│   │   ├── summary.ts           # Summary API (/api/summary/:userId)
+│   │   ├── summary.ts           # Summary API (GET & PUT /api/summary/:userId)
+│   │   ├── doctor.ts            # Doctor API (/api/doctor/:userId)
 │   │   └── health.ts            # Health check
 │   ├── domain/
 │   │   ├── ai/service.ts        # AI service, postProcess(), summary link logic
@@ -74,7 +75,11 @@ vivebien-project/
 │   └── adapters/chatwoot/client.ts  # Chatwoot API client
 ├── public/
 │   ├── index.html               # Admin dashboard
-│   └── summary.html             # Landing page (carelog.vivebien.io/{userId})
+│   ├── summary.html             # Landing page (/{userId})
+│   ├── doctor.html              # Doctor view (/doctor/{userId})
+│   ├── appointment.html         # Appointment prep (/appointment/{userId})
+│   ├── suggest.html             # Edit summary (/suggest/{userId})
+│   └── history.html             # View history (/history/{userId})
 ├── Dockerfile
 └── package.json
 ```
@@ -100,8 +105,25 @@ Link appears after AI generates a summary in WhatsApp.
 ### Landing Page (Patient Summary)
 - **URL**: https://carelog.vivebien.io/{userId}
 - **HTML**: public/summary.html
-- **API**: /api/summary/:userId
+- **API**: GET /api/summary/:userId
 - **Data**: memories table where category = 'health_summary'
+
+### Edit Summary Page
+- **URL**: https://carelog.vivebien.io/suggest/{userId}
+- **HTML**: public/suggest.html
+- **API**: PUT /api/summary/:userId (to save changes)
+- **Features**:
+  - Structured form with 8 health fields
+  - Medication chips with add/remove functionality
+  - Change indicators showing modified fields
+  - Multi-language support
+
+### Summary API Endpoints (src/api/routes/summary.ts)
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| GET | /api/summary/:userId | Get user's health summary |
+| PUT | /api/summary/:userId | Update/create health summary |
+| GET | /api/summary/user/:phone | Get summary by phone number |
 
 ### Doctor View Page (NEW)
 - **URL**: https://carelog.vivebien.io/doctor/{userId}
@@ -195,14 +217,53 @@ I don't replace medical care. I help you prepare for it by organizing what you s
 - ✅ Summary link after summaries (localized): 📋 View my summary 👇 + URL
 - ✅ Landing page at carelog.vivebien.io/{userId}
 - ✅ Doctor view page at carelog.vivebien.io/doctor/{userId}
+- ✅ Appointment preparation page at carelog.vivebien.io/appointment/{userId}
+- ✅ Edit Summary page at carelog.vivebien.io/suggest/{userId}
+- ✅ View History page at carelog.vivebien.io/history/{userId}
 - ✅ Multi-language support (es, en, pt, fr)
 - ✅ Language auto-detection from user messages
 - ✅ Name extraction from conversations (including proactive name sharing)
 - ✅ WhatsApp bold formatting (*text*)
 - ✅ Static file serving (logo, assets)
 - ✅ One-command deployment via webhook triggers
+- ✅ Summary sync/update via PUT /api/summary/:userId
 
 ### Recent Changes (Feb 3, 2026):
+
+#### New Pages Added
+
+**Edit Summary Page** (`/suggest/:userId`)
+- **HTML**: `public/suggest.html`
+- **Purpose**: Allows users to edit their health summary with structured form fields
+- **Features**:
+  - Structured fields: Main Concern, Onset, Location, Symptoms, What Helps, What Worsens, Medications, Notes
+  - Medications field with interactive chips (add with + button, remove with ×)
+  - Change indicators (green dots) showing which fields were modified
+  - Multi-language support (es, en, pt, fr)
+  - Saves to database via PUT /api/summary/:userId
+
+**View History Page** (`/history/:userId`)
+- **HTML**: `public/history.html`
+- **Purpose**: Timeline view of user's health history
+
+**Appointment Page** (`/appointment/:userId`)
+- **HTML**: `public/appointment.html`
+- **Purpose**: Help users prepare for doctor appointments
+
+#### PUT Endpoint for Summary Sync (src/api/routes/summary.ts)
+```typescript
+app.put('/:userId', async (request, reply) => {
+  // Updates or creates health_summary in memories table
+  // Body: { summary: string }
+  // Returns: { success: true, message: string, updatedAt: string }
+});
+```
+
+#### Sticky Headers
+- All pages now have sticky headers (position: sticky, top: 0, z-index: 100)
+
+#### CareLog Logo Font
+- Changed from "Outfit" to "Malayalam MN" across all pages
 
 #### Static File Routing Fix (src/index.ts)
 - **Root cause**: The `/:userId` catch-all route was intercepting static file requests (like `/Logo1.png`) and returning 404
@@ -337,7 +398,23 @@ DELETE FROM users WHERE phone IN ('+12017370113', '12017370113', '2017370113') R
 
 ## Deployment
 
-### One-Command Deploy (Recommended)
+### ⚠️ IMPORTANT: Deploying Changes to Production
+
+**BOTH services must be deployed after ANY code change!** The API and Worker share the same codebase but run as separate services.
+
+### Quick Deploy (Copy & Paste)
+
+**Step 1: Commit and push changes**
+```bash
+cd ~/Desktop/vivebien-project && git add -A && git commit -m "Your commit message" && git push
+```
+
+**Step 2: Trigger both deployments**
+```bash
+curl -X POST "http://85.209.95.19:3000/api/deploy/1642a4c845b117889b4b6cbe0172ecc90b03500666da6e22" && curl -X POST "http://85.209.95.19:3000/api/deploy/27730fe51447b7b37aad06851ccb0470e5b62421badd9548"
+```
+
+### One-Command Deploy Function (Recommended)
 
 Add this function to your `~/.zshrc` or `~/.bashrc`:
 
@@ -364,21 +441,33 @@ deploy "Your commit message here"
 
 ### Deployment Webhook URLs (Easypanel)
 
-| Service | Webhook URL |
-|---------|-------------|
-| vivebien-core-api | `http://85.209.95.19:3000/api/deploy/1642a4c845b117889b4b6cbe0172ecc90b03500666da6e22` |
-| vivebien-core-worker | `http://85.209.95.19:3000/api/deploy/27730fe51447b7b37aad06851ccb0470e5b62421badd9548` |
+| Service | Webhook URL | Must Deploy |
+|---------|-------------|-------------|
+| vivebien-core-api | `http://85.209.95.19:3000/api/deploy/1642a4c845b117889b4b6cbe0172ecc90b03500666da6e22` | ✅ Always |
+| vivebien-core-worker | `http://85.209.95.19:3000/api/deploy/27730fe51447b7b37aad06851ccb0470e5b62421badd9548` | ✅ Always |
 
-### Manual Deployment
+### Manual Deployment (via Easypanel UI)
 
+1. Commit and push:
 ```bash
 cd ~/Desktop/vivebien-project
 git add -A && git commit -m "message" && git push
 ```
 
-Then in Easypanel deploy BOTH:
-1. vivebien-core-api → Deploy
-2. vivebien-core-worker → Deploy
+2. Go to Easypanel (https://85.209.95.19:3000)
+3. Deploy BOTH services:
+   - vivebien-core-api → Click Deploy
+   - vivebien-core-worker → Click Deploy
+
+### Deployment Checklist
+
+After making changes:
+- [ ] Commit changes to git
+- [ ] Push to GitHub
+- [ ] Trigger API webhook OR click Deploy in Easypanel
+- [ ] Trigger Worker webhook OR click Deploy in Easypanel
+- [ ] Wait ~30 seconds for builds to complete
+- [ ] Test the changes on production
 
 ## n8n Workflows
 
