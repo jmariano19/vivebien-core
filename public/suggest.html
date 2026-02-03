@@ -482,122 +482,127 @@
 
       if (!summary) return data;
 
-      // First check if this is our structured format from previous updates
-      // Format: "Main concern: X\nStarted: Y\nLocation: Z\n..."
-      const isStructured = /^(Main concern|Started|Location|Symptoms|What helps|What worsens|Medications|Notes):/im.test(summary);
+      // Clean the summary first
+      let cleaned = summary
+        .replace(/\*\*/g, '')
+        .replace(/\*([^*]+)\*/g, '$1')
+        .replace(/📝|❓|•/g, '')
+        .replace(/---+/g, '\n');
 
-      if (isStructured) {
-        const lines = summary.split('\n');
-        for (const line of lines) {
-          const match = line.match(/^(Main concern|Started|Location|Symptoms|What helps|What worsens|Medications|Notes):\s*(.+)/i);
-          if (match) {
-            const key = match[1].toLowerCase();
-            let value = match[2].trim();
+      // FORMAT 1: Update page format (Main concern: X)
+      const updatePagePatterns = {
+        mainConcern: /^Main concern:\s*(.+)/im,
+        onset: /^Started:\s*(.+)/im,
+        location: /^Location:\s*(.+)/im,
+        symptoms: /^Symptoms:\s*(.+)/im,
+        whatHelps: /^What helps:\s*(.+)/im,
+        whatWorsens: /^What worsens:\s*(.+)/im,
+        medications: /^Medications:\s*(.+)/im,
+        notes: /^Notes:\s*(.+)/im
+      };
 
-            // Clean up the value
-            value = value
-              .replace(/Patient reports (having )?/gi, '')
-              .replace(/\bpatient\b/gi, '')
-              .replace(/\breports\b/gi, '')
-              .trim();
-
-            if (key === 'main concern') data.mainConcern = value;
-            else if (key === 'started') data.onset = value;
-            else if (key === 'location') data.location = value;
-            else if (key === 'symptoms') data.symptoms = value;
-            else if (key === 'what helps') data.whatHelps = value;
-            else if (key === 'what worsens') data.whatWorsens = value;
-            else if (key === 'medications') data.medications = value;
-            else if (key === 'notes') data.notes = value;
-          }
+      // Try Update page format first
+      for (const [key, pattern] of Object.entries(updatePagePatterns)) {
+        const match = cleaned.match(pattern);
+        if (match && match[1]) {
+          data[key] = cleanFieldValue(match[1]);
         }
+      }
+
+      // If found update page format, return early
+      if (data.mainConcern) {
         return data;
       }
 
-      // Try legacy patterns for AI-generated summaries
-      // Main concern patterns
-      const concernPatterns = [
-        /(?:MAIN CONCERN|Main concern|MOTIVO|Motivo principal|QUEIXA)[*:\s]*([^*\n]+)/i,
-        /(?:having|has|with)\s+(?:a\s+)?([^,.\n]+(?:pain|ache|sty|infection|issue|problem)[^,.\n]*)/i,
-      ];
-      for (const pattern of concernPatterns) {
-        const match = summary.match(pattern);
-        if (match && match[1]) {
-          data.mainConcern = match[1].trim().replace(/Patient reports (having )?/gi, '');
-          break;
+      // FORMAT 2: AI-generated format (multi-language headers)
+      const aiPatterns = {
+        mainConcern: [
+          /(?:MOTIVO PRINCIPAL|MAIN CONCERN|QUEIXA PRINCIPAL|MOTIF PRINCIPAL)[:\s]*\n?([^\n]+)/i,
+          /(?:Motivo de consulta|Chief complaint)[:\s]*([^\n]+)/i,
+        ],
+        onset: [
+          /(?:INICIO|ONSET|INÍCIO|DÉBUT)[^:]*[:\s]*\n?([^\n]+)/i,
+          /(?:DURACIÓN|DURATION|DURAÇÃO)[:\s]*([^\n]+)/i,
+          /(?:Started|Comenzó|Início)[:\s]*([^\n]+)/i,
+        ],
+        location: [
+          /(?:LOCALIZACIÓN|LOCATION|LOCALIZAÇÃO|LOCALISATION)[:\s]*\n?([^\n]+)/i,
+        ],
+        symptoms: [
+          /(?:PATRÓN|PATTERN|SÍNTOMAS|SYMPTOMS)[^:]*[:\s]*\n?([^\n]+)/i,
+          /(?:Current symptoms|Síntomas actuales)[:\s]*([^\n]+)/i,
+        ],
+        whatHelps: [
+          /(?:QUÉ AYUDA|WHAT HELPS|O QUE AJUDA|CE QUI AIDE)[^:]*[:\s]*\n?([^\n]+)/i,
+          /[-•]\s*Helps?:\s*([^\n]+)/i,
+          /Factores que alivian[:\s]*([^\n]+)/i,
+        ],
+        whatWorsens: [
+          /(?:EMPEORA|WORSENS|PIORA|AGGRAVE)[^:]*[:\s]*\n?([^\n]+)/i,
+          /[-•]\s*Worsens?:\s*([^\n]+)/i,
+          /Factores que agravan[:\s]*([^\n]+)/i,
+        ],
+        medications: [
+          /(?:MEDICAMENTOS|MEDICATIONS|MÉDICAMENTS)[^:]*[:\s]*\n?([^\n]+)/i,
+        ],
+        notes: [
+          /(?:PREGUNTAS PARA|QUESTIONS FOR|NOTAS)[^:]*[:\s]*\n?([^\n]+)/i,
+        ]
+      };
+
+      // Try AI patterns
+      for (const [key, patterns] of Object.entries(aiPatterns)) {
+        if (data[key]) continue; // Skip if already found
+        for (const pattern of patterns) {
+          const match = cleaned.match(pattern);
+          if (match && match[1]) {
+            data[key] = cleanFieldValue(match[1]);
+            break;
+          }
         }
       }
 
-      // Onset patterns
-      const onsetPatterns = [
-        /(?:Started|ONSET|INICIO|INÍCIO|Began):\s*([^*\n]+)/i,
-        /(?:for|since|hace|desde)\s+(about\s+)?(\d+\s*(?:days?|hours?|weeks?|días?|horas?|semanas?))/i,
-        /(\d+\s*(?:days?|hours?|weeks?|días?|horas?|semanas?))\s*ago/i,
-      ];
-      for (const pattern of onsetPatterns) {
-        const match = summary.match(pattern);
-        if (match) {
-          data.onset = (match[2] || match[1]).trim();
-          break;
-        }
-      }
-
-      // Location patterns
-      const locationPatterns = [
-        /(?:Location|Ubicación|Localização|Localización):\s*([^*\n]+)/i,
-        /(?:on|in|at)\s+(?:the\s+)?(?:left|right|upper|lower)?\s*(eye|head|back|stomach|chest|arm|leg|throat|ear)[^,.\n]*/i,
-      ];
-      for (const pattern of locationPatterns) {
-        const match = summary.match(pattern);
-        if (match && match[1]) {
-          data.location = match[1].trim();
-          break;
-        }
-      }
-
-      // What helps patterns
-      const helpsPatterns = [
-        /(?:What helps|Qué ayuda|O que ajuda|helps):\s*([^*\n]+)/i,
-        /(warm compresses|cold compresses|rest|medication|sleep|compresas)[^,.\n]*/i,
-      ];
-      for (const pattern of helpsPatterns) {
-        const match = summary.match(pattern);
-        if (match && match[1]) {
-          data.whatHelps = match[1].trim();
-          break;
-        }
-      }
-
-      // What worsens patterns
-      const worsensPatterns = [
-        /(?:What worsens|Qué empeora|O que piora|worsens|makes it worse):\s*([^*\n]+)/i,
-      ];
-      for (const pattern of worsensPatterns) {
-        const match = summary.match(pattern);
-        if (match && match[1]) {
-          data.whatWorsens = match[1].trim();
-          break;
-        }
-      }
-
-      // If we still couldn't parse main concern, extract from text
+      // If still no main concern, try to extract from first meaningful sentence
       if (!data.mainConcern) {
-        const cleaned = summary
-          .replace(/[#*_]/g, '')
-          .replace(/---+/g, ' ')
-          .replace(/Health Record Summary/gi, '')
-          .replace(/Patient Name:[^\n]*/gi, '')
-          .replace(/Patient reports (having )?/gi, '')
-          .trim();
+        const sentences = cleaned.split(/[.\n]+/).map(s => s.trim()).filter(s => s.length > 10);
+        const meaningful = sentences.find(s =>
+          !s.match(/^(MOTIVO|MAIN|ONSET|INICIO|WHAT|QUÉ|MEDICAMENTOS|PREGUNTAS|Health Record|Patient)/i)
+        );
+        if (meaningful) {
+          data.mainConcern = cleanFieldValue(meaningful);
+        }
+      }
 
-        // Take first meaningful sentence
-        const sentences = cleaned.split(/[.!?]+/).filter(s => s.trim().length > 10);
-        if (sentences.length > 0) {
-          data.mainConcern = sentences[0].trim();
+      // Extract timing if not found (look for X days ago pattern)
+      if (!data.onset) {
+        const timingMatch = cleaned.match(/(\d+\s*(?:days?|hours?|weeks?|días?|horas?|semanas?)\s*(?:ago)?)/i);
+        if (timingMatch) {
+          data.onset = timingMatch[1].trim();
+        }
+      }
+
+      // Extract what helps if not found (look for common remedies)
+      if (!data.whatHelps) {
+        const helpsMatch = cleaned.match(/(warm compresses|cold compresses|compresas tibias|compresas frías|rest|descanso|medication|sleep|ice|heat)[^,.\n]*/i);
+        if (helpsMatch) {
+          data.whatHelps = cleanFieldValue(helpsMatch[0]);
         }
       }
 
       return data;
+    }
+
+    // Clean a field value
+    function cleanFieldValue(value) {
+      if (!value) return '';
+      return value
+        .replace(/^[\-•*\s]+/, '')
+        .replace(/[\-•*\s]+$/, '')
+        .replace(/Patient reports (having )?/gi, '')
+        .replace(/\bpatient\b/gi, '')
+        .replace(/\breports\b/gi, '')
+        .replace(/\bapproximately\b/gi, 'about')
+        .trim();
     }
 
     function render(data) {
