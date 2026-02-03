@@ -80,8 +80,9 @@
     .card {
       background: var(--card-bg);
       border-radius: 15px;
-      padding: 32px 24px;
+      padding: 28px 22px;
       margin-bottom: 24px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
     }
 
     /* Live Updates - now inside card at top */
@@ -90,12 +91,12 @@
       align-items: center;
       justify-content: center;
       gap: 6px;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
     }
 
     .live-dot {
-      width: 10px;
-      height: 10px;
+      width: 8px;
+      height: 8px;
       background: var(--primary);
       border-radius: 9999px;
       animation: pulse 2s infinite;
@@ -103,22 +104,23 @@
 
     @keyframes pulse {
       0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
+      50% { opacity: 0.4; }
     }
 
     .live-badge span {
       font-family: 'Outfit', sans-serif;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 500;
       color: var(--primary);
-      line-height: 28px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     .card-content {
       font-family: 'Outfit', sans-serif;
-      font-size: 18px;
-      font-weight: 300;
-      line-height: 1.6;
+      font-size: 17px;
+      font-weight: 400;
+      line-height: 1.7;
       color: var(--text-dark);
       text-align: left;
       white-space: pre-line;
@@ -128,34 +130,41 @@
     .action-links {
       display: flex;
       justify-content: center;
-      gap: 32px;
-      margin-bottom: 28px;
+      gap: 24px;
+      margin-bottom: 20px;
     }
 
     .action-links a {
       font-family: 'Outfit', sans-serif;
       color: var(--link-color);
       font-size: 13px;
-      font-weight: 700;
-      text-decoration: underline;
-      line-height: 35px;
+      font-weight: 600;
+      text-decoration: none;
+      padding: 8px 16px;
+      border-radius: 20px;
+      background: rgba(136, 89, 85, 0.08);
       cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .action-links a:hover {
+      background: rgba(136, 89, 85, 0.15);
     }
 
     /* Disclaimer */
     .disclaimer {
       text-align: center;
-      margin-top: 24px;
+      margin-top: 16px;
     }
 
     .disclaimer p {
       font-family: 'Outfit', sans-serif;
-      font-size: 15px;
+      font-size: 13px;
       font-weight: 300;
       color: var(--text-dark);
       opacity: 0.5;
-      line-height: 20px;
-      max-width: 287px;
+      line-height: 18px;
+      max-width: 280px;
       margin: 0 auto;
     }
 
@@ -166,30 +175,37 @@
       left: 0;
       right: 0;
       background: var(--footer-bg);
-      padding: 28px 32px;
+      padding: 20px 24px;
+      padding-bottom: calc(20px + env(safe-area-inset-bottom));
       display: flex;
       justify-content: center;
-      gap: 14px;
+      gap: 12px;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
     }
 
     .btn {
-      padding: 14px 20px;
-      border-radius: 10px;
+      padding: 14px 18px;
+      border-radius: 12px;
       font-family: 'Outfit', sans-serif;
-      font-size: 13px;
-      font-weight: 700;
-      line-height: 21px;
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 20px;
       border: none;
       cursor: pointer;
       transition: all 0.2s;
       background: var(--btn-color);
       color: white;
-      min-width: 145px;
+      min-width: 140px;
       text-align: center;
     }
 
     .btn:hover {
-      opacity: 0.9;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(33, 111, 100, 0.3);
+    }
+
+    .btn:active {
+      transform: translateY(0);
     }
 
     /* Loading state */
