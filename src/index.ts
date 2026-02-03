@@ -100,6 +100,30 @@ async function bootstrap() {
     return reply.status(404).send({ error: 'Not found' });
   });
 
+  // Serve suggest change page for /suggest/:userId URLs
+  app.get('/suggest/:userId', async (request, reply) => {
+    const { userId } = request.params as { userId: string };
+
+    // Only serve for UUID-like paths
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (uuidRegex.test(userId)) {
+      return reply.sendFile('suggest.html');
+    }
+    return reply.status(404).send({ error: 'Not found' });
+  });
+
+  // Serve history page for /history/:userId URLs
+  app.get('/history/:userId', async (request, reply) => {
+    const { userId } = request.params as { userId: string };
+
+    // Only serve for UUID-like paths
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (uuidRegex.test(userId)) {
+      return reply.sendFile('history.html');
+    }
+    return reply.status(404).send({ error: 'Not found' });
+  });
+
   // Serve summary landing page for /:userId URLs
   app.get('/:userId', async (request, reply) => {
     const { userId } = request.params as { userId: string };

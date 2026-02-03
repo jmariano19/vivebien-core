@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CareLog - Historial</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f9f6f0;
+      --text: #1f1f1f;
+      --muted: rgba(0,0,0,0.55);
+      --brand: #2e915e;
+      --card: #ffffff;
+      --shadow: 0 2px 12px rgba(0,0,0,0.06);
+      --radius: 15px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      font-family: "Outfit", system-ui, -apple-system, "Segoe UI", sans-serif;
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+    }
+
+    .page {
+      width: 402px;
+      min-height: 100vh;
+      padding: 14px 16px 28px;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      font-size: 13px;
+      color: var(--muted);
+      position: sticky;
+      top: 0;
+      background: var(--bg);
+      padding: 14px 0;
+      margin: -14px 0 0 0;
+      z-index: 100;
+    }
+    .back {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      justify-self: start;
+      cursor: pointer;
+      text-decoration: none;
+      color: var(--muted);
+    }
+    .back:hover {
+      color: var(--text);
+    }
+    .back-icon {
+      width: 18px;
+      height: 18px;
+      border-left: 2px solid var(--muted);
+      border-bottom: 2px solid var(--muted);
+      transform: rotate(45deg);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: "Malayalam MN", serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--brand);
+      letter-spacing: -0.5px;
+    }
+
+    .header {
+      margin-top: 24px;
+      text-align: center;
+    }
+    h1 {
+      margin: 0;
+      font-family: "Lora", serif;
+      font-size: 26px;
+      font-weight: 500;
+      line-height: 32px;
+      color: #373737;
+    }
+    .subtitle {
+      margin-top: 8px;
+      font-size: 15px;
+      line-height: 22px;
+      font-weight: 300;
+      color: var(--muted);
+    }
+
+    .timeline {
+      margin-top: 24px;
+      position: relative;
+    }
+
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 16px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: #e8e4de;
+    }
+
+    .timeline-item {
+      position: relative;
+      padding-left: 48px;
+      padding-bottom: 24px;
+    }
+    .timeline-item:last-child {
+      padding-bottom: 0;
+    }
+
+    .timeline-dot {
+      position: absolute;
+      left: 8px;
+      top: 4px;
+      width: 18px;
+      height: 18px;
+      background: var(--brand);
+      border-radius: 50%;
+      border: 3px solid var(--bg);
+    }
+    .timeline-dot.inactive {
+      background: #d0ccc5;
+    }
+
+    .timeline-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .timeline-date {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .timeline-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .timeline-content {
+      font-size: 14px;
+      line-height: 22px;
+      color: var(--muted);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      background: rgba(46, 145, 94, 0.1);
+      color: var(--brand);
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+    }
+    .empty-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+    .empty-state h2 {
+      font-family: "Lora", serif;
+      font-size: 20px;
+      font-weight: 500;
+      margin: 0 0 8px;
+      color: var(--text);
+    }
+    .empty-state p {
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 22px;
+      margin: 0;
+    }
+
+    .footer {
+      margin-top: 24px;
+      text-align: center;
+      font-size: 13px;
+      line-height: 18px;
+      font-weight: 300;
+      color: var(--muted);
+      padding: 0 12px;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 60px 20px;
+    }
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid #e0e0e0;
+      border-top-color: var(--brand);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="topbar">
+      <a class="back" id="backButton">
+        <div class="back-icon"></div>
+        <span id="backText">Volver</span>
+      </a>
+      <div class="brand">CareLog</div>
+      <div></div>
+    </div>
+
+    <div id="content">
+      <div class="loading">
+        <div class="loading-spinner"></div>
+        <p>Cargando historial...</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const pathParts = window.location.pathname.split('/');
+    const userId = pathParts[pathParts.length - 1];
+
+    const translations = {
+      es: {
+        title: 'Tu Historial',
+        subtitle: 'Registro de tus conversaciones de salud',
+        back: 'Volver',
+        current: 'Actual',
+        updated: 'Actualizado',
+        created: 'Creado',
+        emptyTitle: 'Sin historial aún',
+        emptyText: 'Tu historial de salud aparecerá aquí a medida que continúes tus conversaciones.',
+        footer: 'Tu historial se actualiza automáticamente con cada conversación.',
+        today: 'Hoy',
+        yesterday: 'Ayer',
+        daysAgo: 'hace {n} días'
+      },
+      en: {
+        title: 'Your History',
+        subtitle: 'Record of your health conversations',
+        back: 'Back',
+        current: 'Current',
+        updated: 'Updated',
+        created: 'Created',
+        emptyTitle: 'No history yet',
+        emptyText: 'Your health history will appear here as you continue your conversations.',
+        footer: 'Your history is automatically updated with each conversation.',
+        today: 'Today',
+        yesterday: 'Yesterday',
+        daysAgo: '{n} days ago'
+      },
+      pt: {
+        title: 'Seu Histórico',
+        subtitle: 'Registro das suas conversas de saúde',
+        back: 'Voltar',
+        current: 'Atual',
+        updated: 'Atualizado',
+        created: 'Criado',
+        emptyTitle: 'Sem histórico ainda',
+        emptyText: 'Seu histórico de saúde aparecerá aqui conforme você continua suas conversas.',
+        footer: 'Seu histórico é atualizado automaticamente a cada conversa.',
+        today: 'Hoje',
+        yesterday: 'Ontem',
+        daysAgo: 'há {n} dias'
+      },
+      fr: {
+        title: 'Votre Historique',
+        subtitle: 'Enregistrement de vos conversations de santé',
+        back: 'Retour',
+        current: 'Actuel',
+        updated: 'Mis à jour',
+        created: 'Créé',
+        emptyTitle: 'Pas encore d\'historique',
+        emptyText: 'Votre historique de santé apparaîtra ici au fur et à mesure de vos conversations.',
+        footer: 'Votre historique est automatiquement mis à jour à chaque conversation.',
+        today: 'Aujourd\'hui',
+        yesterday: 'Hier',
+        daysAgo: 'il y a {n} jours'
+      }
+    };
+
+    let lang = 'es';
+
+    function formatRelativeDate(dateStr, t) {
+      const date = new Date(dateStr);
+      const now = new Date();
+      const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
+
+      if (diffDays === 0) return t.today;
+      if (diffDays === 1) return t.yesterday;
+      if (diffDays < 7) return t.daysAgo.replace('{n}', diffDays);
+
+      const options = { month: 'short', day: 'numeric' };
+      const locale = lang === 'es' ? 'es-ES' : lang === 'pt' ? 'pt-BR' : lang === 'fr' ? 'fr-FR' : 'en-US';
+      return date.toLocaleDateString(locale, options);
+    }
+
+    function formatTime(dateStr) {
+      const date = new Date(dateStr);
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function renderHistory(data) {
+      const t = translations[lang] || translations.es;
+      const content = document.getElementById('content');
+
+      // Create timeline items from summary history
+      // For now, we'll show the current summary as the main item
+      // and any previous updates as historical items
+
+      let timelineHtml = '';
+
+      if (data.summary) {
+        // Current summary
+        timelineHtml += `
+          <div class="timeline-item">
+            <div class="timeline-dot"></div>
+            <div class="timeline-card">
+              <div class="timeline-date">${formatRelativeDate(data.updatedAt || new Date(), t)} · ${formatTime(data.updatedAt || new Date())}</div>
+              <div class="timeline-title">
+                ${data.motivo || 'Health Update'}
+                <span class="badge">${t.current}</span>
+              </div>
+              <div class="timeline-content">${escapeHtml(truncate(data.summary, 120))}</div>
+            </div>
+          </div>
+        `;
+
+        // If we have a creation date different from update, show it
+        if (data.createdAt && data.createdAt !== data.updatedAt) {
+          timelineHtml += `
+            <div class="timeline-item">
+              <div class="timeline-dot inactive"></div>
+              <div class="timeline-card">
+                <div class="timeline-date">${formatRelativeDate(data.createdAt, t)} · ${formatTime(data.createdAt)}</div>
+                <div class="timeline-title">${t.created}</div>
+                <div class="timeline-content">Started tracking health information</div>
+              </div>
+            </div>
+          `;
+        }
+      }
+
+      if (!timelineHtml) {
+        content.innerHTML = `
+          <div class="header">
+            <h1>${t.title}</h1>
+            <p class="subtitle">${t.subtitle}</p>
+          </div>
+
+          <div class="empty-state">
+            <div class="empty-icon">📋</div>
+            <h2>${t.emptyTitle}</h2>
+            <p>${t.emptyText}</p>
+          </div>
+        `;
+        return;
+      }
+
+      content.innerHTML = `
+        <div class="header">
+          <h1>${t.title}</h1>
+          <p class="subtitle">${t.subtitle}</p>
+        </div>
+
+        <div class="timeline">
+          ${timelineHtml}
+        </div>
+
+        <div class="footer">
+          ${t.footer}
+        </div>
+      `;
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function truncate(text, maxLength) {
+      if (!text) return '';
+      if (text.length <= maxLength) return text;
+      return text.substring(0, maxLength).trim() + '...';
+    }
+
+    document.getElementById('backButton').addEventListener('click', () => {
+      window.location.href = `/${userId}`;
+    });
+
+    async function loadHistory() {
+      try {
+        const response = await fetch(`/api/summary/${userId}`);
+        if (!response.ok) throw new Error('Failed to load');
+
+        const data = await response.json();
+        lang = data.language || 'es';
+
+        document.getElementById('backText').textContent = translations[lang]?.back || 'Back';
+        renderHistory(data);
+      } catch (error) {
+        console.error('Error:', error);
+        renderHistory({});
+      }
+    }
+
+    if (userId && userId !== 'history') {
+      loadHistory();
+    } else {
+      renderHistory({});
+    }
+  </script>
+</body>
+</html>

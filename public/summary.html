@@ -635,12 +635,20 @@
 
     // Suggest a change
     function suggestChange() {
-      alert('Próximamente: Sugerir cambios');
+      if (!userId || userId === 'preview' || userId === 'summary.html') {
+        alert('Esta función estará disponible cuando tengas un resumen guardado.');
+        return;
+      }
+      window.location.href = `/suggest/${userId}`;
     }
 
     // View history
     function viewHistory() {
-      alert('Próximamente: Ver historial');
+      if (!userId || userId === 'preview' || userId === 'summary.html') {
+        alert('Esta función estará disponible cuando tengas un resumen guardado.');
+        return;
+      }
+      window.location.href = `/history/${userId}`;
     }
 
     // Start polling
