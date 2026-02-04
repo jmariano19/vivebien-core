@@ -379,11 +379,11 @@
       const t = translations[lang] || translations.es;
       const content = document.getElementById('content');
 
-      // Parse goals from objetivos
+      // Parse and clean goals from objetivos
       let goals = [];
       if (data.objetivos) {
         goals = data.objetivos.split(/[.?\n]/)
-          .map(g => g.trim())
+          .map(g => cleanGoalText(g))
           .filter(g => g.length > 5);
       }
 
@@ -420,7 +420,7 @@
           ${data.motivo ? `
           <div class="section">
             <div class="section-title">📋 ${t.mainConcern}</div>
-            <p class="body-text">${escapeHtml(data.motivo)}</p>
+            <p class="body-text">${escapeHtml(cleanGoalText(data.motivo))}</p>
           </div>
           ` : ''}
 
@@ -522,6 +522,32 @@
       }
 
       return questions;
+    }
+
+    // Clean goal/question text for display
+    function cleanGoalText(text) {
+      if (!text) return '';
+      let cleaned = text
+        // Remove conversation prefixes
+        .replace(/^Usuario\s*(reporta|confirma|describe|caracteriza|indica|aclara|proporciona)[\s:]*["']?/gi, '')
+        .replace(/^Patient\s*(reports?|confirms?|describes?|indicates?)[\s:]*["']?/gi, '')
+        .replace(/^Paciente\s*(reporta|confirma|describe)[\s:]*["']?/gi, '')
+        // Remove trailing quotes
+        .replace(/["']\s*$/g, '')
+        // Remove numbered prefixes like "1." or "* 1"
+        .replace(/^\*?\s*\d+\.?\s*/, '')
+        // Remove placeholder values
+        .replace(/^no\s*proporcionado$/i, '')
+        .replace(/^not\s*provided$/i, '')
+        // Clean up whitespace
+        .trim();
+
+      // Capitalize first letter
+      if (cleaned.length > 0) {
+        cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+      }
+
+      return cleaned;
     }
 
     function escapeHtml(text) {

@@ -482,24 +482,32 @@
       const hpiFields = ['inicio', 'duracion', 'localizacion', 'caracteristicas', 'evolucion', 'factoresAlivian', 'factoresAgravan'];
       hpiFields.forEach(field => {
         if (note.hpi && note.hpi[field]) {
-          hpiHtml += `<div class="hpi-item"><strong>${t.hpiLabels[field]}</strong> <span>${escapeHtml(note.hpi[field])}</span></div>`;
+          const cleanedValue = cleanDoctorText(note.hpi[field]);
+          if (cleanedValue && cleanedValue.toLowerCase() !== 'no proporcionado') {
+            hpiHtml += `<div class="hpi-item"><strong>${t.hpiLabels[field]}</strong> <span>${escapeHtml(cleanedValue)}</span></div>`;
+          }
         }
       });
 
-      // Build measures text
+      // Build measures text (clean and filter out conversation artifacts)
       let medidasHtml = '';
       if (note.medidas && note.medidas.length > 0) {
-        const medidasText = note.medidas.join('. ');
-        medidasHtml = `
-          <div class="section">
-            <div class="section-title"><span class="icon">💊</span> ${t.medidas}</div>
-            <p class="body-text">${escapeHtml(medidasText)}</p>
-          </div>
-        `;
+        const cleanedMedidas = note.medidas
+          .map(m => cleanDoctorText(m))
+          .filter(m => m && m.length > 3 && m.toLowerCase() !== 'no proporcionado');
+        if (cleanedMedidas.length > 0) {
+          const medidasText = cleanedMedidas.join('. ');
+          medidasHtml = `
+            <div class="section">
+              <div class="section-title"><span class="icon">💊</span> ${t.medidas}</div>
+              <p class="body-text">${escapeHtml(medidasText)}</p>
+            </div>
+          `;
+        }
       }
 
-      // Determine objetivos text
-      let objetivosText = note.objetivos;
+      // Determine objetivos text (clean it)
+      let objetivosText = note.objetivos ? cleanDoctorText(note.objetivos) : null;
       if (!objetivosText) {
         objetivosText = t.defaultObjetivo;
       }
@@ -525,7 +533,7 @@
         <div class="card" id="doctorCard">
           <div class="section">
             <div class="section-title"><span class="icon">🩺</span> ${t.motivo}</div>
-            <p class="body-text highlight">${escapeHtml(note.motivo || t.noReportados)}</p>
+            <p class="body-text highlight">${escapeHtml(cleanDoctorText(note.motivo) || t.noReportados)}</p>
           </div>
 
           ${hpiHtml ? `
@@ -539,7 +547,7 @@
 
           <div class="section">
             <div class="section-title"><span class="icon">🤒</span> ${t.sintomas}</div>
-            <p class="body-text">${escapeHtml(note.sintomasAsociados || t.noReportados)}</p>
+            <p class="body-text">${escapeHtml(cleanDoctorText(note.sintomasAsociados) || t.noReportados)}</p>
           </div>
 
           ${medidasHtml}
@@ -557,6 +565,35 @@
 
       // Setup event listeners
       setupEventListeners();
+    }
+
+    // Clean text for doctor-friendly display
+    function cleanDoctorText(text) {
+      if (!text) return '';
+      let cleaned = text
+        // Remove conversation prefixes
+        .replace(/Usuario\s*(reporta|confirma|describe|caracteriza|indica|aclara|proporciona nombre?)[\s:]*["']?/gi, '')
+        .replace(/Patient\s*(reports?|confirms?|describes?|indicates?)[\s:]*["']?/gi, '')
+        .replace(/Paciente\s*(reporta|confirma|describe)[\s:]*["']?/gi, '')
+        // Remove trailing quotes
+        .replace(/["']\s*$/g, '')
+        // Clean placeholders
+        .replace(/^no\s*proporcionado$/i, '')
+        .replace(/^not\s*provided$/i, '')
+        // Clean multiple entries
+        .replace(/\.\s*Usuario\s*/gi, '. ')
+        .replace(/\.\s*Patient\s*/gi, '. ')
+        // Clean up
+        .replace(/\.\s*\./g, '.')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      // Capitalize first letter
+      if (cleaned.length > 0) {
+        cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+      }
+
+      return cleaned;
     }
 
     function escapeHtml(text) {

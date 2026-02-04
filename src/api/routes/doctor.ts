@@ -128,8 +128,8 @@ function parseSummaryToDoctorNote(content: string, language: string): DoctorNote
     for (const pattern of patterns[field]) {
       const match = normalized.match(pattern);
       if (match && match[1]) {
-        const value = cleanValue(match[1]);
-        if (value && value.toLowerCase() !== 'no especificado' && value.toLowerCase() !== 'not specified') {
+        const value = cleanHpiValue(match[1]);
+        if (value && value.toLowerCase() !== 'no especificado' && value.toLowerCase() !== 'not specified' && value.toLowerCase() !== 'no proporcionado') {
           (note.hpi as Record<string, string>)[field] = value;
         }
         break;
@@ -153,10 +153,7 @@ function parseSummaryToDoctorNote(content: string, language: string): DoctorNote
   for (const pattern of patterns.medidas) {
     const match = normalized.match(pattern);
     if (match && match[1]) {
-      const measures = match[1]
-        .split(/[\n•\-]/)
-        .map(m => cleanValue(m))
-        .filter(m => m && m.length > 3);
+      const measures = cleanMedidas(match[1]);
       if (measures.length > 0) {
         note.medidas = measures;
       }
@@ -166,10 +163,7 @@ function parseSummaryToDoctorNote(content: string, language: string): DoctorNote
 
   // If factoresAlivian has treatments, add to medidas
   if (note.hpi.factoresAlivian && note.medidas.length === 0) {
-    const treatments = note.hpi.factoresAlivian
-      .split(/[,;]/)
-      .map(t => cleanValue(t))
-      .filter(t => t && t.length > 3);
+    const treatments = cleanMedidas(note.hpi.factoresAlivian);
     if (treatments.length > 0) {
       note.medidas = treatments;
     }
@@ -179,13 +173,9 @@ function parseSummaryToDoctorNote(content: string, language: string): DoctorNote
   for (const pattern of patterns.objetivos) {
     const match = normalized.match(pattern);
     if (match && match[1]) {
-      const questions = match[1]
-        .split(/[\n•\-]/)
-        .map(q => cleanValue(q))
-        .filter(q => q && q.length > 5 && !q.match(/^\d+\.?\s*$/))
-        .slice(0, 3);
-      if (questions.length > 0) {
-        note.objetivos = questions.join(' ');
+      const cleanedObjetivos = cleanObjetivos(match[1]);
+      if (cleanedObjetivos) {
+        note.objetivos = cleanedObjetivos;
       }
       break;
     }
@@ -195,15 +185,119 @@ function parseSummaryToDoctorNote(content: string, language: string): DoctorNote
 }
 
 /**
- * Clean a value - trim, remove trailing punctuation artifacts
+ * Clean a value for doctor-friendly display
+ * Removes conversation artifacts, placeholders, and formats for clinical use
  */
 function cleanValue(value: string): string {
-  return value
+  if (!value) return '';
+
+  let cleaned = value
     .trim()
-    .replace(/^[\-\•\*\s]+/, '')   // Remove leading bullets
-    .replace(/[\-\•\*\s]+$/, '')    // Remove trailing bullets
-    .replace(/^\(|\)$/g, '')        // Remove wrapping parentheses
+    // Remove conversation prefixes (Usuario reporta → Paciente reports)
+    .replace(/^Usuario\s*(reporta|confirma|describe|caracteriza|indica|aclara|proporciona nombre)[\s:]*["']?/gi, '')
+    .replace(/^Patient\s*(reports?|confirms?|describes?|indicates?)[\s:]*["']?/gi, '')
+    .replace(/^Paciente\s*(reporta|confirma|describe)[\s:]*["']?/gi, '')
+    // Remove trailing quotes
+    .replace(/["']\s*$/g, '')
+    // Remove placeholder values
+    .replace(/^no\s*proporcionado$/i, '')
+    .replace(/^not\s*provided$/i, '')
+    .replace(/^n\/a$/i, '')
+    .replace(/^none$/i, '')
+    .replace(/^ninguno$/i, '')
+    // Remove bullets and formatting
+    .replace(/^[\-\•\*\s]+/, '')
+    .replace(/[\-\•\*\s]+$/, '')
+    .replace(/^\(|\)$/g, '')
+    // Clean multiple conversation entries joined together
+    .replace(/Usuario\s*(reporta|confirma|describe|caracteriza|indica|aclara)[\s:]*["']?/gi, '. ')
+    .replace(/Patient\s*(reports?|confirms?|describes?)[\s:]*["']?/gi, '. ')
+    // Clean up artifacts
+    .replace(/\.\s*\./g, '.')
+    .replace(/\s+/g, ' ')
     .trim();
+
+  // If the result is too short or just punctuation, return empty
+  if (cleaned.length < 2 || /^[\.\,\s\-]+$/.test(cleaned)) {
+    return '';
+  }
+
+  // Capitalize first letter
+  if (cleaned.length > 0) {
+    cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+  }
+
+  return cleaned;
+}
+
+/**
+ * Clean content specifically for HPI fields
+ * Extracts the actual clinical content from conversation-style text
+ */
+function cleanHpiValue(value: string): string {
+  if (!value) return '';
+
+  // First apply general cleaning
+  let cleaned = cleanValue(value);
+
+  // If it still contains conversation patterns, try to extract just the clinical info
+  if (cleaned.includes('Usuario') || cleaned.includes('Patient')) {
+    // Try to extract quoted content or content after colons
+    const quotedMatch = cleaned.match(/["']([^"']+)["']/);
+    if (quotedMatch) {
+      cleaned = quotedMatch[1];
+    }
+  }
+
+  return cleaned;
+}
+
+/**
+ * Clean medidas (measures) text - extracts actual treatments from conversation text
+ */
+function cleanMedidas(text: string): string[] {
+  if (!text) return [];
+
+  // Split by common delimiters
+  const parts = text.split(/[.;\n]/).map(p => cleanValue(p)).filter(p => p.length > 3);
+
+  // Filter out conversation-style entries
+  return parts.filter(p => {
+    const lower = p.toLowerCase();
+    // Skip entries that are just conversation logs
+    if (lower.startsWith('usuario') || lower.startsWith('patient') || lower.startsWith('paciente')) {
+      return false;
+    }
+    // Skip placeholder text
+    if (lower === 'no proporcionado' || lower === 'not provided' || lower === 'ninguno') {
+      return false;
+    }
+    return true;
+  });
+}
+
+/**
+ * Clean objetivos (questions/goals) - extracts actual questions
+ */
+function cleanObjetivos(text: string): string {
+  if (!text) return '';
+
+  // Split by common delimiters and clean
+  const questions = text
+    .split(/[\n•\-]/)
+    .map(q => cleanValue(q))
+    .filter(q => {
+      if (q.length < 5) return false;
+      const lower = q.toLowerCase();
+      // Skip conversation-style entries
+      if (lower.startsWith('usuario') || lower.startsWith('patient')) return false;
+      // Skip numbered entries that are just placeholders
+      if (/^\d+\.?\s*$/.test(q)) return false;
+      return true;
+    })
+    .slice(0, 3);
+
+  return questions.join('. ');
 }
 
 /**
