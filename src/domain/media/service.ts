@@ -1,24 +1,36 @@
 import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import { config } from '../../config';
 import { logger } from '../../infra/logging/logger';
 
 export class MediaService {
   private anthropic: Anthropic;
+  private openai: OpenAI | null;
 
   constructor() {
     this.anthropic = new Anthropic({
       apiKey: config.anthropicApiKey,
     });
+
+    // OpenAI is required for voice transcription (Whisper)
+    this.openai = config.openaiApiKey
+      ? new OpenAI({ apiKey: config.openaiApiKey })
+      : null;
   }
 
   /**
-   * Transcribe audio using Claude's native audio understanding
+   * Transcribe audio using OpenAI Whisper
    * @param audioUrl URL of the audio file to transcribe
    * @param language Optional language hint (e.g., 'es', 'en')
    */
   async transcribeAudio(audioUrl: string, language?: string): Promise<string> {
+    if (!this.openai) {
+      logger.warn('OpenAI API key not configured, cannot transcribe audio');
+      return '[Voice message received - transcription not available. Please set OPENAI_API_KEY.]';
+    }
+
     try {
-      logger.info({ audioUrl, language }, 'Starting audio transcription with Claude');
+      logger.info({ audioUrl, language }, 'Starting audio transcription with Whisper');
 
       // Download the audio file
       const audioResponse = await fetch(audioUrl);
@@ -27,56 +39,19 @@ export class MediaService {
       }
 
       const audioBuffer = await audioResponse.arrayBuffer();
-      const base64Audio = Buffer.from(audioBuffer).toString('base64');
 
-      // Determine media type from content-type header
-      const contentType = audioResponse.headers.get('content-type') || 'audio/ogg';
-      const mediaType = contentType.includes('mp3') ? 'audio/mpeg'
-        : contentType.includes('wav') ? 'audio/wav'
-        : contentType.includes('webm') ? 'audio/webm'
-        : contentType.includes('mp4') ? 'audio/mp4'
-        : 'audio/ogg';
-
-      // Language-specific prompts for transcription
-      const langPrompts: Record<string, string> = {
-        es: 'Transcribe este mensaje de voz palabra por palabra en español. Solo devuelve la transcripción, sin explicaciones adicionales.',
-        en: 'Transcribe this voice message word for word in English. Only return the transcription, no additional explanations.',
-        pt: 'Transcreva esta mensagem de voz palavra por palavra em português. Apenas retorne a transcrição, sem explicações adicionais.',
-        fr: 'Transcrivez ce message vocal mot à mot en français. Retournez uniquement la transcription, sans explications supplémentaires.',
-      };
-
-      const prompt = langPrompts[language || 'en'] || langPrompts.en;
-
-      // Call Claude with audio
-      const response = await this.anthropic.messages.create({
-        model: 'claude-sonnet-4-5-20250929',
-        max_tokens: 1024,
-        messages: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'audio',
-                source: {
-                  type: 'base64',
-                  media_type: mediaType as 'audio/ogg' | 'audio/mpeg' | 'audio/wav' | 'audio/webm',
-                  data: base64Audio,
-                },
-              },
-              {
-                type: 'text',
-                text: prompt,
-              },
-            ],
-          },
-        ],
+      // Create a File object for OpenAI (Whisper expects a file)
+      const audioFile = new File([audioBuffer], 'audio.ogg', {
+        type: audioResponse.headers.get('content-type') || 'audio/ogg'
       });
 
-      const transcription = response.content
-        .filter((block) => block.type === 'text')
-        .map((block) => (block as { type: 'text'; text: string }).text)
-        .join('\n')
-        .trim();
+      // Transcribe using Whisper
+      const transcription = await this.openai.audio.transcriptions.create({
+        file: audioFile,
+        model: 'whisper-1',
+        language: language === 'es' ? 'es' : language === 'pt' ? 'pt' : language === 'fr' ? 'fr' : undefined,
+        response_format: 'text',
+      });
 
       logger.info({ transcriptionLength: transcription.length }, 'Audio transcription complete');
       return transcription;
@@ -148,7 +123,7 @@ Soyez concis mais informatif. Répondez en français.`,
 
       // Call Claude with vision
       const response = await this.anthropic.messages.create({
-        model: 'claude-sonnet-4-5-20250929', // Using Sonnet for cost efficiency
+        model: 'claude-sonnet-4-5-20250929',
         max_tokens: 500,
         messages: [
           {
