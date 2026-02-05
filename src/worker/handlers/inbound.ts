@@ -52,11 +52,30 @@ function extractUserName(userMessage: string, recentMessages: Message[]): string
     /\b(je m'appelle|je suis)\s+([A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+)?)/i,
   ];
 
+  // Common words that follow "I am" / "soy" but are NOT names
+  const notNameWords = [
+    'doing', 'feeling', 'good', 'well', 'fine', 'ok', 'okay', 'great', 'bad',
+    'sick', 'ill', 'tired', 'better', 'worse', 'not', 'very', 'so', 'really',
+    'having', 'experiencing', 'getting', 'going', 'looking', 'trying',
+    'here', 'back', 'new', 'just', 'also', 'still', 'now', 'happy', 'sad',
+    'bien', 'mal', 'enfermo', 'enferma', 'cansado', 'cansada', 'mejor', 'peor',
+    'aquí', 'aqui', 'nuevo', 'nueva', 'preocupado', 'preocupada',
+    'bem', 'doente', 'cansado', 'melhor', 'pior',
+    'malade', 'fatigué', 'fatiguée', 'mieux', 'pire',
+  ];
+
   // Try proactive extraction first
   for (const pattern of proactiveNamePatterns) {
     const match = userMessage.match(pattern);
     if (match && match[2]) {
       const extractedName = match[2].trim();
+      const firstWord = extractedName.split(/\s+/)[0]?.toLowerCase();
+
+      // Skip if the first word is a common non-name word
+      if (firstWord && notNameWords.includes(firstWord)) {
+        continue;
+      }
+
       // Validate and capitalize
       const words = extractedName.split(/\s+/);
       if (words.length >= 1 && words.length <= 4) {

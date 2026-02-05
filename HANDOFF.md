@@ -51,6 +51,11 @@ WhatsApp → Chatwoot → vivebien-core API → BullMQ → Workers → Claude AI
 - **Database**: projecto-1
 - **User**: postgres
 - **Password**: bd894cefacb1c52998f3
+- **pgweb UI**: https://projecto-1-postgress-pgweb.yydhsb.easypanel.host/
+
+### Deploy Webhooks
+- **Core API**: http://85.209.95.19:3000/api/deploy/1642a4c845b117889b4b6cbe0172ecc90b03500666da6e22
+- **Core Worker**: http://85.209.95.19:3000/api/deploy/27730fe51447b7b37aad06851ccb0470e5b62421badd9548
 
 ### Key Tables
 | Table | Purpose |
@@ -441,6 +446,6 @@ After making changes:
 - **Product name**: "CareLog" (AI tool for health documentation)
 - **Domain**: carelog.vivebien.io
 - **GitHub**: https://github.com/jmariano19/vivebien-core
-- **n8n**: No longer required for core functionality
+- **n8n**: No longer required for core functionality, but Claude_DevOps_Gateway_v3 workflow is available for database queries via MCP
 - System prompt is in conversation/service.ts, not a separate file
 - If summary link doesn't appear, check BOTH services are deployed
