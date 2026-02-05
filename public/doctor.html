@@ -191,6 +191,49 @@
     .section-title .icon {
       font-size: 16px;
     }
+    .concern-title {
+      font-weight: 600;
+      font-size: 15px;
+      color: var(--text);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: capitalize;
+      background: #f0ece6;
+      color: var(--muted);
+    }
+    .status-badge.active {
+      background: #fff3cd;
+      color: #856404;
+    }
+    .status-badge.improving {
+      background: #d4edda;
+      color: #155724;
+    }
+    .status-badge.resolved {
+      background: #e8e8e8;
+      color: #666;
+    }
+    .concern-divider {
+      margin: 24px 0;
+      padding: 20px 0;
+      border-top: 2px solid #f0ece6;
+      border-bottom: none;
+    }
+    .concern-divider:first-of-type {
+      margin-top: 0;
+      padding-top: 0;
+      border-top: none;
+    }
     .body-text {
       font-size: 16px;
       font-weight: 400;
@@ -467,6 +510,7 @@
 
     let currentLang = 'es';
     let doctorNote = null;
+    let concerns = [];
 
     // Format date for display
     function formatDate(date, lang) {
@@ -477,45 +521,184 @@
       return `${today}, ${formatted}`;
     }
 
-    // Render the doctor note
-    function renderDoctorNote(note, lang) {
-      const t = translations[lang] || translations.es;
-      const content = document.getElementById('content');
+    // Parse concern summary content (using same extraction pattern as doctorNote)
+    function parseConcernSummary(summaryContent) {
+      const result = {
+        motivo: '',
+        hpi: {},
+        sintomasAsociados: '',
+        medidas: [],
+        objetivos: ''
+      };
 
-      // Build HPI items (only show fields that have values)
-      let hpiHtml = '';
-      const hpiFields = ['inicio', 'duracion', 'localizacion', 'caracteristicas', 'evolucion', 'factoresAlivian', 'factoresAgravan'];
-      hpiFields.forEach(field => {
-        if (note.hpi && note.hpi[field]) {
-          const cleanedValue = cleanDoctorText(note.hpi[field]);
-          if (cleanedValue && cleanedValue.toLowerCase() !== 'no proporcionado') {
-            hpiHtml += `<div class="hpi-item"><strong>${t.hpiLabels[field]}</strong> <span>${escapeHtml(cleanedValue)}</span></div>`;
+      if (!summaryContent) return result;
+
+      const lines = summaryContent.split('\n');
+      let currentSection = null;
+      let currentContent = [];
+
+      lines.forEach(line => {
+        const trimmed = line.trim();
+        if (!trimmed) return;
+
+        // Detect section headers
+        if (trimmed.toLowerCase().startsWith('concern:')) {
+          if (currentSection && currentContent.length > 0) {
+            const content = currentContent.join('\n').trim();
+            assignContent(result, currentSection, content);
           }
+          result.motivo = trimmed.replace(/^concern:\s*/i, '');
+          currentSection = null;
+          currentContent = [];
+        } else if (trimmed.toLowerCase().startsWith('started:')) {
+          if (currentSection && currentContent.length > 0) {
+            const content = currentContent.join('\n').trim();
+            assignContent(result, currentSection, content);
+          }
+          result.hpi.inicio = trimmed.replace(/^started:\s*/i, '');
+          currentSection = null;
+          currentContent = [];
+        } else if (trimmed.toLowerCase().startsWith('duration:')) {
+          result.hpi.duracion = trimmed.replace(/^duration:\s*/i, '');
+        } else if (trimmed.toLowerCase().startsWith('location:')) {
+          result.hpi.localizacion = trimmed.replace(/^location:\s*/i, '');
+        } else if (trimmed.toLowerCase().startsWith('character:')) {
+          result.hpi.caracteristicas = trimmed.replace(/^character:\s*/i, '');
+        } else if (trimmed.toLowerCase().startsWith('course:')) {
+          result.hpi.evolucion = trimmed.replace(/^course:\s*/i, '');
+        } else if (trimmed.toLowerCase().startsWith('relieves:')) {
+          result.hpi.factoresAlivian = trimmed.replace(/^relieves:\s*/i, '');
+        } else if (trimmed.toLowerCase().startsWith('worsens:')) {
+          result.hpi.factoresAgravan = trimmed.replace(/^worsens:\s*/i, '');
+        } else if (trimmed.toLowerCase().startsWith('symptoms:')) {
+          currentSection = 'sintomas';
+          currentContent = [trimmed.replace(/^symptoms:\s*/i, '')];
+        } else if (trimmed.toLowerCase().startsWith('measures:')) {
+          currentSection = 'medidas';
+          currentContent = [trimmed.replace(/^measures:\s*/i, '')];
+        } else if (trimmed.toLowerCase().startsWith('goals:')) {
+          currentSection = 'objetivos';
+          currentContent = [trimmed.replace(/^goals:\s*/i, '')];
+        } else if (currentSection) {
+          currentContent.push(trimmed);
         }
       });
 
-      // Build measures text (clean and filter out conversation artifacts)
-      let medidasHtml = '';
-      if (note.medidas && note.medidas.length > 0) {
-        const cleanedMedidas = note.medidas
-          .map(m => cleanDoctorText(m))
-          .filter(m => m && m.length > 3 && m.toLowerCase() !== 'no proporcionado');
-        if (cleanedMedidas.length > 0) {
-          const medidasText = cleanedMedidas.join('. ');
-          medidasHtml = `
-            <div class="section">
-              <div class="section-title"><span class="icon">💊</span> ${t.medidas}</div>
-              <p class="body-text">${escapeHtml(medidasText)}</p>
+      // Flush any remaining content
+      if (currentSection && currentContent.length > 0) {
+        const content = currentContent.join('\n').trim();
+        assignContent(result, currentSection, content);
+      }
+
+      return result;
+    }
+
+    function assignContent(result, section, content) {
+      if (section === 'sintomas') {
+        result.sintomasAsociados = content;
+      } else if (section === 'medidas') {
+        result.medidas = content.split(/[,;]/).map(m => m.trim()).filter(m => m);
+      } else if (section === 'objetivos') {
+        result.objetivos = content;
+      }
+    }
+
+    // Render the doctor note with concerns
+    function renderDoctorNote(note, lang, concernsList = []) {
+      const t = translations[lang] || translations.es;
+      const content = document.getElementById('content');
+
+      // If concerns exist, use them; otherwise use doctor note as a single concern
+      const sections = concernsList && concernsList.length > 0
+        ? concernsList
+        : [{ title: null, status: null, parsed: note }];
+
+      // Build sections HTML
+      let sectionsHtml = '';
+
+      sections.forEach((section, idx) => {
+        const sectionData = section.parsed;
+
+        // Build HPI items (only show fields that have values)
+        let hpiHtml = '';
+        const hpiFields = ['inicio', 'duracion', 'localizacion', 'caracteristicas', 'evolucion', 'factoresAlivian', 'factoresAgravan'];
+        hpiFields.forEach(field => {
+          if (sectionData.hpi && sectionData.hpi[field]) {
+            const cleanedValue = cleanDoctorText(sectionData.hpi[field]);
+            if (cleanedValue && cleanedValue.toLowerCase() !== 'no proporcionado') {
+              hpiHtml += `<div class="hpi-item"><strong>${t.hpiLabels[field]}</strong> <span>${escapeHtml(cleanedValue)}</span></div>`;
+            }
+          }
+        });
+
+        // Build measures text (clean and filter out conversation artifacts)
+        let medidasHtml = '';
+        if (sectionData.medidas && sectionData.medidas.length > 0) {
+          const cleanedMedidas = sectionData.medidas
+            .map(m => cleanDoctorText(m))
+            .filter(m => m && m.length > 3 && m.toLowerCase() !== 'no proporcionado');
+          if (cleanedMedidas.length > 0) {
+            const medidasText = cleanedMedidas.join('. ');
+            medidasHtml = `
+              <div class="section">
+                <div class="section-title"><span class="icon">💊</span> ${t.medidas}</div>
+                <p class="body-text">${escapeHtml(medidasText)}</p>
+              </div>
+            `;
+          }
+        }
+
+        // Determine objetivos text (clean it)
+        let objetivosText = sectionData.objetivos ? cleanDoctorText(sectionData.objetivos) : null;
+        if (!objetivosText) {
+          objetivosText = t.defaultObjetivo;
+        }
+
+        // Build concern header if this is from concerns list
+        let concernHeader = '';
+        if (section.title) {
+          const statusClass = section.status ? `status-badge ${section.status}` : '';
+          concernHeader = `
+            <div class="concern-title">
+              ${escapeHtml(section.title)}
+              ${statusClass ? `<span class="${statusClass}">${escapeHtml(section.status)}</span>` : ''}
             </div>
           `;
         }
-      }
 
-      // Determine objetivos text (clean it)
-      let objetivosText = note.objetivos ? cleanDoctorText(note.objetivos) : null;
-      if (!objetivosText) {
-        objetivosText = t.defaultObjetivo;
-      }
+        // Build individual concern section
+        const sectionClass = section.title ? 'concern-divider' : '';
+        sectionsHtml += `
+          <div class="${sectionClass}">
+            ${concernHeader}
+            <div class="section">
+              <div class="section-title"><span class="icon">🩺</span> ${t.motivo}</div>
+              <p class="body-text highlight">${escapeHtml(cleanDoctorText(sectionData.motivo) || t.noReportados)}</p>
+            </div>
+
+            ${hpiHtml ? `
+            <div class="section">
+              <div class="section-title"><span class="icon">📋</span> ${t.hpi}</div>
+              <div class="hpi-list">
+                ${hpiHtml}
+              </div>
+            </div>
+            ` : ''}
+
+            <div class="section">
+              <div class="section-title"><span class="icon">🤒</span> ${t.sintomas}</div>
+              <p class="body-text">${escapeHtml(cleanDoctorText(sectionData.sintomasAsociados) || t.noReportados)}</p>
+            </div>
+
+            ${medidasHtml}
+
+            <div class="section">
+              <div class="section-title"><span class="icon">❓</span> ${t.objetivos}</div>
+              <p class="body-text">${escapeHtml(objetivosText)}</p>
+            </div>
+          </div>
+        `;
+      });
 
       content.innerHTML = `
         <div class="header">
@@ -536,31 +719,7 @@
         </div>
 
         <div class="card" id="doctorCard">
-          <div class="section">
-            <div class="section-title"><span class="icon">🩺</span> ${t.motivo}</div>
-            <p class="body-text highlight">${escapeHtml(cleanDoctorText(note.motivo) || t.noReportados)}</p>
-          </div>
-
-          ${hpiHtml ? `
-          <div class="section">
-            <div class="section-title"><span class="icon">📋</span> ${t.hpi}</div>
-            <div class="hpi-list">
-              ${hpiHtml}
-            </div>
-          </div>
-          ` : ''}
-
-          <div class="section">
-            <div class="section-title"><span class="icon">🤒</span> ${t.sintomas}</div>
-            <p class="body-text">${escapeHtml(cleanDoctorText(note.sintomasAsociados) || t.noReportados)}</p>
-          </div>
-
-          ${medidasHtml}
-
-          <div class="section">
-            <div class="section-title"><span class="icon">❓</span> ${t.objetivos}</div>
-            <p class="body-text">${escapeHtml(objetivosText)}</p>
-          </div>
+          ${sectionsHtml}
         </div>
 
         <div class="footer">
@@ -624,26 +783,61 @@
       let text = `${doctorNote.userName || 'Paciente'}\n`;
       text += `${doctorNote.dateLabel || formatDate(new Date(), currentLang)}\n\n`;
 
-      text += `${t.motivo.toUpperCase()}\n${doctorNote.motivo || t.noReportados}\n\n`;
+      // If concerns exist, include all of them
+      if (concerns && concerns.length > 0) {
+        concerns.forEach((concern, idx) => {
+          if (idx > 0) text += '\n' + '='.repeat(50) + '\n\n';
 
-      if (doctorNote.hpi) {
-        text += `${t.hpi.toUpperCase()}\n`;
-        const hpiFields = ['inicio', 'duracion', 'localizacion', 'caracteristicas', 'evolucion', 'factoresAlivian', 'factoresAgravan'];
-        hpiFields.forEach(field => {
-          if (doctorNote.hpi[field]) {
-            text += `• ${t.hpiLabels[field]}: ${doctorNote.hpi[field]}\n`;
+          const parsed = concern.parsed;
+          text += `CONCERN: ${concern.title}`;
+          if (concern.status) text += ` [${concern.status.toUpperCase()}]`;
+          text += '\n' + '-'.repeat(40) + '\n\n';
+
+          text += `${t.motivo.toUpperCase()}\n${parsed.motivo || t.noReportados}\n\n`;
+
+          if (parsed.hpi && Object.keys(parsed.hpi).length > 0) {
+            text += `${t.hpi.toUpperCase()}\n`;
+            const hpiFields = ['inicio', 'duracion', 'localizacion', 'caracteristicas', 'evolucion', 'factoresAlivian', 'factoresAgravan'];
+            hpiFields.forEach(field => {
+              if (parsed.hpi[field]) {
+                text += `• ${t.hpiLabels[field]}: ${parsed.hpi[field]}\n`;
+              }
+            });
+            text += '\n';
           }
+
+          text += `${t.sintomas.toUpperCase()}\n${parsed.sintomasAsociados || t.noReportados}\n\n`;
+
+          if (parsed.medidas && parsed.medidas.length > 0) {
+            text += `${t.medidas.toUpperCase()}\n${parsed.medidas.join('. ')}\n\n`;
+          }
+
+          text += `${t.objetivos.toUpperCase()}\n${parsed.objetivos || t.defaultObjetivo}\n\n`;
         });
-        text += '\n';
+      } else {
+        // Backward compatibility: use doctorNote as single section
+        text += `${t.motivo.toUpperCase()}\n${doctorNote.motivo || t.noReportados}\n\n`;
+
+        if (doctorNote.hpi) {
+          text += `${t.hpi.toUpperCase()}\n`;
+          const hpiFields = ['inicio', 'duracion', 'localizacion', 'caracteristicas', 'evolucion', 'factoresAlivian', 'factoresAgravan'];
+          hpiFields.forEach(field => {
+            if (doctorNote.hpi[field]) {
+              text += `• ${t.hpiLabels[field]}: ${doctorNote.hpi[field]}\n`;
+            }
+          });
+          text += '\n';
+        }
+
+        text += `${t.sintomas.toUpperCase()}\n${doctorNote.sintomasAsociados || t.noReportados}\n\n`;
+
+        if (doctorNote.medidas && doctorNote.medidas.length > 0) {
+          text += `${t.medidas.toUpperCase()}\n${doctorNote.medidas.join('. ')}\n\n`;
+        }
+
+        text += `${t.objetivos.toUpperCase()}\n${doctorNote.objetivos || t.defaultObjetivo}\n\n`;
       }
 
-      text += `${t.sintomas.toUpperCase()}\n${doctorNote.sintomasAsociados || t.noReportados}\n\n`;
-
-      if (doctorNote.medidas && doctorNote.medidas.length > 0) {
-        text += `${t.medidas.toUpperCase()}\n${doctorNote.medidas.join('. ')}\n\n`;
-      }
-
-      text += `${t.objetivos.toUpperCase()}\n${doctorNote.objetivos || t.defaultObjetivo}\n\n`;
       text += `---\n${t.disclaimer}`;
 
       return text;
@@ -711,20 +905,43 @@
       window.location.href = `/${userId}`;
     });
 
-    // Fetch doctor note data
+    // Fetch doctor note data and concerns
     async function loadDoctorNote() {
       try {
-        const response = await fetch(`/api/doctor/${userId}`);
-        if (!response.ok) throw new Error('Failed to load');
+        // Fetch doctor note
+        const doctorResponse = await fetch(`/api/doctor/${userId}`);
+        if (!doctorResponse.ok) throw new Error('Failed to load doctor note');
 
-        const data = await response.json();
-        currentLang = data.language || 'es';
-        doctorNote = data;
+        const doctorData = await doctorResponse.json();
+        currentLang = doctorData.language || 'es';
+        doctorNote = doctorData;
 
         // Update back button text
         document.getElementById('backText').textContent = translations[currentLang]?.back || 'Back';
 
-        renderDoctorNote(data, currentLang);
+        // Try to fetch concerns (if API exists)
+        let concernsList = [];
+        try {
+          const concernsResponse = await fetch(`/api/concerns/${userId}`);
+          if (concernsResponse.ok) {
+            const concernsData = await concernsResponse.json();
+            if (concernsData.concerns && concernsData.concerns.length > 0) {
+              // Parse each concern's summaryContent
+              concernsList = concernsData.concerns.map(concern => ({
+                id: concern.id,
+                title: concern.title,
+                status: concern.status,
+                parsed: parseConcernSummary(concern.summaryContent)
+              }));
+            }
+          }
+        } catch (err) {
+          // Concerns API not available or error - continue with backward compat
+          console.log('Concerns API not available, using single doctor note');
+        }
+
+        concerns = concernsList;
+        renderDoctorNote(doctorData, currentLang, concernsList);
       } catch (error) {
         console.error('Error loading doctor note:', error);
         showError(currentLang);

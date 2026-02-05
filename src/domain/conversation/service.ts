@@ -6,6 +6,7 @@ import {
   SafetyCheckResult,
 } from '../../shared/types';
 import { getActivePrompt, getConfigTemplate, getFeatureFlag } from '../../infra/db/client';
+import { ConcernService } from '../concern/service';
 
 export class ConversationService {
   constructor(private db: Pool) {}
@@ -86,17 +87,39 @@ export class ConversationService {
     // Load recent conversation history
     const recentMessages = await this.getRecentMessages(context.userId, 10);
 
-    // Load current health summary for context
-    const healthSummary = await this.getHealthSummary(context.userId);
+    // Load active health concerns for context (multi-concern aware)
+    const concernService = new ConcernService(this.db);
+    let healthContext: string | null = null;
+
+    try {
+      const activeConcerns = await concernService.getActiveConcerns(context.userId);
+
+      if (activeConcerns.length > 0) {
+        const concernLines = activeConcerns.map((c, i) => {
+          const statusLabel = c.status === 'improving' ? 'Improving' : 'Active';
+          const preview = c.summaryContent
+            ? c.summaryContent.split('\n')[0]?.substring(0, 80)
+            : 'No details yet';
+          return `${i + 1}. ${c.title} (${statusLabel}) - ${preview}`;
+        });
+        healthContext = `[CareLog - Active health concerns]:\n${concernLines.join('\n')}`;
+      }
+    } catch {
+      // Fallback to old single-summary if health_concerns table doesn't exist yet
+      const healthSummary = await this.getHealthSummary(context.userId);
+      if (healthSummary) {
+        healthContext = `[CareLog - Current health record]:\n${healthSummary}`;
+      }
+    }
 
     // Build the message array with history
     const messages: Message[] = [];
 
     // Add health record context if available
-    if (healthSummary) {
+    if (healthContext) {
       messages.push({
         role: 'assistant',
-        content: `[CareLog - Current health record]:\n${healthSummary}`,
+        content: healthContext,
       });
     }
 
@@ -123,14 +146,18 @@ export class ConversationService {
     userId: string,
     userMessage: string,
     assistantResponse: string,
-    aiService: { generateSummary: (messages: Message[], currentSummary: string | null, language?: string) => Promise<string> }
+    aiService: {
+      generateSummary: (messages: Message[], currentSummary: string | null, language?: string) => Promise<string>;
+      detectConcernTitle: (messages: Message[], language?: string) => Promise<string>;
+    }
   ): Promise<void> {
-    // Get current summary and user language
-    const [currentSummary, userResult] = await Promise.all([
-      this.getHealthSummary(userId),
-      this.db.query<{ language: string }>(`SELECT language FROM users WHERE id = $1`, [userId]),
-    ]);
+    const concernService = new ConcernService(this.db);
 
+    // Get user language
+    const userResult = await this.db.query<{ language: string }>(
+      `SELECT language FROM users WHERE id = $1`,
+      [userId]
+    );
     const userLanguage = userResult.rows[0]?.language;
 
     // Get recent messages for context
@@ -143,10 +170,37 @@ export class ConversationService {
       { role: 'assistant' as const, content: assistantResponse },
     ];
 
-    // Generate updated summary using AI (with language preference)
-    const newSummary = await aiService.generateSummary(allMessages, currentSummary, userLanguage);
+    try {
+      // Step 1: Detect which concern this conversation is about
+      const concernTitle = await aiService.detectConcernTitle(allMessages, userLanguage);
 
-    // Upsert the summary (check if exists, then insert or update)
+      // Step 2: Get or create the concern
+      const concern = await concernService.getOrCreateConcern(userId, concernTitle);
+
+      // Step 3: Generate updated summary for this specific concern
+      const newSummary = await aiService.generateSummary(
+        allMessages,
+        concern.summaryContent,
+        userLanguage
+      );
+
+      // Step 4: Update the concern (creates snapshot if meaningful change)
+      await concernService.updateConcernSummary(concern.id, newSummary, 'auto_update');
+
+      // Step 5: Also update the legacy memories table for backward compat
+      await this.upsertLegacySummary(userId, newSummary);
+    } catch (error) {
+      // Fallback to legacy flow if concern tables don't exist yet
+      const currentSummary = await this.getHealthSummary(userId);
+      const newSummary = await aiService.generateSummary(allMessages, currentSummary, userLanguage);
+      await this.upsertLegacySummary(userId, newSummary);
+    }
+  }
+
+  /**
+   * Upsert summary in the legacy memories table (for backward compatibility)
+   */
+  private async upsertLegacySummary(userId: string, summary: string): Promise<void> {
     const existing = await this.db.query(
       `SELECT id FROM memories WHERE user_id = $1 AND category = 'health_summary'`,
       [userId]
@@ -156,13 +210,13 @@ export class ConversationService {
       await this.db.query(
         `UPDATE memories SET content = $1, created_at = NOW(), access_count = access_count + 1
          WHERE user_id = $2 AND category = 'health_summary'`,
-        [newSummary, userId]
+        [summary, userId]
       );
     } else {
       await this.db.query(
         `INSERT INTO memories (id, user_id, content, category, importance_score, created_at, access_count)
          VALUES (gen_random_uuid(), $1, $2, 'health_summary', 1.0, NOW(), 0)`,
-        [userId, newSummary]
+        [userId, summary]
       );
     }
   }

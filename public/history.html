@@ -16,6 +16,9 @@
       --card: #ffffff;
       --shadow: 0 2px 12px rgba(0,0,0,0.06);
       --radius: 15px;
+      --status-active: #2E915E;
+      --status-improving: #3B82F6;
+      --status-resolved: #9CA3AF;
     }
 
     * { box-sizing: border-box; }
@@ -79,7 +82,7 @@
 
     .header {
       margin-top: 24px;
-      text-align: center;
+      margin-bottom: 20px;
     }
     h1 {
       margin: 0;
@@ -89,16 +92,65 @@
       line-height: 32px;
       color: #373737;
     }
-    .subtitle {
-      margin-top: 8px;
-      font-size: 15px;
-      line-height: 22px;
-      font-weight: 300;
-      color: var(--muted);
+
+    /* Concern tabs */
+    .tabs-container {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      margin-bottom: 24px;
+      padding-bottom: 8px;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .tabs-container::-webkit-scrollbar {
+      display: none;
     }
 
+    .tab {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      background: var(--card);
+      border: 1px solid #e8e4de;
+      border-radius: 20px;
+      cursor: pointer;
+      white-space: nowrap;
+      font-size: 13px;
+      color: var(--muted);
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+    .tab:hover {
+      background: #f5f2ed;
+      border-color: #ddd8d0;
+    }
+    .tab.active {
+      background: var(--brand);
+      color: white;
+      border-color: var(--brand);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .status-dot.active {
+      background: var(--status-active);
+    }
+    .status-dot.improving {
+      background: var(--status-improving);
+    }
+    .status-dot.resolved {
+      background: var(--status-resolved);
+    }
+
+    /* Timeline */
     .timeline {
-      margin-top: 24px;
+      margin-top: 16px;
       position: relative;
     }
 
@@ -116,6 +168,7 @@
       position: relative;
       padding-left: 48px;
       padding-bottom: 24px;
+      cursor: pointer;
     }
     .timeline-item:last-child {
       padding-bottom: 0;
@@ -130,9 +183,7 @@
       background: var(--brand);
       border-radius: 50%;
       border: 3px solid var(--bg);
-    }
-    .timeline-dot.inactive {
-      background: #d0ccc5;
+      transition: all 0.2s ease;
     }
 
     .timeline-card {
@@ -140,6 +191,10 @@
       border-radius: var(--radius);
       padding: 16px 18px;
       box-shadow: var(--shadow);
+      transition: all 0.2s ease;
+    }
+    .timeline-item:hover .timeline-card {
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
     }
 
     .timeline-date {
@@ -151,32 +206,227 @@
       margin-bottom: 8px;
     }
 
-    .timeline-title {
-      font-size: 16px;
-      font-weight: 600;
-      color: var(--text);
-      margin-bottom: 6px;
+    .timeline-header {
       display: flex;
       align-items: center;
       gap: 8px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
     }
 
-    .timeline-content {
+    .change-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .change-badge.auto_update {
+      background: #f0f0f0;
+      color: #666;
+    }
+    .change-badge.user_edit {
+      background: rgba(59, 130, 246, 0.1);
+      color: var(--status-improving);
+    }
+    .change-badge.status_change {
+      background: rgba(46, 145, 94, 0.1);
+      color: var(--status-active);
+    }
+
+    .timeline-summary {
       font-size: 14px;
       line-height: 22px;
       color: var(--muted);
     }
 
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 3px 8px;
-      background: rgba(46, 145, 94, 0.1);
-      color: var(--brand);
-      border-radius: 12px;
-      font-size: 11px;
+    .timeline-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    .action-btn {
+      padding: 6px 12px;
+      border: 1px solid #e8e4de;
+      background: transparent;
+      border-radius: 8px;
+      font-size: 12px;
       font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .action-btn:hover {
+      background: #f5f2ed;
+      border-color: #ddd8d0;
+    }
+    .action-btn.danger {
+      color: #dc2626;
+      border-color: #fca5a5;
+    }
+    .action-btn.danger:hover {
+      background: #fee2e2;
+    }
+
+    /* Expanded state */
+    .timeline-item.expanded .timeline-card {
+      background: #fafaf8;
+    }
+
+    .expanded-content {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid #e8e4de;
+      font-size: 14px;
+      line-height: 22px;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    /* Status change modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.4);
+      display: flex;
+      align-items: flex-end;
+      z-index: 1000;
+    }
+
+    .modal {
+      background: var(--card);
+      border-radius: var(--radius) var(--radius) 0 0;
+      padding: 24px 16px;
+      width: 100%;
+      max-width: 402px;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+      animation: slideUp 0.3s ease;
+    }
+
+    @keyframes slideUp {
+      from {
+        transform: translateY(100%);
+      }
+      to {
+        transform: translateY(0);
+      }
+    }
+
+    .modal-title {
+      font-family: "Lora", serif;
+      font-size: 20px;
+      font-weight: 500;
+      margin: 0 0 20px;
+      color: var(--text);
+    }
+
+    .status-options {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .status-btn {
+      padding: 12px 16px;
+      border: none;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: #f0f0f0;
+      color: var(--text);
+    }
+    .status-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .status-btn.active {
+      color: white;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .status-btn.active-status {
+      background: var(--status-active);
+    }
+    .status-btn.improving-status {
+      background: var(--status-improving);
+    }
+    .status-btn.resolved-status {
+      background: var(--status-resolved);
+    }
+
+    .modal-close {
+      margin-top: 16px;
+      padding: 12px 16px;
+      border: none;
+      border-radius: 12px;
+      background: #f0f0f0;
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    /* Confirm dialog */
+    .confirm-dialog {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 24px 20px;
+      max-width: 340px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+      z-index: 1001;
+    }
+
+    .confirm-title {
+      font-family: "Lora", serif;
+      font-size: 18px;
+      font-weight: 500;
+      margin: 0 0 8px;
+      color: var(--text);
+    }
+
+    .confirm-text {
+      font-size: 14px;
+      line-height: 22px;
+      color: var(--muted);
+      margin: 0 0 20px;
+    }
+
+    .confirm-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .confirm-btn {
+      flex: 1;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .confirm-btn.cancel {
+      background: #f0f0f0;
+      color: var(--text);
+    }
+    .confirm-btn.delete {
+      background: #dc2626;
+      color: white;
     }
 
     .empty-state {
@@ -200,16 +450,6 @@
       font-size: 15px;
       line-height: 22px;
       margin: 0;
-    }
-
-    .footer {
-      margin-top: 24px;
-      text-align: center;
-      font-size: 13px;
-      line-height: 18px;
-      font-weight: 300;
-      color: var(--muted);
-      padding: 0 12px;
     }
 
     .loading {
@@ -244,7 +484,7 @@
     <div id="content">
       <div class="loading">
         <div class="loading-spinner"></div>
-        <p>Cargando historial...</p>
+        <p id="loadingText">Cargando historial...</p>
       </div>
     </div>
   </div>
@@ -256,63 +496,119 @@
     const translations = {
       es: {
         title: 'Tu Historial',
-        subtitle: 'Registro de tus conversaciones de salud',
-        back: 'Volver',
-        current: 'Actual',
-        updated: 'Actualizado',
-        created: 'Creado',
-        emptyTitle: 'Sin historial aún',
-        emptyText: 'Tu historial de salud aparecerá aquí a medida que continúes tus conversaciones.',
-        footer: 'Tu historial se actualiza automáticamente con cada conversación.',
+        all: 'Todos',
+        active: 'Activo',
+        improving: 'Mejorando',
+        resolved: 'Resuelto',
+        autoUpdate: 'Auto actualizado',
+        userEdit: 'Editado',
+        statusChange: 'Cambio de estado',
+        edit: 'Editar',
+        changeStatus: 'Cambiar estado',
+        delete: 'Eliminar',
         today: 'Hoy',
         yesterday: 'Ayer',
-        daysAgo: 'hace {n} días'
+        daysAgo: 'hace {n} días',
+        emptyTitle: 'Sin historial aún',
+        emptyText: 'Tu historial de salud aparecerá aquí a medida que continúes tus conversaciones.',
+        loading: 'Cargando historial...',
+        back: 'Volver',
+        confirmDeleteTitle: 'Eliminar preocupación',
+        confirmDeleteText: 'Esta acción no se puede deshacer.',
+        cancel: 'Cancelar',
+        deleteBtn: 'Eliminar',
+        selectStatus: 'Selecciona un nuevo estado'
       },
       en: {
         title: 'Your History',
-        subtitle: 'Record of your health conversations',
-        back: 'Back',
-        current: 'Current',
-        updated: 'Updated',
-        created: 'Created',
-        emptyTitle: 'No history yet',
-        emptyText: 'Your health history will appear here as you continue your conversations.',
-        footer: 'Your history is automatically updated with each conversation.',
+        all: 'All',
+        active: 'Active',
+        improving: 'Improving',
+        resolved: 'Resolved',
+        autoUpdate: 'Auto updated',
+        userEdit: 'User edit',
+        statusChange: 'Status change',
+        edit: 'Edit',
+        changeStatus: 'Change Status',
+        delete: 'Delete',
         today: 'Today',
         yesterday: 'Yesterday',
-        daysAgo: '{n} days ago'
+        daysAgo: '{n} days ago',
+        emptyTitle: 'No history yet',
+        emptyText: 'Your health history will appear here as you continue your conversations.',
+        loading: 'Loading history...',
+        back: 'Back',
+        confirmDeleteTitle: 'Delete concern',
+        confirmDeleteText: 'This action cannot be undone.',
+        cancel: 'Cancel',
+        deleteBtn: 'Delete',
+        selectStatus: 'Select a new status'
       },
       pt: {
         title: 'Seu Histórico',
-        subtitle: 'Registro das suas conversas de saúde',
-        back: 'Voltar',
-        current: 'Atual',
-        updated: 'Atualizado',
-        created: 'Criado',
-        emptyTitle: 'Sem histórico ainda',
-        emptyText: 'Seu histórico de saúde aparecerá aqui conforme você continua suas conversas.',
-        footer: 'Seu histórico é atualizado automaticamente a cada conversa.',
+        all: 'Todos',
+        active: 'Ativo',
+        improving: 'Melhorando',
+        resolved: 'Resolvido',
+        autoUpdate: 'Auto atualizado',
+        userEdit: 'Edição do usuário',
+        statusChange: 'Mudança de status',
+        edit: 'Editar',
+        changeStatus: 'Mudar Status',
+        delete: 'Eliminar',
         today: 'Hoje',
         yesterday: 'Ontem',
-        daysAgo: 'há {n} dias'
+        daysAgo: 'há {n} dias',
+        emptyTitle: 'Sem histórico ainda',
+        emptyText: 'Seu histórico de saúde aparecerá aqui conforme você continua suas conversas.',
+        loading: 'Carregando histórico...',
+        back: 'Voltar',
+        confirmDeleteTitle: 'Excluir preocupação',
+        confirmDeleteText: 'Esta ação não pode ser desfeita.',
+        cancel: 'Cancelar',
+        deleteBtn: 'Excluir',
+        selectStatus: 'Selecione um novo status'
       },
       fr: {
         title: 'Votre Historique',
-        subtitle: 'Enregistrement de vos conversations de santé',
-        back: 'Retour',
-        current: 'Actuel',
-        updated: 'Mis à jour',
-        created: 'Créé',
-        emptyTitle: 'Pas encore d\'historique',
-        emptyText: 'Votre historique de santé apparaîtra ici au fur et à mesure de vos conversations.',
-        footer: 'Votre historique est automatiquement mis à jour à chaque conversation.',
-        today: 'Aujourd\'hui',
+        all: 'Tous',
+        active: 'Actif',
+        improving: 'En amélioration',
+        resolved: 'Résolu',
+        autoUpdate: 'Mise à jour auto',
+        userEdit: 'Édition utilisateur',
+        statusChange: 'Changement de statut',
+        edit: 'Modifier',
+        changeStatus: 'Changer le statut',
+        delete: 'Supprimer',
+        today: "Aujourd'hui",
         yesterday: 'Hier',
-        daysAgo: 'il y a {n} jours'
+        daysAgo: 'il y a {n} jours',
+        emptyTitle: "Pas encore d'historique",
+        emptyText: 'Votre historique de santé apparaîtra ici au fur et à mesure de vos conversations.',
+        loading: 'Chargement de l\'historique...',
+        back: 'Retour',
+        confirmDeleteTitle: 'Supprimer la préoccupation',
+        confirmDeleteText: 'Cette action ne peut pas être annulée.',
+        cancel: 'Annuler',
+        deleteBtn: 'Supprimer',
+        selectStatus: 'Sélectionnez un nouveau statut'
       }
     };
 
     let lang = 'es';
+    let concerns = [];
+    let allSnapshots = [];
+    let selectedConcernId = null;
+
+    function getStatusColor(status) {
+      switch (status) {
+        case 'active': return 'active';
+        case 'improving': return 'improving';
+        case 'resolved': return 'resolved';
+        default: return 'active';
+      }
+    }
 
     function formatRelativeDate(dateStr, t) {
       const date = new Date(dateStr);
@@ -333,79 +629,6 @@
       return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
 
-    function renderHistory(data) {
-      const t = translations[lang] || translations.es;
-      const content = document.getElementById('content');
-
-      // Create timeline items from summary history
-      // For now, we'll show the current summary as the main item
-      // and any previous updates as historical items
-
-      let timelineHtml = '';
-
-      if (data.summary) {
-        // Current summary
-        timelineHtml += `
-          <div class="timeline-item">
-            <div class="timeline-dot"></div>
-            <div class="timeline-card">
-              <div class="timeline-date">${formatRelativeDate(data.updatedAt || new Date(), t)} · ${formatTime(data.updatedAt || new Date())}</div>
-              <div class="timeline-title">
-                ${data.motivo || 'Health Update'}
-                <span class="badge">${t.current}</span>
-              </div>
-              <div class="timeline-content">${escapeHtml(truncate(cleanForDisplay(data.summary), 120))}</div>
-            </div>
-          </div>
-        `;
-
-        // If we have a creation date different from update, show it
-        if (data.createdAt && data.createdAt !== data.updatedAt) {
-          timelineHtml += `
-            <div class="timeline-item">
-              <div class="timeline-dot inactive"></div>
-              <div class="timeline-card">
-                <div class="timeline-date">${formatRelativeDate(data.createdAt, t)} · ${formatTime(data.createdAt)}</div>
-                <div class="timeline-title">${t.created}</div>
-                <div class="timeline-content">Started tracking health information</div>
-              </div>
-            </div>
-          `;
-        }
-      }
-
-      if (!timelineHtml) {
-        content.innerHTML = `
-          <div class="header">
-            <h1>${t.title}</h1>
-            <p class="subtitle">${t.subtitle}</p>
-          </div>
-
-          <div class="empty-state">
-            <div class="empty-icon">📋</div>
-            <h2>${t.emptyTitle}</h2>
-            <p>${t.emptyText}</p>
-          </div>
-        `;
-        return;
-      }
-
-      content.innerHTML = `
-        <div class="header">
-          <h1>${t.title}</h1>
-          <p class="subtitle">${t.subtitle}</p>
-        </div>
-
-        <div class="timeline">
-          ${timelineHtml}
-        </div>
-
-        <div class="footer">
-          ${t.footer}
-        </div>
-      `;
-    }
-
     function escapeHtml(text) {
       if (!text) return '';
       const div = document.createElement('div');
@@ -419,87 +642,317 @@
       return text.substring(0, maxLength).trim() + '...';
     }
 
-    // Clean summary for display - remove markdown and extract meaningful content
-    function cleanForDisplay(text) {
-      if (!text) return '';
+    function renderTabs() {
+      const t = translations[lang] || translations.es;
+      let tabsHtml = `<div class="tab ${selectedConcernId === null ? 'active' : ''}" data-concern-id="all">
+        <span class="status-dot active"></span>
+        ${t.all}
+      </div>`;
 
-      // Remove markdown formatting
-      let cleaned = text
-        .replace(/\*\*([^*]+)\*\*/g, '$1')  // **bold** -> bold
-        .replace(/\*([^*]+)\*/g, '$1')       // *italic* -> italic
-        .replace(/^#+\s*/gm, '')              // # headers
-        .replace(/---+/g, ' ')                // --- dividers
-        .replace(/📝|❓|•/g, '')              // emojis/bullets
-
-      // Remove section headers (multi-language)
-      const headers = [
-        'MOTIVO PRINCIPAL', 'MAIN CONCERN', 'QUEIXA PRINCIPAL', 'MOTIF PRINCIPAL',
-        'INICIO', 'ONSET', 'INÍCIO', 'DÉBUT', 'DURACIÓN', 'DURATION',
-        'LOCALIZACIÓN', 'LOCATION', 'LOCALIZAÇÃO',
-        'QUÉ AYUDA', 'WHAT HELPS', 'O QUE AJUDA',
-        'EMPEORA', 'WORSENS', 'PIORA', 'AGGRAVE',
-        'MEDICAMENTOS', 'MEDICATIONS', 'MÉDICAMENTS',
-        'SÍNTOMAS', 'SYMPTOMS', 'SINTOMAS',
-        'PATRÓN', 'PATTERN', 'SEVERIDAD', 'SEVERITY',
-        'FACTORES', 'FACTORS', 'CARACTERÍSTICAS', 'CHARACTERISTICS',
-        'Health Summary', 'Resumen de Salud', 'Health Record', 'Registro de Salud',
-        'Questions for your visit', 'Preguntas para tu visita',
-        'Main concern', 'Started', 'Location', 'Symptoms', 'What helps', 'What worsens', 'Medications', 'Notes',
-        'Current symptoms', 'Síntomas actuales', 'Dolor constante', 'Local'
-      ];
-      headers.forEach(h => {
-        cleaned = cleaned.replace(new RegExp(h + '[:\\s]*', 'gi'), '');
+      concerns.forEach((concern, index) => {
+        const isSelected = selectedConcernId === concern.id;
+        const statusClass = getStatusColor(concern.status);
+        tabsHtml += `<div class="tab ${isSelected ? 'active' : ''}" data-concern-id="${concern.id}">
+          <span class="status-dot ${statusClass}"></span>
+          ${escapeHtml(concern.title)}
+        </div>`;
       });
 
-      // Remove placeholder values
-      cleaned = cleaned
-        .replace(/no\s*proporcionado/gi, '')
-        .replace(/not\s*provided/gi, '')
-        .replace(/usuario\s*reporta\s*["']?/gi, '')
-        .replace(/patient\s*reports?\s*/gi, '')
-        .replace(/["']\s*$/g, '')
+      return tabsHtml;
+    }
 
-      // Clean up whitespace and punctuation
-      cleaned = cleaned
-        .replace(/\s+/g, ' ')
-        .replace(/^\s*[-–—]\s*/gm, '')
-        .replace(/\s*[-–—]\s*$/gm, '')
-        .replace(/\.\s*\./g, '.')
-        .replace(/,\s*,/g, ',')
-        .trim();
+    function renderTimeline() {
+      const t = translations[lang] || translations.es;
+      let timelineHtml = '';
 
-      // Capitalize first letter
-      if (cleaned.length > 0) {
-        cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+      const snapshots = selectedConcernId === null
+        ? allSnapshots
+        : allSnapshots.filter(s => s.concernId === selectedConcernId);
+
+      if (snapshots.length === 0) {
+        return `<div class="empty-state">
+          <div class="empty-icon">📋</div>
+          <h2>${t.emptyTitle}</h2>
+          <p>${t.emptyText}</p>
+        </div>`;
       }
 
-      return cleaned || 'Health information recorded';
+      // Sort by date descending
+      snapshots.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      snapshots.forEach(snapshot => {
+        const changeTypeKey = snapshot.changeType || 'auto_update';
+        const changeTypeLabel = {
+          'auto_update': t.autoUpdate,
+          'user_edit': t.userEdit,
+          'status_change': t.statusChange
+        }[changeTypeKey] || changeTypeKey;
+
+        const summary = escapeHtml(truncate(snapshot.summary || '', 120));
+        const fullSummary = escapeHtml(snapshot.summary || '');
+        const itemId = `item-${snapshot.concernId}-${snapshot.date}`;
+
+        timelineHtml += `
+          <div class="timeline-item" id="${itemId}">
+            <div class="timeline-dot"></div>
+            <div class="timeline-card">
+              <div class="timeline-date">${formatRelativeDate(snapshot.date, t)} · ${formatTime(snapshot.date)}</div>
+              <div class="timeline-header">
+                <span class="change-badge ${changeTypeKey}">${changeTypeLabel}</span>
+              </div>
+              <div class="timeline-summary">${summary}</div>
+              <div class="timeline-actions">
+                <button class="action-btn edit-btn" data-concern-id="${snapshot.concernId}">
+                  ${t.edit}
+                </button>
+                <button class="action-btn status-btn" data-concern-id="${snapshot.concernId}">
+                  ${t.changeStatus}
+                </button>
+                <button class="action-btn danger delete-btn" data-concern-id="${snapshot.concernId}">
+                  ${t.delete}
+                </button>
+              </div>
+              <div class="expanded-content" style="display: none;">${fullSummary}</div>
+            </div>
+          </div>
+        `;
+      });
+
+      return timelineHtml;
+    }
+
+    function renderPage() {
+      const t = translations[lang] || translations.es;
+      const content = document.getElementById('content');
+
+      let html = `
+        <div class="header">
+          <h1>${t.title}</h1>
+        </div>
+        <div class="tabs-container">
+          ${renderTabs()}
+        </div>
+        <div class="timeline">
+          ${renderTimeline()}
+        </div>
+      `;
+
+      content.innerHTML = html;
+      attachEventListeners();
+    }
+
+    function attachEventListeners() {
+      const t = translations[lang] || translations.es;
+
+      // Tab switching
+      document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          const concernId = tab.dataset.concernId;
+          selectedConcernId = concernId === 'all' ? null : concernId;
+          renderPage();
+        });
+      });
+
+      // Timeline item expansion
+      document.querySelectorAll('.timeline-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+          if (e.target.closest('.action-btn')) return;
+          item.classList.toggle('expanded');
+          const expandedContent = item.querySelector('.expanded-content');
+          if (expandedContent) {
+            expandedContent.style.display = item.classList.contains('expanded') ? 'block' : 'none';
+          }
+        });
+      });
+
+      // Edit button
+      document.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const concernId = btn.dataset.concernId;
+          window.location.href = `/suggest/${userId}?concernId=${concernId}&returnTo=history`;
+        });
+      });
+
+      // Change status button
+      document.querySelectorAll('.status-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const concernId = btn.dataset.concernId;
+          showStatusModal(concernId);
+        });
+      });
+
+      // Delete button
+      document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const concernId = btn.dataset.concernId;
+          showDeleteConfirm(concernId);
+        });
+      });
+    }
+
+    function showStatusModal(concernId) {
+      const t = translations[lang] || translations.es;
+      const concern = concerns.find(c => c.id === concernId);
+      if (!concern) return;
+
+      const modal = document.createElement('div');
+      modal.className = 'modal-overlay';
+      modal.innerHTML = `
+        <div class="modal">
+          <h2 class="modal-title">${t.selectStatus}</h2>
+          <div class="status-options">
+            <button class="status-btn ${concern.status === 'active' ? 'active active-status' : 'active-status'}" data-status="active">
+              ${t.active}
+            </button>
+            <button class="status-btn ${concern.status === 'improving' ? 'active improving-status' : 'improving-status'}" data-status="improving">
+              ${t.improving}
+            </button>
+            <button class="status-btn ${concern.status === 'resolved' ? 'active resolved-status' : 'resolved-status'}" data-status="resolved">
+              ${t.resolved}
+            </button>
+          </div>
+          <button class="modal-close">${t.cancel}</button>
+        </div>
+      `;
+
+      document.body.appendChild(modal);
+
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal || e.target.classList.contains('modal-close')) {
+          modal.remove();
+        }
+      });
+
+      modal.querySelectorAll('.status-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const newStatus = btn.dataset.status;
+          updateConcernStatus(concernId, newStatus);
+          modal.remove();
+        });
+      });
+    }
+
+    function showDeleteConfirm(concernId) {
+      const t = translations[lang] || translations.es;
+
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      overlay.innerHTML = `
+        <div class="confirm-dialog">
+          <h3 class="confirm-title">${t.confirmDeleteTitle}</h3>
+          <p class="confirm-text">${t.confirmDeleteText}</p>
+          <div class="confirm-actions">
+            <button class="confirm-btn cancel">${t.cancel}</button>
+            <button class="confirm-btn delete">${t.deleteBtn}</button>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(overlay);
+
+      overlay.querySelector('.cancel').addEventListener('click', () => {
+        overlay.remove();
+      });
+
+      overlay.querySelector('.delete').addEventListener('click', () => {
+        deleteConcern(concernId);
+        overlay.remove();
+      });
+
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) overlay.remove();
+      });
+    }
+
+    async function updateConcernStatus(concernId, newStatus) {
+      try {
+        const response = await fetch(`/api/concerns/${userId}/${concernId}/status`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: newStatus })
+        });
+
+        if (response.ok) {
+          const concern = concerns.find(c => c.id === concernId);
+          if (concern) {
+            concern.status = newStatus;
+            renderPage();
+          }
+        }
+      } catch (error) {
+        console.error('Error updating status:', error);
+      }
+    }
+
+    async function deleteConcern(concernId) {
+      try {
+        const response = await fetch(`/api/concerns/${userId}/${concernId}`, {
+          method: 'DELETE'
+        });
+
+        if (response.ok) {
+          concerns = concerns.filter(c => c.id !== concernId);
+          allSnapshots = allSnapshots.filter(s => s.concernId !== concernId);
+          selectedConcernId = null;
+          renderPage();
+        }
+      } catch (error) {
+        console.error('Error deleting concern:', error);
+      }
+    }
+
+    async function loadHistory() {
+      const t = translations[lang] || translations.es;
+      document.getElementById('loadingText').textContent = t.loading;
+
+      try {
+        const response = await fetch(`/api/concerns/${userId}`);
+        if (!response.ok) throw new Error('Failed to load concerns');
+
+        const data = await response.json();
+        lang = data.language || 'es';
+        concerns = data.concerns || [];
+        document.getElementById('backText').textContent = translations[lang]?.back || 'Back';
+
+        // Load history for each concern
+        allSnapshots = [];
+        for (const concern of concerns) {
+          const histResponse = await fetch(`/api/concerns/${userId}/${concern.id}/history`);
+          if (histResponse.ok) {
+            const histData = await histResponse.json();
+            const snapshots = histData.snapshots || [];
+            snapshots.forEach(snapshot => {
+              allSnapshots.push({
+                concernId: concern.id,
+                ...snapshot
+              });
+            });
+          }
+        }
+
+        // Select first concern by default
+        if (concerns.length > 0) {
+          selectedConcernId = concerns[0].id;
+        }
+
+        renderPage();
+      } catch (error) {
+        console.error('Error:', error);
+        renderPage();
+      }
     }
 
     document.getElementById('backButton').addEventListener('click', () => {
       window.location.href = `/${userId}`;
     });
 
-    async function loadHistory() {
-      try {
-        const response = await fetch(`/api/summary/${userId}`);
-        if (!response.ok) throw new Error('Failed to load');
-
-        const data = await response.json();
-        lang = data.language || 'es';
-
-        document.getElementById('backText').textContent = translations[lang]?.back || 'Back';
-        renderHistory(data);
-      } catch (error) {
-        console.error('Error:', error);
-        renderHistory({});
-      }
-    }
-
     if (userId && userId !== 'history') {
       loadHistory();
     } else {
-      renderHistory({});
+      renderPage();
     }
   </script>
 </body>

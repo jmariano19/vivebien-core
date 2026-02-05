@@ -1,6 +1,7 @@
 import { FastifyInstance, FastifyPluginAsync } from 'fastify';
-import { queryOne, queryMany, query } from '../../infra/db/client';
+import { queryOne, queryMany, query, db } from '../../infra/db/client';
 import { NotFoundError } from '../../shared/errors';
+import { ConcernService } from '../../domain/concern/service';
 
 export const summaryRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
   // ============================================================================
@@ -58,12 +59,30 @@ export const summaryRoutes: FastifyPluginAsync = async (app: FastifyInstance) =>
       return reply.status(404).send({ error: 'No summary found' });
     }
 
+    // Also fetch concerns if table exists
+    let concerns: Array<{ id: string; title: string; status: string; summaryContent: string | null; icon: string | null; updatedAt: Date }> = [];
+    try {
+      const concernService = new ConcernService(db);
+      const allConcerns = await concernService.getAllConcerns(userId);
+      concerns = allConcerns.map(c => ({
+        id: c.id,
+        title: c.title,
+        status: c.status,
+        summaryContent: c.summaryContent,
+        icon: c.icon,
+        updatedAt: c.updatedAt,
+      }));
+    } catch {
+      // Table may not exist yet
+    }
+
     return {
       userId: user.id,
       userName: user.name,
       language: user.language,
       summary: summary.content,
       updatedAt: summary.created_at,
+      concerns,
     };
   });
 

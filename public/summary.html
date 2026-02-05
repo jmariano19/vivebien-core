@@ -24,6 +24,9 @@
       --text: #373737;
       --text-dark: #000000;
       --footer-bg: #DFD6CB;
+      --status-active: #2E915E;
+      --status-improving: #3B82F6;
+      --status-resolved: #9CA3AF;
     }
 
     body {
@@ -84,6 +87,154 @@
       padding: 28px 22px;
       margin-bottom: 24px;
       box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+
+    /* Concern card (collapsed view) */
+    .concern-card {
+      background: var(--card-bg);
+      border-radius: 15px;
+      padding: 20px 22px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .concern-card:active {
+      transform: scale(0.98);
+    }
+
+    .concern-card.resolved {
+      opacity: 0.7;
+    }
+
+    .concern-card-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .concern-card-icon {
+      font-size: 28px;
+      flex-shrink: 0;
+    }
+
+    .concern-card-title-section {
+      flex: 1;
+    }
+
+    .concern-card-title {
+      font-family: 'Lora', Georgia, serif;
+      font-size: 18px;
+      font-weight: 500;
+      color: var(--text-dark);
+      margin-bottom: 6px;
+    }
+
+    .concern-card-status {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 11px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .concern-card-status.active {
+      background: rgba(46, 145, 94, 0.15);
+      color: var(--status-active);
+    }
+
+    .concern-card-status.improving {
+      background: rgba(59, 130, 246, 0.15);
+      color: var(--status-improving);
+    }
+
+    .concern-card-status.resolved {
+      background: rgba(156, 163, 175, 0.15);
+      color: var(--status-resolved);
+    }
+
+    .concern-card-preview {
+      font-family: 'Outfit', sans-serif;
+      font-size: 14px;
+      color: var(--text);
+      opacity: 0.7;
+      line-height: 1.4;
+      margin-top: 8px;
+    }
+
+    .concern-card-date {
+      font-family: 'Outfit', sans-serif;
+      font-size: 12px;
+      color: var(--text);
+      opacity: 0.5;
+      margin-top: 8px;
+    }
+
+    /* Expanded concern card */
+    .concern-card.expanded {
+      padding: 28px 22px;
+    }
+
+    .concern-card-expanded-content {
+      margin-top: 16px;
+      display: none;
+    }
+
+    .concern-card.expanded .concern-card-expanded-content {
+      display: block;
+    }
+
+    .concern-card-expanded-content .field-list {
+      margin-top: 16px;
+    }
+
+    .concern-card-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(0,0,0,0.08);
+    }
+
+    .concern-card-action-btn {
+      flex: 1;
+      padding: 10px 12px;
+      background: rgba(46, 145, 94, 0.1);
+      color: var(--primary);
+      border: none;
+      border-radius: 10px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .concern-card-action-btn:active {
+      background: rgba(46, 145, 94, 0.2);
+    }
+
+    /* Resolved concerns section */
+    .resolved-section {
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 1px solid rgba(0,0,0,0.08);
+    }
+
+    .resolved-section-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      opacity: 0.6;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 16px;
     }
 
     /* Live Updates - now inside card at top */
@@ -367,32 +518,24 @@
 
     <!-- Main Content (hidden initially) -->
     <div id="content" style="display: none;">
-      <!-- Main Card with structured content -->
-      <div class="card">
-        <div class="live-badge">
-          <span class="live-dot"></span>
-          <span id="liveText">Updates Live</span>
-        </div>
+      <!-- Live Badge (shown at top of concerns) -->
+      <div class="live-badge" id="liveBadge" style="display: none;">
+        <span class="live-dot"></span>
+        <span id="liveText">Updates Live</span>
+      </div>
 
-        <!-- Main Concern Title -->
-        <div class="card-title" id="concernTitle">
-          <span class="icon">👁️</span>
-          <span id="mainConcernText">Loading...</span>
-        </div>
+      <!-- Concerns Container -->
+      <div id="concernsContainer">
+        <!-- Concerns will be rendered here -->
+      </div>
 
-        <!-- Structured Fields -->
-        <div class="field-list" id="fieldList">
-          <!-- Fields will be populated by JavaScript -->
-        </div>
-
-        <!-- Doctor View CTA inside card -->
-        <div class="doctor-cta">
-          <button class="doctor-cta-btn" onclick="copyForDoctor()">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <span id="doctorCtaText">Share with Doctor</span>
-          </button>
+      <!-- Resolved Concerns Section (hidden by default) -->
+      <div id="resolvedSection" style="display: none;">
+        <div class="resolved-section">
+          <div class="resolved-section-title" id="resolvedTitle">Resolved Concerns</div>
+          <div id="resolvedContainer">
+            <!-- Resolved concerns will be rendered here -->
+          </div>
         </div>
       </div>
 
@@ -436,6 +579,7 @@
     let summaryText = '';
     let pollInterval = null;
     let userLang = 'es'; // Default to Spanish, will be updated from API
+    let expandedConcernId = null; // Track which concern is expanded
 
     // Localization
     const i18n = {
@@ -463,7 +607,15 @@
           location: 'Ubicación',
           symptoms: 'Síntomas'
         },
-        defaultName: 'Tu Resumen'
+        status: {
+          active: 'Activo',
+          improving: 'Mejorando',
+          resolved: 'Resuelto'
+        },
+        defaultName: 'Tu Resumen',
+        resolvedTitle: 'Preocupaciones Resueltas',
+        editBtn: 'Editar',
+        historyBtn: 'Ver Historia'
       },
       en: {
         loading: 'Loading your summary...',
@@ -489,7 +641,15 @@
           location: 'Location',
           symptoms: 'Symptoms'
         },
-        defaultName: 'Your Summary'
+        status: {
+          active: 'Active',
+          improving: 'Improving',
+          resolved: 'Resolved'
+        },
+        defaultName: 'Your Summary',
+        resolvedTitle: 'Resolved Concerns',
+        editBtn: 'Edit',
+        historyBtn: 'View History'
       },
       pt: {
         loading: 'Carregando seu resumo...',
@@ -515,7 +675,15 @@
           location: 'Localização',
           symptoms: 'Sintomas'
         },
-        defaultName: 'Seu Resumo'
+        status: {
+          active: 'Ativo',
+          improving: 'Melhorando',
+          resolved: 'Resolvido'
+        },
+        defaultName: 'Seu Resumo',
+        resolvedTitle: 'Preocupações Resolvidas',
+        editBtn: 'Editar',
+        historyBtn: 'Ver Histórico'
       },
       fr: {
         loading: 'Chargement de votre résumé...',
@@ -541,7 +709,15 @@
           location: 'Localisation',
           symptoms: 'Symptômes'
         },
-        defaultName: 'Votre Résumé'
+        status: {
+          active: 'Actif',
+          improving: 'En amélioration',
+          resolved: 'Résolu'
+        },
+        defaultName: 'Votre Résumé',
+        resolvedTitle: 'Préoccupations Résolues',
+        editBtn: 'Modifier',
+        historyBtn: 'Voir l\'historique'
       }
     };
 
@@ -579,7 +755,7 @@
       document.getElementById('disclaimerText').textContent = lang.disclaimer;
       document.getElementById('doctorBtn').textContent = lang.doctorBtn;
       document.getElementById('appointmentBtn').textContent = lang.appointmentBtn;
-      document.getElementById('doctorCtaText').textContent = lang.doctorCta || 'Share with your doctor';
+      document.getElementById('resolvedTitle').textContent = lang.resolvedTitle;
       document.getElementById('dateText').textContent = formatDate(new Date());
     }
 
@@ -601,7 +777,7 @@
         }
 
         const data = await response.json();
-        if (data && data.summary) {
+        if (data && (data.summary || (data.concerns && data.concerns.length > 0))) {
           summaryData = data;
           summaryText = data.summary;
 
@@ -621,7 +797,7 @@
       }
     }
 
-    // Render summary data
+    // Render summary data - supports both single card and multiple concerns
     function renderSummary(data) {
       document.getElementById('loading').style.display = 'none';
       document.getElementById('empty').style.display = 'none';
@@ -636,22 +812,156 @@
       const updateDate = data.updatedAt ? new Date(data.updatedAt) : new Date();
       document.getElementById('dateText').textContent = formatDate(updateDate);
 
-      // Parse and render structured summary
+      // Check if we have concerns array (new multi-concern format)
+      if (data.concerns && data.concerns.length > 0) {
+        renderMultipleConcerns(data.concerns, data.summary);
+      } else {
+        // Fallback to old single-card format
+        renderSingleSummary(data);
+      }
+    }
+
+    // Render single summary (backward compatibility)
+    function renderSingleSummary(data) {
+      document.getElementById('liveBadge').style.display = 'none';
+
+      // Clear containers
+      document.getElementById('concernsContainer').innerHTML = '';
+      document.getElementById('resolvedSection').style.display = 'none';
+
+      // Parse summary
       const summary = data.summary || '';
       const fields = parseAnyFormat(summary);
 
-      // Set main concern as title
+      // Create single card from old format
+      const card = document.createElement('div');
+      card.className = 'card';
+
       const mainConcern = cleanFieldForDisplay(fields.mainConcern) || 'Health Note';
-      document.getElementById('mainConcernText').textContent = capitalizeFirst(mainConcern);
-
-      // Set appropriate icon based on concern
       const icon = getIconForConcern(mainConcern);
-      document.querySelector('.card-title .icon').textContent = icon;
+      const lang = getLang();
 
-      // Build structured field list
-      const fieldList = document.getElementById('fieldList');
-      fieldList.innerHTML = '';
+      let html = '<div class="live-badge">';
+      html += '<span class="live-dot"></span>';
+      html += `<span id="liveTextSingle">${lang.liveText}</span>`;
+      html += '</div>';
 
+      html += '<div class="card-title">';
+      html += `<span class="icon">${icon}</span>`;
+      html += `<span>${capitalizeFirst(mainConcern)}</span>`;
+      html += '</div>';
+
+      html += '<div class="field-list">';
+
+      const fieldConfig = [
+        { key: 'started', label: lang.fields?.started || 'Started', value: fields.started },
+        { key: 'helps', label: lang.fields?.helps || 'Helps', value: fields.whatHelps },
+        { key: 'worsens', label: lang.fields?.worsens || 'Worsens', value: fields.whatWorsens },
+        { key: 'medications', label: lang.fields?.medications || 'Medications', value: fields.medications },
+      ];
+
+      fieldConfig.forEach(({ label, value }) => {
+        const cleanValue = cleanFieldForDisplay(value);
+        if (cleanValue && isValidFieldValue(cleanValue)) {
+          html += '<div class="field-item">';
+          html += `<span class="field-label">${label}</span>`;
+          html += `<span class="field-value">${capitalizeFirst(cleanValue)}</span>`;
+          html += '</div>';
+        }
+      });
+
+      html += '</div>';
+      html += '<div class="doctor-cta">';
+      html += '<button class="doctor-cta-btn" onclick="copyForDoctor()">';
+      html += '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">';
+      html += '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />';
+      html += '</svg>';
+      html += `<span>${lang.doctorCta}</span>`;
+      html += '</button>';
+      html += '</div>';
+
+      card.innerHTML = html;
+      document.getElementById('concernsContainer').appendChild(card);
+    }
+
+    // Render multiple concerns as cards
+    function renderMultipleConcerns(concerns, summaryText) {
+      document.getElementById('liveBadge').style.display = 'flex';
+      const lang = getLang();
+
+      // Clear containers
+      document.getElementById('concernsContainer').innerHTML = '';
+      document.getElementById('resolvedContainer').innerHTML = '';
+      document.getElementById('resolvedSection').style.display = 'none';
+
+      // Separate active and resolved concerns
+      const activeConcerns = concerns.filter(c => c.status !== 'resolved');
+      const resolvedConcerns = concerns.filter(c => c.status === 'resolved');
+
+      // Render active concerns
+      activeConcerns.forEach((concern, index) => {
+        const card = createConcernCard(concern, index);
+        document.getElementById('concernsContainer').appendChild(card);
+      });
+
+      // Render resolved concerns if any
+      if (resolvedConcerns.length > 0) {
+        document.getElementById('resolvedSection').style.display = 'block';
+        resolvedConcerns.forEach((concern, index) => {
+          const card = createConcernCard(concern, index, true);
+          document.getElementById('resolvedContainer').appendChild(card);
+        });
+      }
+    }
+
+    // Create a single concern card element
+    function createConcernCard(concern, index, isResolved = false) {
+      const lang = getLang();
+      const card = document.createElement('div');
+      const cardId = `concern-${index}`;
+      card.id = cardId;
+      card.className = `concern-card ${isResolved ? 'resolved' : ''}`;
+
+      const fields = parseAnyFormat(concern.summaryContent || '');
+      const icon = concern.icon || getIconForConcern(concern.title);
+      const status = concern.status || 'active';
+      const lastUpdated = concern.lastUpdated ? formatDate(new Date(concern.lastUpdated)) : formatDate(new Date());
+
+      // Get preview text from first field
+      let preview = '';
+      if (fields.started) {
+        preview = cleanFieldForDisplay(fields.started);
+      } else if (fields.whatHelps) {
+        preview = cleanFieldForDisplay(fields.whatHelps);
+      } else if (fields.summaryContent) {
+        preview = cleanFieldForDisplay(concern.summaryContent);
+      }
+      preview = preview.substring(0, 60) + (preview.length > 60 ? '...' : '');
+
+      // Build card HTML
+      let html = `
+        <div class="concern-card-header">
+          <div class="concern-card-icon">${icon}</div>
+          <div class="concern-card-title-section">
+            <div class="concern-card-title">${capitalizeFirst(concern.title)}</div>
+            <span class="concern-card-status ${status}">${lang.status[status] || status}</span>
+          </div>
+        </div>
+        <div class="concern-card-preview">${preview}</div>
+        <div class="concern-card-date">${lastUpdated}</div>
+        <div class="concern-card-expanded-content">
+          <div class="field-list"></div>
+          <div class="concern-card-actions">
+            <button class="concern-card-action-btn" onclick="editConcern('${cardId}')">${lang.editBtn}</button>
+            <button class="concern-card-action-btn" onclick="viewConcernHistory('${cardId}')">${lang.historyBtn}</button>
+          </div>
+        </div>
+      `;
+
+      card.innerHTML = html;
+
+      // Build expanded fields
+      const fieldList = card.querySelector('.field-list');
       const fieldConfig = [
         { key: 'started', label: lang.fields?.started || 'Started', value: fields.started },
         { key: 'helps', label: lang.fields?.helps || 'Helps', value: fields.whatHelps },
@@ -672,8 +982,46 @@
         }
       });
 
-      // Update doctor CTA text
-      document.getElementById('doctorCtaText').textContent = lang.doctorCta || 'Share with your doctor';
+      // Add click handler to expand/collapse
+      card.addEventListener('click', (e) => {
+        if (!e.target.closest('button')) {
+          toggleConcernExpanded(cardId);
+        }
+      });
+
+      return card;
+    }
+
+    // Toggle concern card expansion
+    function toggleConcernExpanded(cardId) {
+      const card = document.getElementById(cardId);
+      if (expandedConcernId === cardId) {
+        card.classList.remove('expanded');
+        expandedConcernId = null;
+      } else {
+        if (expandedConcernId) {
+          document.getElementById(expandedConcernId).classList.remove('expanded');
+        }
+        card.classList.add('expanded');
+        expandedConcernId = cardId;
+      }
+    }
+
+    // Edit concern action
+    function editConcern(cardId) {
+      console.log('Edit concern:', cardId);
+      // Navigate to edit page if needed
+      if (userId && userId !== 'preview' && userId !== 'summary.html') {
+        window.location.href = `/suggest/${userId}`;
+      }
+    }
+
+    // View concern history
+    function viewConcernHistory(cardId) {
+      console.log('View history for:', cardId);
+      if (userId && userId !== 'preview' && userId !== 'summary.html') {
+        window.location.href = `/history/${userId}`;
+      }
     }
 
     // Get icon for concern type
@@ -720,110 +1068,6 @@
     function capitalizeFirst(str) {
       if (!str) return '';
       return str.charAt(0).toUpperCase() + str.slice(1);
-    }
-
-    // Clean summary for display - creates a simple, patient-friendly format
-    function cleanSummaryForDisplay(text) {
-      if (!text) return 'Your health summary will appear here as you share more details.';
-
-      // First, detect the format type and parse accordingly
-      const fields = parseAnyFormat(text);
-
-      // Helper to check if a field value is actually meaningful content
-      function isValidField(value) {
-        if (!value || value.length < 3) return false;
-        // Filter out placeholder/empty indicators
-        const invalidPatterns = [
-          /^no\s*proporcionado/i,
-          /^not\s*provided/i,
-          /^n\/a$/i,
-          /^none$/i,
-          /^ninguno/i,
-          /^no\s*aplica/i,
-          /^usuario\s*reporta/i,
-          /^patient\s*reports?/i,
-          /^-+$/,
-          /^\.+$/,
-        ];
-        return !invalidPatterns.some(p => p.test(value.trim()));
-      }
-
-      // Clean a display value
-      function cleanDisplayValue(value) {
-        if (!value) return '';
-        return value
-          .replace(/^usuario\s*reporta\s*["']?/i, '')
-          .replace(/["']$/g, '')
-          .replace(/^patient\s*reports?\s*/i, '')
-          .trim();
-      }
-
-      // Build a natural, flowing summary from parsed fields
-      const parts = [];
-
-      if (isValidField(fields.mainConcern)) {
-        let concern = cleanDisplayValue(fields.mainConcern);
-        concern = concern.charAt(0).toUpperCase() + concern.slice(1);
-        parts.push(concern);
-      }
-
-      if (isValidField(fields.started)) {
-        let started = cleanDisplayValue(fields.started);
-        // Only add timing info if it looks like a time expression
-        if (/\d|days?|hours?|weeks?|días?|horas?|semanas?|ago|hace|há/i.test(started)) {
-          if (!/^(hace|há|about|\d)/i.test(started)) {
-            parts.push(`Started ${started.toLowerCase()}`);
-          } else {
-            parts.push(started.charAt(0).toUpperCase() + started.slice(1));
-          }
-        }
-      }
-
-      if (isValidField(fields.location)) {
-        let location = cleanDisplayValue(fields.location);
-        // Only add if not already in main concern
-        if (!fields.mainConcern || !fields.mainConcern.toLowerCase().includes(location.toLowerCase())) {
-          parts.push(`Location: ${location}`);
-        }
-      }
-
-      if (isValidField(fields.symptoms)) {
-        parts.push(cleanDisplayValue(fields.symptoms));
-      }
-
-      if (isValidField(fields.whatHelps)) {
-        let helps = cleanDisplayValue(fields.whatHelps);
-        parts.push(`${helps} is helping`);
-      }
-
-      if (isValidField(fields.whatWorsens)) {
-        let worsens = cleanDisplayValue(fields.whatWorsens);
-        parts.push(`${worsens} makes it worse`);
-      }
-
-      if (isValidField(fields.medications)) {
-        let meds = cleanDisplayValue(fields.medications);
-        parts.push(`Taking: ${meds}`);
-      }
-
-      if (isValidField(fields.notes)) {
-        parts.push(cleanDisplayValue(fields.notes));
-      }
-
-      if (parts.length > 0) {
-        let result = parts.join('. ');
-        // Clean up
-        result = result
-          .replace(/\s+/g, ' ')
-          .replace(/\.\s*\./g, '.')
-          .replace(/\s+is helping is helping/gi, ' is helping')
-          .replace(/\s+makes it worse makes it worse/gi, ' makes it worse')
-          .trim();
-        if (!result.endsWith('.') && !result.endsWith('?')) result += '.';
-        return result;
-      }
-
-      return 'Your health summary will appear here as you share more details.';
     }
 
     // Universal parser that handles ALL format types

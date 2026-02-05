@@ -62,8 +62,10 @@ WhatsApp → Chatwoot → vivebien-core API → BullMQ → Workers → Claude AI
 |-------|---------|
 | users | User records (id, phone, language, name) |
 | messages | Conversation history |
-| memories | Health summaries (category='health_summary') |
+| memories | Health summaries (category='health_summary') — legacy, still updated for backward compat |
 | conversation_state | Current phase, message count |
+| health_concerns | Individual health concerns per user (title, status, summary_content, icon) |
+| concern_snapshots | History of changes per concern (content, change_type, status at time) |
 
 ## Repository Structure
 ```
@@ -74,11 +76,13 @@ vivebien-project/
 │   ├── api/routes/
 │   │   ├── ingest.ts            # Webhook endpoint (/ingest/chatwoot)
 │   │   ├── summary.ts           # Summary API (GET & PUT /api/summary/:userId)
+│   │   ├── concerns.ts          # Concerns API (CRUD /api/concerns/:userId)
 │   │   ├── doctor.ts            # Doctor API (/api/doctor/:userId)
 │   │   └── health.ts            # Health check
 │   ├── domain/
-│   │   ├── ai/service.ts        # AI service, postProcess(), summary link logic
-│   │   ├── conversation/service.ts  # System prompts, updateHealthSummary()
+│   │   ├── ai/service.ts        # AI service, postProcess(), summary link, detectConcernTitle()
+│   │   ├── concern/service.ts   # ConcernService (multi-concern CRUD + snapshots)
+│   │   ├── conversation/service.ts  # System prompts, updateHealthSummary() (multi-concern)
 │   │   ├── media/service.ts     # Voice transcription (Whisper) + Image analysis (Vision)
 │   │   └── user/service.ts      # User CRUD
 │   ├── worker/
@@ -149,6 +153,80 @@ async function processAttachments(attachments, message, language, logger) {
 - After transcription, language is detected from the transcribed text
 - User's language preference is updated if different
 - AI responds in the detected language
+
+---
+
+## Multi-Concern Health Tracking (NEW - Feb 5, 2026)
+
+### Overview
+CareLog now tracks multiple health concerns per user instead of a single summary. Each concern has its own status lifecycle and change history (snapshots).
+
+### How It Works
+1. User chats about a health topic (e.g., "I have back pain")
+2. AI detects the concern title via Claude Haiku (`detectConcernTitle()`)
+3. System fuzzy-matches against existing concerns or creates a new one
+4. Summary is generated per-concern and stored in `health_concerns.summary_content`
+5. If the content changed meaningfully, a snapshot is created in `concern_snapshots`
+6. Legacy `memories` table is also updated for backward compatibility
+
+### Status Lifecycle
+- **active** (green) — Currently being tracked
+- **improving** (blue) — User reports improvement
+- **resolved** (gray) — No longer an active concern
+
+### Database Tables
+
+**health_concerns:**
+| Column | Type | Purpose |
+|--------|------|---------|
+| id | UUID | Primary key |
+| user_id | UUID | References users(id) |
+| title | VARCHAR(255) | Short topic name ("Back pain", "Eye sty") |
+| status | VARCHAR(20) | active, improving, or resolved |
+| summary_content | TEXT | Current structured summary |
+| icon | VARCHAR(10) | Emoji icon for display |
+| created_at | TIMESTAMPTZ | When concern was first tracked |
+| updated_at | TIMESTAMPTZ | Last update time |
+
+**concern_snapshots:**
+| Column | Type | Purpose |
+|--------|------|---------|
+| id | UUID | Primary key |
+| concern_id | UUID | References health_concerns(id) ON DELETE CASCADE |
+| user_id | UUID | User ID for indexing |
+| content | TEXT | Full summary at this point in time |
+| change_type | VARCHAR(30) | auto_update, user_edit, or status_change |
+| status | VARCHAR(20) | Status at time of snapshot |
+| created_at | TIMESTAMPTZ | When snapshot was created |
+
+### API Endpoints
+
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| GET | `/api/concerns/:userId` | All concerns for a user |
+| GET | `/api/concerns/:userId/:concernId` | Single concern detail |
+| PUT | `/api/concerns/:userId/:concernId` | Update summary/title (from edit page) |
+| PUT | `/api/concerns/:userId/:concernId/status` | Change status (active/improving/resolved) |
+| DELETE | `/api/concerns/:userId/:concernId` | Delete concern + all snapshots |
+| GET | `/api/concerns/:userId/:concernId/history` | Snapshot timeline for a concern |
+
+### Key Files
+- `src/domain/concern/service.ts` — ConcernService with all CRUD + fuzzy matching + meaningful change detection
+- `src/domain/ai/service.ts` — `detectConcernTitle()` uses Claude Haiku for fast topic extraction
+- `src/domain/conversation/service.ts` — `buildMessages()` injects all active concerns as context; `updateHealthSummary()` routes to correct concern
+- `src/api/routes/concerns.ts` — REST API for concerns
+- `migrations/003_health_concerns.sql` — Database migration (already applied)
+
+### Frontend Pages (Updated)
+- **summary.html** — Shows multiple concern cards with status badges, tap to expand
+- **history.html** — Concern tabs + snapshot timeline, status change modal, delete flow
+- **suggest.html** — Accepts `?concernId=X&returnTo=history` for per-concern editing
+- **doctor.html** — Renders each concern as a separate clinical section
+
+### Backward Compatibility
+- `GET /api/summary/:userId` still works and now includes a `concerns` array alongside the existing `summary` field
+- Legacy `memories` table is still updated on every summary generation
+- Frontend gracefully falls back to single-summary mode if no concerns exist
 
 ---
 
@@ -299,11 +377,14 @@ Link appears after AI generates a summary in WhatsApp.
 - ✅ CareLog onboarding flow (value-first, AI disclosure after summary)
 - ✅ Summary generation in chat with WhatsApp formatting
 - ✅ Summary link after summaries (localized): 📋 View my summary 👇 + URL
-- ✅ Landing page at carelog.vivebien.io/{userId}
-- ✅ Doctor view page at carelog.vivebien.io/doctor/{userId}
+- ✅ Landing page at carelog.vivebien.io/{userId} (multi-concern cards)
+- ✅ Doctor view page at carelog.vivebien.io/doctor/{userId} (multi-concern clinical sections)
 - ✅ Appointment preparation page at carelog.vivebien.io/appointment/{userId}
-- ✅ Edit Summary page at carelog.vivebien.io/suggest/{userId}
-- ✅ View History page at carelog.vivebien.io/history/{userId}
+- ✅ Edit Summary page at carelog.vivebien.io/suggest/{userId} (per-concern editing)
+- ✅ View History page at carelog.vivebien.io/history/{userId} (concern tabs + snapshot timeline)
+- ✅ Multi-concern health tracking with status lifecycle (active → improving → resolved)
+- ✅ Concern change history with snapshots (auto_update, user_edit, status_change)
+- ✅ Concerns API (/api/concerns/:userId) with full CRUD
 - ✅ Multi-language support (es, en, pt, fr)
 - ✅ Language auto-detection from user messages AND voice
 - ✅ Name extraction from conversations (including proactive name sharing)
@@ -312,6 +393,16 @@ Link appears after AI generates a summary in WhatsApp.
 - ✅ Direct database access (no n8n required)
 
 ### Recent Changes (Feb 5, 2026):
+
+#### Multi-Concern Health Tracking
+- New tables: `health_concerns` and `concern_snapshots` (migration: `003_health_concerns.sql`)
+- New service: `ConcernService` at `src/domain/concern/service.ts`
+- New API: `/api/concerns/:userId` with full CRUD + history
+- AI-powered concern detection: `detectConcernTitle()` using Claude Haiku
+- Fuzzy title matching (exact, substring, 50% word overlap) to avoid duplicate concerns
+- Meaningful change detection before creating snapshots
+- All 4 frontend pages redesigned for multi-concern support
+- Backward compatible: legacy `memories` table still updated, old API still works
 
 #### Voice & Image Support
 - Added MediaService for voice transcription and image analysis
@@ -349,19 +440,25 @@ Link appears after AI generates a summary in WhatsApp.
 
 ### Clear Test Data (via Database):
 ```sql
--- 1. Delete messages
+-- 1. Delete concern snapshots (cascades from health_concerns, but explicit is safer)
+DELETE FROM concern_snapshots WHERE user_id IN (SELECT id FROM users WHERE phone IN ('+12017370113', '12017370113', '2017370113'));
+
+-- 2. Delete health concerns
+DELETE FROM health_concerns WHERE user_id IN (SELECT id FROM users WHERE phone IN ('+12017370113', '12017370113', '2017370113'));
+
+-- 3. Delete messages
 DELETE FROM messages WHERE user_id IN (SELECT id FROM users WHERE phone IN ('+12017370113', '12017370113', '2017370113'));
 
--- 2. Delete memories
+-- 4. Delete memories
 DELETE FROM memories WHERE user_id IN (SELECT id FROM users WHERE phone IN ('+12017370113', '12017370113', '2017370113'));
 
--- 3. Delete conversation state
+-- 5. Delete conversation state
 DELETE FROM conversation_state WHERE user_id IN (SELECT id FROM users WHERE phone IN ('+12017370113', '12017370113', '2017370113'));
 
--- 4. Delete billing accounts
+-- 6. Delete billing accounts
 DELETE FROM billing_accounts WHERE user_id IN (SELECT id FROM users WHERE phone IN ('+12017370113', '12017370113', '2017370113'));
 
--- 5. Delete user (run last)
+-- 7. Delete user (run last)
 DELETE FROM users WHERE phone IN ('+12017370113', '12017370113', '2017370113') RETURNING phone;
 ```
 
@@ -379,18 +476,13 @@ DELETE FROM users WHERE phone IN ('+12017370113', '12017370113', '2017370113') R
 
 **BOTH services must be deployed after ANY code change!** The API and Worker share the same codebase but run as separate services.
 
-### Quick Deploy (Copy & Paste)
+### Quick Deploy (Single Command)
 
-**Step 1: Commit and push changes**
 ```bash
-cd ~/Desktop/vivebien-project && git add -A && git commit -m "Your commit message" && git push
+cd ~/Desktop/vivebien-project && git push && curl -s http://85.209.95.19:3000/api/deploy/1642a4c845b117889b4b6cbe0172ecc90b03500666da6e22 && curl -s http://85.209.95.19:3000/api/deploy/27730fe51447b7b37aad06851ccb0470e5b62421badd9548
 ```
 
-**Step 2: Trigger both deployments (via Easypanel UI)**
-1. Go to Easypanel (https://85.209.95.19:3000)
-2. Deploy BOTH services:
-   - vivebien-core-api → Click Deploy
-   - vivebien-core-worker → Click Deploy
+This pushes to GitHub and triggers both API + Worker deployments in one go.
 
 ### Deployment Checklist
 

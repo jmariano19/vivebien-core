@@ -371,6 +371,11 @@
     const pathParts = window.location.pathname.split('/');
     const userId = pathParts[pathParts.length - 1];
 
+    // Parse query parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const concernId = urlParams.get('concernId');
+    const returnTo = urlParams.get('returnTo');
+
     const translations = {
       es: {
         title: 'Actualizar Resumen',
@@ -815,6 +820,13 @@
       return div.innerHTML;
     }
 
+    function getReturnUrl() {
+      if (returnTo === 'history') {
+        return `/history/${userId}`;
+      }
+      return `/${userId}`;
+    }
+
     function setupFieldListeners(fieldKeys) {
       const saveBtn = document.getElementById('saveBtn');
       const cancelBtn = document.getElementById('cancelBtn');
@@ -851,7 +863,7 @@
       });
 
       cancelBtn.addEventListener('click', () => {
-        window.location.href = `/${userId}`;
+        window.location.href = getReturnUrl();
       });
 
       saveBtn.addEventListener('click', async () => {
@@ -883,7 +895,15 @@
         const summaryText = summaryParts.join('\n');
 
         try {
-          const response = await fetch(`/api/summary/${userId}`, {
+          // Determine which API endpoint to use
+          let endpoint;
+          if (concernId) {
+            endpoint = `/api/concerns/${userId}/${concernId}`;
+          } else {
+            endpoint = `/api/summary/${userId}`;
+          }
+
+          const response = await fetch(endpoint, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ summary: summaryText })
@@ -895,7 +915,7 @@
 
           showToast(t.saved, true);
           setTimeout(() => {
-            window.location.href = `/${userId}`;
+            window.location.href = getReturnUrl();
           }, 1500);
         } catch (err) {
           console.error('Error saving:', err);
@@ -907,12 +927,20 @@
     }
 
     document.getElementById('backButton').addEventListener('click', () => {
-      window.location.href = `/${userId}`;
+      window.location.href = getReturnUrl();
     });
 
     async function loadData() {
       try {
-        const response = await fetch(`/api/summary/${userId}`);
+        // Determine which API endpoint to use
+        let endpoint;
+        if (concernId) {
+          endpoint = `/api/concerns/${userId}/${concernId}`;
+        } else {
+          endpoint = `/api/summary/${userId}`;
+        }
+
+        const response = await fetch(endpoint);
         if (!response.ok) throw new Error('Failed to load');
 
         const data = await response.json();
@@ -921,7 +949,9 @@
         document.getElementById('backText').textContent = translations[lang]?.back || 'Back';
 
         // Parse the existing summary into structured fields
-        const parsedData = parseExistingSummary(data.summary);
+        // For concern API, use summaryContent; for summary API, use summary
+        const summaryText = data.summaryContent || data.summary;
+        const parsedData = parseExistingSummary(summaryText);
         render(parsedData);
       } catch (error) {
         console.error('Error:', error);

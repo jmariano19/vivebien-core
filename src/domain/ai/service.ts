@@ -351,6 +351,74 @@ Rules:
   }
 
   /**
+   * Detect the main health concern topic from conversation messages.
+   * Uses Claude Haiku for fast, lightweight extraction.
+   * Returns a short title like "Back pain", "Eye sty", "Headaches"
+   */
+  async detectConcernTitle(messages: Message[], language?: string): Promise<string> {
+    await this.rateLimiter.acquire();
+
+    const langName = language === 'es' ? 'Spanish' : language === 'pt' ? 'Portuguese' : language === 'fr' ? 'French' : 'English';
+
+    // Use the last few messages for context
+    const recentMessages = messages.slice(-6);
+    const conversationText = recentMessages
+      .map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
+      .join('\n');
+
+    const prompt = `What is the MAIN health topic being discussed in this conversation? Return ONLY the topic name (2-5 words, in ${langName}).
+
+Examples of good responses:
+- Back pain
+- Eye sty
+- Persistent headaches
+- Sore throat
+- Knee injury
+- Dolor de espalda
+- Orzuelo en el ojo
+
+CONVERSATION:
+${conversationText}
+
+Topic name:`;
+
+    try {
+      const response = await this.client.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 30,
+        messages: [{ role: 'user', content: prompt }],
+      });
+
+      const content = response.content
+        .filter(block => block.type === 'text')
+        .map(block => (block as { type: 'text'; text: string }).text)
+        .join('')
+        .trim();
+
+      // Clean up the response
+      let title = content
+        .replace(/^["']+|["']+$/g, '')  // Remove quotes
+        .replace(/^(the |el |la |le |o )/i, '')  // Remove articles
+        .trim();
+
+      // Capitalize first letter of each word
+      title = title.split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+
+      // Validate: should be 2-60 chars
+      if (title.length < 2 || title.length > 60) {
+        return 'Health concern';
+      }
+
+      return title;
+    } catch (error) {
+      logger.error({ error }, 'Failed to detect concern title');
+      return 'Health concern';
+    }
+  }
+
+  /**
    * Language detection based on common words in messages
    * Supports: Spanish, English, Portuguese, French
    */
