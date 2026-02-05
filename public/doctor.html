@@ -571,6 +571,8 @@
     function cleanDoctorText(text) {
       if (!text) return '';
       let cleaned = text
+        // Remove markdown headers
+        .replace(/^#+\s*/gm, '')
         // Remove conversation prefixes
         .replace(/Usuario\s*(reporta|confirma|describe|caracteriza|indica|aclara|proporciona nombre?)[\s:]*["']?/gi, '')
         .replace(/Patient\s*(reports?|confirms?|describes?|indicates?)[\s:]*["']?/gi, '')

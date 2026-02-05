@@ -47,16 +47,18 @@ function parseSummaryToDoctorNote(content: string, language: string): DoctorNote
 
   // Multi-language header patterns
   const patterns = {
-    // Main concern / Motivo
+    // Main concern / Motivo (including simple format: "Concern: X", "Motivo: X")
     motivo: [
       /(?:MOTIVO PRINCIPAL|MAIN CONCERN|QUEIXA PRINCIPAL|MOTIF PRINCIPAL)[:\s]*([^\n]+)/i,
       /(?:Main concern|Motivo de consulta|Chief complaint)[:\s]*([^\n]+)/i,
+      /^(?:Concern|Motivo|Queixa|Motif)[:\s]*([^\n]+)/im,  // Simple format
     ],
     // Onset / Inicio
     inicio: [
       /(?:INICIO|ONSET|INÍCIO|DÉBUT)[^:]*[:\s]*([^\n]+)/i,
       /(?:Started|Comenzó|Início|Début)[:\s]*([^\n]+)/i,
       /(?:When did (?:it|this) start|Cuándo comenzó)[:\s]*([^\n]+)/i,
+      /^(?:Inicio|Started|Início|Début)[:\s]*([^\n]+)/im,  // Simple format
     ],
     // Duration / Duración
     duracion: [
@@ -79,12 +81,14 @@ function parseSummaryToDoctorNote(content: string, language: string): DoctorNote
       /(?:QUÉ AYUDA|WHAT HELPS|O QUE AJUDA|CE QUI AIDE)[^:]*[:\s]*([^\n]+)/i,
       /(?:Helps|Ayuda|What helps|Factores que alivian)[:\s]*([^\n]+)/i,
       /(?:Relieving factors)[:\s]*([^\n]+)/i,
+      /^(?:Mejora con|Helps|Melhora com|Améliore)[:\s]*([^\n]+)/im,  // Simple format
     ],
     // What worsens / Aggravating factors
     factoresAgravan: [
       /(?:EMPEORA|WORSENS|PIORA|AGGRAVE)[^:]*[:\s]*([^\n]+)/i,
       /(?:Worsens|Empeora|What worsens|Factores que agravan)[:\s]*([^\n]+)/i,
       /(?:Aggravating factors)[:\s]*([^\n]+)/i,
+      /^(?:Empeora con|Worsens|Piora com|Aggrave)[:\s]*([^\n]+)/im,  // Simple format
     ],
     // Associated symptoms
     sintomasAsociados: [
@@ -115,7 +119,10 @@ function parseSummaryToDoctorNote(content: string, language: string): DoctorNote
   if (!note.motivo) {
     const firstLine = normalized.split('\n').find(line => {
       const cleaned = line.trim();
-      return cleaned.length > 10 && !cleaned.match(/^(health summary|resumen|summary)/i);
+      // Skip generic headers and short lines
+      return cleaned.length > 3 &&
+        !cleaned.match(/^(health\s*note|health\s*summary|resumen|summary|nota\s*de\s*salud|your\s*health|tu\s*nota)/i) &&
+        !cleaned.match(/^(concern|motivo|started|inicio|helps|mejora|worsens|empeora)[:\s]/i);  // Skip field labels
     });
     if (firstLine) {
       note.motivo = cleanValue(firstLine);
