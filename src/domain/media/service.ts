@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import OpenAI from 'openai';
+import OpenAI, { toFile } from 'openai';
 import { config } from '../../config';
 import { logger } from '../../infra/logging/logger';
 
@@ -33,12 +33,12 @@ export class MediaService {
       }
 
       const audioBuffer = await audioResponse.arrayBuffer();
-      const audioFile = new File([audioBuffer], 'audio.ogg', {
-        type: audioResponse.headers.get('content-type') || 'audio/ogg'
-      });
+      const buffer = Buffer.from(audioBuffer);
+      const contentType = audioResponse.headers.get('content-type') || 'audio/ogg';
+      const ext = contentType.includes('mp3') ? 'mp3' : contentType.includes('wav') ? 'wav' : contentType.includes('webm') ? 'webm' : 'ogg';
 
       const transcription = await this.openai.audio.transcriptions.create({
-        file: audioFile,
+        file: await toFile(buffer, `audio.${ext}`, { type: contentType }),
         model: 'whisper-1',
         language: language === 'es' ? 'es' : language === 'pt' ? 'pt' : language === 'fr' ? 'fr' : undefined,
         response_format: 'text',
