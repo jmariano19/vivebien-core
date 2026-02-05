@@ -244,7 +244,7 @@ function cleanHpiValue(value: string): string {
   if (cleaned.includes('Usuario') || cleaned.includes('Patient')) {
     // Try to extract quoted content or content after colons
     const quotedMatch = cleaned.match(/["']([^"']+)["']/);
-    if (quotedMatch) {
+    if (quotedMatch && quotedMatch[1]) {
       cleaned = quotedMatch[1];
     }
   }
