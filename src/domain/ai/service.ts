@@ -282,7 +282,7 @@ export class AIService {
     const sl = simpleLabels[detectedLang] || simpleLabels.en!;
 
     const prompt = currentSummary
-      ? `You are Constanza. Update this health note based on new information.
+      ? `You are CareLog. Update this health note based on new information.
 
 CURRENT NOTE:
 ${currentSummary}
@@ -306,7 +306,7 @@ Rules:
 - No headers like "MOTIVO PRINCIPAL" - use simple labels
 - No bullet points or complex formatting
 - Write in ${languageName}`
-      : `You are Constanza. Create a simple health note from this conversation.
+      : `You are CareLog. Create a simple health note from this conversation.
 
 CONVERSATION:
 ${conversationText}
