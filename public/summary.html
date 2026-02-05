@@ -639,7 +639,6 @@
       // Parse and render structured summary
       const summary = data.summary || '';
       const fields = parseAnyFormat(summary);
-      const lang = getLang();
 
       // Set main concern as title
       const mainConcern = cleanFieldForDisplay(fields.mainConcern) || 'Health Note';
