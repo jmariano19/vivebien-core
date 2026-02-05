@@ -484,19 +484,21 @@
 
       // Clean the summary first
       let cleaned = summary
+        .replace(/^#+\s*/gm, '')           // Remove markdown headers (# Health Note)
+        .replace(/Health Note\s*[-–—]?\s*\w*/i, '')  // Remove "Health Note - Name" line
         .replace(/\*\*/g, '')
         .replace(/\*([^*]+)\*/g, '$1')
         .replace(/📝|❓|•/g, '')
         .replace(/---+/g, '\n');
 
-      // FORMAT 1: Update page format (Main concern: X)
+      // FORMAT 1: Update page format (Main concern: X, Concern: X)
       const updatePagePatterns = {
-        mainConcern: /^Main concern:\s*(.+)/im,
-        onset: /^Started:\s*(.+)/im,
+        mainConcern: /^(?:Main concern|Concern|Motivo|Queixa|Motif):\s*(.+)/im,
+        onset: /^(?:Started|Onset|Inicio|Início|Début):\s*(.+)/im,
         location: /^Location:\s*(.+)/im,
-        symptoms: /^Symptoms:\s*(.+)/im,
-        whatHelps: /^What helps:\s*(.+)/im,
-        whatWorsens: /^What worsens:\s*(.+)/im,
+        symptoms: /^(?:Symptoms|Progress|Progreso|Evolución):\s*(.+)/im,
+        whatHelps: /^(?:What helps|Helps|Treatment tried|Tratamiento|Mejora con):\s*(.+)/im,
+        whatWorsens: /^(?:What worsens|Worsens|Empeora con):\s*(.+)/im,
         medications: /^Medications:\s*(.+)/im,
         notes: /^Notes:\s*(.+)/im
       };
