@@ -317,18 +317,9 @@ export async function handleInboundMessage(
   // Step 8: Post-process response (includes adding summary link if applicable)
   const cleanedResponse = aiService.postProcess(aiResponse.content, user.id, user.language);
 
-  // Step 9: Save message to history
-  await logExecution(
-    correlationId,
-    'save_messages',
-    async () => conversationService.saveMessages(user.id, conversationId, [
-      { role: 'user', content: processedMessage },
-      { role: 'assistant', content: cleanedResponse },
-    ]),
-    logger
-  );
-
-  // Step 10: Extract and save user name if provided (works during onboarding or active phase)
+  // Step 9: Extract and save user name if provided (works during onboarding or active phase)
+  // IMPORTANT: Must happen BEFORE saving new messages, so getRecentMessages returns
+  // the previous assistant message (e.g. "what's your name?") not the new one
   if (!user.name) {
     const recentMessages = await conversationService.getRecentMessages(user.id, 5);
     const extractedName = extractUserName(processedMessage, recentMessages);
@@ -340,9 +331,21 @@ export async function handleInboundMessage(
         async () => userService.updateName(user.id, extractedName),
         logger
       );
+      user.name = extractedName;
       logger.info({ userId: user.id, name: extractedName }, 'User name extracted and saved');
     }
   }
+
+  // Step 10: Save message to history
+  await logExecution(
+    correlationId,
+    'save_messages',
+    async () => conversationService.saveMessages(user.id, conversationId, [
+      { role: 'user', content: processedMessage },
+      { role: 'assistant', content: cleanedResponse },
+    ]),
+    logger
+  );
 
   // Step 11: Confirm credit debit
   if (creditCheck.reservationId) {
