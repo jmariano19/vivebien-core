@@ -254,9 +254,25 @@ export async function handleInboundMessage(
     logger
   );
 
-  // Step 3.5: Detect and update language on first few messages
-  if (user.isNew || context.messageCount < 3) {
-    const detectedLang = detectLanguage(message);
+  // Step 4: Process message content (handle media if present)
+  // Do this FIRST so we can detect language from transcribed voice messages
+  let processedMessage = message;
+  const hasVoiceMessage = attachments && attachments.some(a => a.type === 'audio');
+
+  if (attachments && attachments.length > 0) {
+    processedMessage = await logExecution(
+      correlationId,
+      'process_media',
+      async () => processAttachments(attachments, message, user.language || 'en', logger),
+      logger
+    );
+  }
+
+  // Step 4.5: Detect and update language
+  // Always re-detect for voice messages (user might switch languages)
+  // For text, only detect on first few messages
+  if (user.isNew || context.messageCount < 5 || hasVoiceMessage) {
+    const detectedLang = detectLanguage(processedMessage);
     if (detectedLang && detectedLang !== user.language) {
       await logExecution(
         correlationId,
@@ -265,19 +281,8 @@ export async function handleInboundMessage(
         logger
       );
       user.language = detectedLang;
-      logger.info({ userId: user.id, language: detectedLang }, 'User language updated');
+      logger.info({ userId: user.id, language: detectedLang }, 'User language updated from voice/text');
     }
-  }
-
-  // Step 4: Process message content (handle media if present)
-  let processedMessage = message;
-  if (attachments && attachments.length > 0) {
-    processedMessage = await logExecution(
-      correlationId,
-      'process_media',
-      async () => processAttachments(attachments, message, user.language || 'en', logger),
-      logger
-    );
   }
 
   // Step 5: Check for safety/urgency

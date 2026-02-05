@@ -37,10 +37,11 @@ export class MediaService {
       const contentType = audioResponse.headers.get('content-type') || 'audio/ogg';
       const ext = contentType.includes('mp3') ? 'mp3' : contentType.includes('wav') ? 'wav' : contentType.includes('webm') ? 'webm' : 'ogg';
 
+      // Don't pass language hint - let Whisper auto-detect
+      // This ensures English speakers get English transcription even if profile says Spanish
       const transcription = await this.openai.audio.transcriptions.create({
         file: await toFile(buffer, `audio.${ext}`, { type: contentType }),
         model: 'whisper-1',
-        language: language === 'es' ? 'es' : language === 'pt' ? 'pt' : language === 'fr' ? 'fr' : undefined,
         response_format: 'text',
       });
 
