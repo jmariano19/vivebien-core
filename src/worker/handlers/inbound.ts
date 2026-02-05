@@ -5,6 +5,7 @@ import { CreditService } from '../../domain/credits/service';
 import { ConversationService } from '../../domain/conversation/service';
 import { AIService } from '../../domain/ai/service';
 import { CheckinService } from '../../domain/checkin/service';
+import { mediaService } from '../../domain/media/service';
 import { ChatwootClient } from '../../adapters/chatwoot/client';
 import { db } from '../../infra/db/client';
 import { getCheckinQueue } from '../../infra/queue/client';
@@ -274,7 +275,7 @@ export async function handleInboundMessage(
     processedMessage = await logExecution(
       correlationId,
       'process_media',
-      async () => processAttachments(attachments, message, logger),
+      async () => processAttachments(attachments, message, user.language || 'en', logger),
       logger
     );
   }
@@ -412,20 +413,30 @@ export async function handleInboundMessage(
 async function processAttachments(
   attachments: Array<{ type: string; url: string }>,
   originalMessage: string,
+  language: string,
   logger: Logger
 ): Promise<string> {
   const processedParts: string[] = [];
 
   for (const attachment of attachments) {
     if (attachment.type === 'audio') {
-      // TODO: Implement Whisper transcription
-      logger.info({ url: attachment.url }, 'Processing audio attachment');
-      // const transcription = await whisperService.transcribe(attachment.url);
-      // processedParts.push(`[Audio transcription]: ${transcription}`);
-      processedParts.push('[Audio message received - transcription pending]');
+      logger.info({ url: attachment.url }, 'Processing audio attachment with Whisper');
+      const transcription = await mediaService.transcribeAudio(attachment.url, language);
+      if (transcription && !transcription.startsWith('[')) {
+        // Successfully transcribed - add as user's spoken words
+        processedParts.push(`[Voice message]: ${transcription}`);
+      } else {
+        processedParts.push(transcription);
+      }
     } else if (attachment.type === 'image') {
-      logger.info({ url: attachment.url }, 'Processing image attachment');
-      processedParts.push('[Image received]');
+      logger.info({ url: attachment.url }, 'Processing image with Claude Vision');
+      const analysis = await mediaService.analyzeImage(attachment.url, language);
+      if (analysis && !analysis.startsWith('[')) {
+        // Successfully analyzed - add description
+        processedParts.push(`[Image description]: ${analysis}`);
+      } else {
+        processedParts.push(analysis);
+      }
     }
   }
 
