@@ -354,7 +354,7 @@
 
     <!-- Header -->
     <div class="header">
-      <h1 id="userName">Usuario</h1>
+      <h1 id="userName">Your Summary</h1>
       <p class="date" id="dateText">Today</p>
     </div>
 
@@ -461,7 +461,8 @@
           medications: 'Medicamentos',
           location: 'Ubicación',
           symptoms: 'Síntomas'
-        }
+        },
+        defaultName: 'Tu Resumen'
       },
       en: {
         loading: 'Loading your summary...',
@@ -486,7 +487,8 @@
           medications: 'Medications',
           location: 'Location',
           symptoms: 'Symptoms'
-        }
+        },
+        defaultName: 'Your Summary'
       },
       pt: {
         loading: 'Carregando seu resumo...',
@@ -511,7 +513,8 @@
           medications: 'Medicamentos',
           location: 'Localização',
           symptoms: 'Sintomas'
-        }
+        },
+        defaultName: 'Seu Resumo'
       },
       fr: {
         loading: 'Chargement de votre résumé...',
@@ -536,7 +539,8 @@
           medications: 'Médicaments',
           location: 'Localisation',
           symptoms: 'Symptômes'
-        }
+        },
+        defaultName: 'Votre Résumé'
       }
     };
 
@@ -622,8 +626,9 @@
       document.getElementById('empty').style.display = 'none';
       document.getElementById('content').style.display = 'block';
 
-      // User name
-      const name = data.userName || data.user?.name || 'Usuario';
+      // User name (use localized default if no name provided)
+      const lang = getLang();
+      const name = data.userName || data.user?.name || lang.defaultName || 'Your Summary';
       document.getElementById('userName').textContent = name;
 
       // Date

@@ -369,7 +369,8 @@
           evolucion: 'Evolución',
           factoresAlivian: 'Alivia',
           factoresAgravan: 'Agrava'
-        }
+        },
+        defaultName: 'Paciente'
       },
       en: {
         title: 'For Your Doctor',
@@ -398,7 +399,8 @@
           evolucion: 'Course',
           factoresAlivian: 'Relieves',
           factoresAgravan: 'Worsens'
-        }
+        },
+        defaultName: 'Patient'
       },
       pt: {
         title: 'Para seu Médico',
@@ -427,7 +429,8 @@
           evolucion: 'Evolução',
           factoresAlivian: 'Alivia',
           factoresAgravan: 'Agrava'
-        }
+        },
+        defaultName: 'Paciente'
       },
       fr: {
         title: 'Pour votre Médecin',
@@ -456,7 +459,8 @@
           evolucion: 'Évolution',
           factoresAlivian: 'Soulage',
           factoresAgravan: 'Aggrave'
-        }
+        },
+        defaultName: 'Patient'
       }
     };
 
@@ -514,7 +518,7 @@
 
       content.innerHTML = `
         <div class="header">
-          <h1>${escapeHtml(note.userName || 'Paciente')}</h1>
+          <h1>${escapeHtml(note.userName || t.defaultName || 'Patient')}</h1>
           <div class="subtitle">${note.dateLabel || formatDate(new Date(), lang)}</div>
         </div>
 
