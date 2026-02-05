@@ -927,7 +927,11 @@
             snapshots.forEach(snapshot => {
               allSnapshots.push({
                 concernId: concern.id,
-                ...snapshot
+                date: snapshot.createdAt,
+                summary: snapshot.content,
+                changeType: snapshot.changeType,
+                status: snapshot.status,
+                id: snapshot.id,
               });
             });
           }
