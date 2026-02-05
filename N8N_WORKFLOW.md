@@ -1,4 +1,10 @@
-# ViveBien - Thin n8n Workflow Specification
+# ViveBien - n8n Workflow Specification
+
+> ⚠️ **DEPRECATED (Feb 5, 2026)**: n8n is NO LONGER required for CareLog.
+> Chatwoot webhooks now go directly to the API at `https://carelog.vivebien.io/ingest/chatwoot`.
+> This document is kept for historical reference only.
+
+---
 
 This document specifies the minimal n8n workflow that replaces your complex processing workflow.
 
