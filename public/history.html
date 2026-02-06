@@ -620,6 +620,19 @@
           }
         }
 
+        // Deduplicate: keep only the latest snapshot per concern per day
+        // This prevents showing 5+ near-identical "Back pain" cards for the same day
+        const deduped = {};
+        allSnapshots
+          .sort((a, b) => new Date(b.date) - new Date(a.date))
+          .forEach(s => {
+            const dayKey = new Date(s.date).toDateString() + '|' + s.concernId;
+            if (!deduped[dayKey]) {
+              deduped[dayKey] = s; // Keep the latest (first after sort desc)
+            }
+          });
+        allSnapshots = Object.values(deduped);
+
         if (concerns.length > 0) {
           selectedConcernId = null; // Start with ALL
         }
