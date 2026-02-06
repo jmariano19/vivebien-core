@@ -680,6 +680,23 @@ After making changes:
 
 ---
 
+## GitHub Push Access (for Claude)
+
+At the start of each session, configure git to push directly:
+
+```bash
+TOKEN=$(cat .github-token)
+git remote set-url origin https://jmariano19:${TOKEN}@github.com/jmariano19/vivebien-core.git
+```
+
+The token is stored in `.github-token` (gitignored, never committed). After configuring, Claude can push and deploy with:
+
+```bash
+git push && curl -s http://85.209.95.19:3000/api/deploy/1642a4c845b117889b4b6cbe0172ecc90b03500666da6e22 && curl -s http://85.209.95.19:3000/api/deploy/27730fe51447b7b37aad06851ccb0470e5b62421badd9548
+```
+
+---
+
 ## Notes
 - **Product name**: "CareLog" (AI tool for health documentation)
 - **Domain**: carelog.vivebien.io

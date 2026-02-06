@@ -31,3 +31,6 @@ coverage/
 tmp/
 temp/
 *.tmp
+
+# GitHub token for Claude push access
+.github-token
