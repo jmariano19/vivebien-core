@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>CareLog - Doctor Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #F9F6F0;
+      --card-bg: #FFF;
+      --primary: #2E915E;
+      --btn-color: #216F64;
+      --text: #373737;
+      --text-dark: #1f1f1f;
+      --muted: rgba(0,0,0,0.55);
+      --shadow: 0 2px 12px rgba(0,0,0,0.06);
+      --radius: 15px;
+      --border: #f0ece6;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+    }
+
+    .page {
+      width: 402px;
+      min-height: 100vh;
+      padding: 16px 16px 40px;
+    }
+
+    .preview-banner {
+      background: #FFF3CD;
+      border: 1px solid #FFEAA7;
+      border-radius: 10px;
+      padding: 10px 16px;
+      margin-bottom: 12px;
+      text-align: center;
+      font-size: 13px;
+      color: #856404;
+    }
+
+    /* Top bar */
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 0 16px;
+      position: sticky;
+      top: 0;
+      background: var(--bg);
+      z-index: 100;
+    }
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--muted);
+      text-decoration: none;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .back-link:hover { color: var(--text); }
+    .back-link svg {
+      width: 7px;
+      height: 12px;
+      flex-shrink: 0;
+    }
+    .brand {
+      font-family: 'Lora', Georgia, serif;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .header h1 {
+      font-family: 'Lora', Georgia, serif;
+      font-size: 26px;
+      font-weight: 500;
+      color: var(--text);
+      line-height: 32px;
+      margin-bottom: 6px;
+    }
+    .header .subtitle {
+      font-size: 15px;
+      font-weight: 300;
+      line-height: 20px;
+      color: var(--muted);
+    }
+
+    /* Action buttons row */
+    .actions-row {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+    .action-btn {
+      height: 40px;
+      padding: 0 16px;
+      background: var(--card-bg);
+      color: var(--text-dark);
+      border: 1px solid #e0dcd6;
+      border-radius: 10px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .action-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    }
+    .action-btn:active {
+      transform: translateY(0);
+      box-shadow: none;
+    }
+    .action-btn.primary {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+    .action-btn .icon {
+      font-size: 16px;
+      color: initial;
+    }
+
+    /* Card */
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    /* Concern block */
+    .concern-block {
+      padding: 20px 18px;
+    }
+    .concern-block.alt-bg {
+      background: rgba(232, 232, 232, 0.22);
+      border-top: 2px solid var(--border);
+    }
+    .concern-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .concern-name {
+      font-weight: 600;
+      font-size: 15px;
+      color: var(--text-dark);
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .status-badge.ongoing {
+      background: rgba(46, 145, 94, 0.15);
+      color: #2e915e;
+    }
+    .status-badge.improving {
+      background: rgba(59, 130, 246, 0.15);
+      color: #3B82F6;
+    }
+    .status-badge.resolved {
+      background: rgba(206, 198, 36, 0.15);
+      color: #91682e;
+    }
+
+    /* Section rows */
+    .section-row {
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .section-row:last-child {
+      border-bottom: none;
+    }
+    .section-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 600;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .section-label .icon {
+      font-size: 16px;
+      color: initial;
+    }
+    .section-value {
+      font-size: 16px;
+      font-weight: 400;
+      line-height: 26px;
+      color: var(--text-dark);
+    }
+    .section-value.highlight {
+      color: #1a1a1a;
+    }
+
+    /* Disclaimer footer */
+    .disclaimer {
+      margin-top: 18px;
+      text-align: center;
+      font-size: 15px;
+      line-height: 20px;
+      font-weight: 300;
+      color: var(--muted);
+      padding: 0 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="preview-banner">PREVIEW MODE — Click "Back to summary" to go to preview-summary.html</div>
+
+    <div class="topbar">
+      <a class="back-link" href="preview-summary.html">
+        <svg viewBox="0 0 7 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 1L1 6L6 11"/></svg>
+        <span>Back to summary</span>
+      </a>
+      <span class="brand">CareLog</span>
+    </div>
+
+    <div class="header">
+      <h1>For Your Doctor</h1>
+      <div class="subtitle">Patient-generated summary prepared for this visit.</div>
+    </div>
+
+    <div class="actions-row">
+      <button class="action-btn primary" onclick="alert('Preview: Copied to clipboard!')">
+        <span class="icon">📋</span> Copy
+      </button>
+      <button class="action-btn" onclick="alert('Preview: Share triggered!')">
+        <span class="icon">↗</span> Share
+      </button>
+      <button class="action-btn" onclick="alert('Preview: Print triggered!')">
+        <span class="icon">🖨</span> Print
+      </button>
+    </div>
+
+    <div class="card">
+      <!-- First concern: normal white bg -->
+      <div class="concern-block">
+        <div class="concern-header">
+          <span class="concern-name">Sleep Trouble</span>
+          <span class="status-badge ongoing">Ongoing</span>
+        </div>
+        <div class="section-row">
+          <div class="section-label"><span class="icon">🩺</span> Main Complaint</div>
+          <p class="section-value highlight">Difficulty falling and staying asleep for the past week</p>
+        </div>
+        <div class="section-row">
+          <div class="section-label"><span class="icon">🤒</span> Associated Symptoms</div>
+          <p class="section-value">Fatigue during the day, mild headaches in the morning</p>
+        </div>
+        <div class="section-row">
+          <div class="section-label"><span class="icon">❓</span> Questions for Doctor</div>
+          <p class="section-value">Evaluate the cause and determine additional management recommendations.</p>
+        </div>
+      </div>
+
+      <!-- Second concern: gray bg band -->
+      <div class="concern-block alt-bg">
+        <div class="concern-header">
+          <span class="concern-name">Back pain</span>
+          <span class="status-badge resolved">Resolved</span>
+        </div>
+        <div class="section-row">
+          <div class="section-label"><span class="icon">🩺</span> Main Complaint</div>
+          <p class="section-value highlight">Lower back pain that started after lifting heavy boxes</p>
+        </div>
+        <div class="section-row">
+          <div class="section-label"><span class="icon">🤒</span> Associated Symptoms</div>
+          <p class="section-value">Stiffness when standing up, occasional numbness in left leg</p>
+        </div>
+        <div class="section-row">
+          <div class="section-label"><span class="icon">❓</span> Questions for Doctor</div>
+          <p class="section-value">"What could be causing this?" "What should I try next?" "Are there warning signs I should watch for?"</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="disclaimer">
+      This record was generated by CareLog as a preparation tool. It does not replace professional medical evaluation.
+    </div>
+  </div>
+</body>
+</html>

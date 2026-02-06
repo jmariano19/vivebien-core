@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>CareLog - Preview Summary</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23885955'%3E%3Cpath d='M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600&family=Outfit:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #F9F6F0; --card-bg: #FFFFFF; --primary: #2E915E; --primary-dark: #247a4d;
+      --btn-color: #216F64; --link-color: #885955; --text: #373737; --text-dark: #000000;
+      --footer-bg: #DFD6CB; --status-active: #2E915E; --status-improving: #3B82F6;
+      --status-resolved: #9CA3AF; --danger: #DC2626;
+    }
+    body { font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    .container { max-width: 402px; margin: 0 auto; padding: 22px 22px 180px 22px; min-height: 100vh; }
+    .preview-banner { background: #FFF3CD; border: 1px solid #FFEAA7; border-radius: 10px; padding: 10px 16px; margin-bottom: 16px; text-align: center; font-size: 13px; color: #856404; }
+    .logo { display: flex; align-items: center; justify-content: center; margin-bottom: 24px; font-family: 'Lora', Georgia, serif; font-size: 20px; font-weight: 700; color: var(--primary); letter-spacing: -0.5px; }
+    .header { text-align: center; margin-bottom: 20px; }
+    .header h1 { font-family: 'Lora', Georgia, serif; font-size: 32px; font-weight: 500; color: var(--text); line-height: 28px; margin-bottom: 8px; }
+    .header .subtitle { font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 300; color: var(--text-dark); line-height: 20px; max-width: 220px; margin: 0 auto; }
+    .live-badge { display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 16px; }
+    .live-dot { width: 8px; height: 8px; background: var(--primary); border-radius: 9999px; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    .live-badge span { font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 500; color: var(--primary); }
+
+    /* Cards */
+    .concern-card {
+      background: var(--card-bg); border-radius: 15px; padding: 18px 20px; margin-bottom: 14px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06); border: 1px solid transparent;
+      position: relative; transition: all 0.2s; cursor: pointer;
+    }
+    .concern-card.expanded { border-color: rgba(46, 145, 94, 0.61); }
+    .concern-card.resolved { opacity: 0.65; }
+    .concern-card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .concern-card-date { font-family: 'Outfit', sans-serif; font-size: 12px; color: var(--text); opacity: 0.5; }
+    .dots-menu-btn { background: none; border: none; cursor: pointer; padding: 4px 2px; font-size: 18px; color: var(--text); opacity: 0.4; letter-spacing: 2px; line-height: 1; }
+    .dots-menu-btn:hover { opacity: 0.7; }
+    .dots-menu-wrapper { position: relative; z-index: 10; }
+    .dots-dropdown { display: none; position: absolute; top: 100%; right: 0; background: var(--card-bg); border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); overflow: hidden; min-width: 120px; z-index: 20; }
+    .dots-dropdown.open { display: block; }
+    .dots-dropdown button { display: block; width: 100%; padding: 10px 16px; background: none; border: none; font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; text-align: left; transition: background 0.15s; }
+    .dots-dropdown button:hover { background: rgba(0,0,0,0.04); }
+    .dots-dropdown .menu-update { color: var(--btn-color); }
+    .dots-dropdown .menu-history { color: var(--btn-color); }
+    .dots-dropdown .menu-delete { color: var(--danger); }
+    .concern-card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+    .concern-card-icon { font-size: 28px; flex-shrink: 0; }
+    .concern-card-title { font-family: 'Lora', Georgia, serif; font-size: 18px; font-weight: 500; color: var(--text-dark); }
+    .concern-card-status { display: inline-block; padding: 3px 10px; border-radius: 12px; font-family: 'Outfit', sans-serif; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.3px; margin-top: 2px; }
+    .concern-card-status.active { background: rgba(46, 145, 94, 0.15); color: var(--status-active); }
+    .concern-card-status.improving { background: rgba(59, 130, 246, 0.15); color: var(--status-improving); }
+    .concern-card-status.resolved { background: rgba(156, 163, 175, 0.15); color: var(--status-resolved); }
+
+    .concern-card-paragraph { font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 300; color: var(--text-dark); line-height: 25px; margin-top: 8px; }
+
+    .concern-card-collapsed-footer { display: flex; justify-content: flex-end; margin-top: 4px; }
+    .view-toggle-link { font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700; color: #9a9a9a; background: none; border: none; cursor: pointer; padding: 4px 0; display: flex; align-items: center; gap: 4px; }
+    .view-toggle-link svg { width: 10px; height: 6px; flex-shrink: 0; }
+
+    .concern-card-body { display: none; margin-top: 12px; }
+    .concern-card.expanded .concern-card-body { display: block; }
+    .concern-card.expanded .concern-card-collapsed-footer { display: none; }
+
+    .concern-card-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; }
+    .concern-card-actions-left { display: flex; gap: 16px; }
+    .concern-card-actions-left a { font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700; color: #2d915f; text-decoration: none; cursor: pointer; }
+
+    /* Auto-update + Disclaimer */
+    .auto-update-msg { text-align: center; margin-top: 20px; }
+    .auto-update-msg p { font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 300; color: var(--text-dark); opacity: 0.5; line-height: 20px; max-width: 287px; margin: 0 auto; }
+    .disclaimer { text-align: center; margin-top: 20px; }
+    .disclaimer p { font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 300; color: var(--text-dark); opacity: 0.5; line-height: 20px; max-width: 287px; margin: 0 auto; }
+
+    /* Footer */
+    .footer-actions { position: fixed; bottom: 0; left: 0; right: 0; background: var(--footer-bg); padding: 20px 24px; padding-bottom: calc(20px + env(safe-area-inset-bottom)); display: flex; justify-content: center; gap: 12px; box-shadow: 0 -4px 20px rgba(0,0,0,0.08); }
+    .btn { padding: 14px 18px; border-radius: 10px; font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700; line-height: 35px; border: none; cursor: pointer; transition: all 0.2s; background: var(--btn-color); color: white; min-width: 140px; text-align: center; }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+    .btn:active { transform: translateY(0); box-shadow: none; }
+
+    /* Delete modal */
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.45); z-index: 100; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: var(--card-bg); border-radius: 16px; padding: 28px 24px 20px; width: 300px; text-align: center; box-shadow: 0 12px 40px rgba(0,0,0,0.2); }
+    .modal h2 { font-family: 'Lora', Georgia, serif; font-size: 20px; font-weight: 500; color: var(--text-dark); margin-bottom: 8px; }
+    .modal p { font-family: 'Outfit', sans-serif; font-size: 14px; color: var(--text); opacity: 0.6; margin-bottom: 24px; }
+    .modal-buttons { display: flex; gap: 12px; justify-content: center; }
+    .modal-btn { padding: 12px 28px; border-radius: 10px; font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; border: 1px solid rgba(0,0,0,0.12); background: var(--card-bg); color: var(--text); transition: all 0.15s; }
+    .modal-btn:hover { background: rgba(0,0,0,0.04); }
+    .modal-btn.danger { background: var(--danger); color: white; border-color: var(--danger); }
+    .modal-btn.danger:hover { background: #b91c1c; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="preview-banner">PREVIEW MODE — Mock data matching Jeffrey's account</div>
+    <div class="logo">CareLog</div>
+
+    <div class="live-badge">
+      <span class="live-dot"></span>
+      <span>Updates Live</span>
+    </div>
+
+    <div class="header">
+      <h1>Jeff Mariano</h1>
+      <p class="subtitle">Everything you've shared, organized for your care</p>
+    </div>
+
+    <div id="concernsContainer"></div>
+
+    <div class="auto-update-msg">
+      <p>This page updates automatically as you message me on WhatsApp.</p>
+    </div>
+
+    <div class="disclaimer">
+      <p>Este registro fue generado por Confianza como herramienta de preparación. No sustituye la evaluación médica profesional.</p>
+    </div>
+  </div>
+
+  <div class="footer-actions">
+    <button class="btn" onclick="window.location.href='preview-doctor.html'">Version para tu Doctor</button>
+    <button class="btn" onclick="window.location.href='preview-questions.html'">Proxima consulta</button>
+  </div>
+
+  <div class="modal-overlay" id="deleteModal">
+    <div class="modal">
+      <h2>Delete concern</h2>
+      <p>This action cannot be undone</p>
+      <div class="modal-buttons">
+        <button class="modal-btn" onclick="closeDeleteModal()">CANCEL</button>
+        <button class="modal-btn danger" onclick="alert('Preview: delete would happen here'); closeDeleteModal();">DELETE</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const mockConcerns = [
+      {
+        id: 'mock-1',
+        title: 'Sleep Trouble',
+        status: 'improving',
+        icon: '😴',
+        updatedAt: new Date().toISOString(),
+        paragraph: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam eget risus tempor, pellentesque dui in, egestas ligula.'
+      },
+      {
+        id: 'mock-2',
+        title: 'Back pain',
+        status: 'active',
+        icon: '😰',
+        updatedAt: new Date().toISOString(),
+        paragraph: 'Persistent lower back pain reported for approximately two weeks. Rest and warm compresses help. Worsens when sitting for long periods.'
+      }
+    ];
+
+    let expandedConcernId = null;
+    let openMenuId = null;
+
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    function formatDate(date) {
+      const d = new Date(date);
+      return `Today, ${days[d.getDay()]} ${months[d.getMonth()]} ${d.getDate()}`;
+    }
+
+    function createCard(concern, index, isExpanded) {
+      const card = document.createElement('div');
+      const cardId = `concern-${concern.id}`;
+      card.id = cardId;
+      card.className = 'concern-card' + (isExpanded ? ' expanded' : '');
+
+      const lastUpdated = formatDate(new Date(concern.updatedAt));
+      const statusLabel = concern.status === 'active' ? 'Ongoing' : concern.status === 'improving' ? 'Improving' : 'Resolved';
+
+      let html = '';
+      html += '<div class="concern-card-top">';
+      html += '  <div class="concern-card-date">' + lastUpdated + '</div>';
+      html += '  <div class="dots-menu-wrapper">';
+      html += '    <button class="dots-menu-btn" onclick="event.stopPropagation(); toggleDotsMenu(\'' + concern.id + '\')">•••</button>';
+      html += '    <div class="dots-dropdown" id="menu-' + concern.id + '">';
+      html += '      <button class="menu-update" onclick="event.stopPropagation(); window.location.href=\'preview-update.html\'">UPDATE</button>';
+      html += '      <button class="menu-history" onclick="event.stopPropagation(); window.location.href=\'preview-history.html\'">HISTORY</button>';
+      html += '      <button class="menu-delete" onclick="event.stopPropagation(); openDeleteModal(\'' + concern.id + '\')">DELETE</button>';
+      html += '    </div>';
+      html += '  </div>';
+      html += '</div>';
+
+      html += '<div class="concern-card-header">';
+      html += '  <div class="concern-card-icon">' + concern.icon + '</div>';
+      html += '  <div class="concern-card-title">' + concern.title + '</div>';
+      html += '</div>';
+      html += '<span class="concern-card-status ' + concern.status + '">' + statusLabel + '</span>';
+
+      // Expanded body
+      html += '<div class="concern-card-body">';
+      html += '  <div class="concern-card-paragraph">' + concern.paragraph + '</div>';
+      html += '  <div class="concern-card-actions">';
+      html += '    <div class="concern-card-actions-left">';
+      html += '      <a onclick="window.location.href=\'preview-history.html\'">History</a>';
+      html += '      <a onclick="window.location.href=\'preview-update.html\'">Update</a>';
+      html += '    </div>';
+      html += '    <button class="view-toggle-link" onclick="event.stopPropagation(); expandCard(\'' + cardId + '\')">View Less <svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(180deg)"><path d="M1 1L5 5L9 1"/></svg></button>';
+      html += '  </div>';
+      html += '</div>';
+
+      // Collapsed footer
+      html += '<div class="concern-card-collapsed-footer">';
+      html += '  <button class="view-toggle-link" onclick="event.stopPropagation(); expandCard(\'' + cardId + '\')">View More <svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1L5 5L9 1"/></svg></button>';
+      html += '</div>';
+
+      card.innerHTML = html;
+      card.addEventListener('click', (e) => {
+        if (!e.target.closest('button') && !e.target.closest('a') && !e.target.closest('.dots-dropdown')) toggleExpanded(cardId);
+      });
+      return card;
+    }
+
+    function expandCard(cardId) { toggleExpanded(cardId); }
+    function toggleExpanded(cardId) {
+      const card = document.getElementById(cardId);
+      if (!card) return;
+      if (card.classList.contains('expanded')) {
+        card.classList.remove('expanded');
+        if (expandedConcernId === cardId) expandedConcernId = null;
+      } else {
+        if (expandedConcernId && expandedConcernId !== cardId) {
+          const prev = document.getElementById(expandedConcernId);
+          if (prev) prev.classList.remove('expanded');
+        }
+        card.classList.add('expanded');
+        expandedConcernId = cardId;
+      }
+    }
+    function toggleDotsMenu(id) {
+      const el = document.getElementById('menu-' + id);
+      if (!el) return;
+      if (openMenuId && openMenuId !== id) { const p = document.getElementById('menu-' + openMenuId); if (p) p.classList.remove('open'); }
+      el.classList.toggle('open');
+      openMenuId = el.classList.contains('open') ? id : null;
+    }
+    document.addEventListener('click', () => { if (openMenuId) { const m = document.getElementById('menu-' + openMenuId); if (m) m.classList.remove('open'); openMenuId = null; } });
+    function openDeleteModal() { if (openMenuId) { const m = document.getElementById('menu-' + openMenuId); if (m) m.classList.remove('open'); openMenuId = null; } document.getElementById('deleteModal').classList.add('open'); }
+    function closeDeleteModal() { document.getElementById('deleteModal').classList.remove('open'); }
+    document.getElementById('deleteModal').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeDeleteModal(); });
+
+    const container = document.getElementById('concernsContainer');
+    mockConcerns.forEach((c, i) => container.appendChild(createCard(c, i, i === 0)));
+  </script>
+</body>
+</html>

@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>CareLog - Timeline Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root { --bg:#F9F6F0;--card-bg:#FFF;--primary:#2E915E;--btn-color:#216F64;--text:#373737;--text-dark:#000;--muted:rgba(0,0,0,0.45);--status-active:#2E915E;--status-improving:#3B82F6;--status-resolved:#9CA3AF; }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;justify-content:center}
+    .page{width:402px;min-height:100vh;padding:16px 22px 40px}
+    .preview-banner{background:#FFF3CD;border:1px solid #FFEAA7;border-radius:10px;padding:10px 16px;margin-bottom:12px;text-align:center;font-size:13px;color:#856404}
+    .topbar{display:flex;align-items:center;gap:12px;padding:8px 0 16px;position:sticky;top:0;background:var(--bg);z-index:100}
+    .back-link{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:400;color:var(--muted);text-decoration:none;cursor:pointer;white-space:nowrap}
+    .back-link:hover{color:var(--text)}
+    .back-link svg{width:7px;height:12px;flex-shrink:0}
+    .brand{display:inline-flex;align-items:center;gap:6px;font-family:'Lora',Georgia,serif;font-size:16px;font-weight:700;color:var(--primary)}
+    .header{text-align:center;margin-bottom:20px}
+    .header h1{font-family:'Lora',Georgia,serif;font-size:32px;font-weight:500;color:var(--text);line-height:36px}
+    .tabs{display:flex;gap:8px;overflow-x:auto;margin-bottom:28px;padding-bottom:4px;scrollbar-width:none}
+    .tabs::-webkit-scrollbar{display:none}
+    .tab{padding:10px 20px;border-radius:10px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;cursor:pointer;white-space:nowrap;flex-shrink:0;border:none;background:#E0D8CD;color:#6B5D4F;transition:all 0.2s}
+    .tab:hover{background:#d6cec2}
+    .tab.active{background:#216F64;color:white}
+    .timeline{position:relative;padding-left:40px}
+    .timeline::before{content:'';position:absolute;left:14px;top:8px;bottom:8px;width:2px;background:#e0dbd4}
+    .timeline-group{margin-bottom:24px}
+    .timeline-date-row{display:flex;align-items:center;margin-bottom:12px;position:relative}
+    .timeline-emoji{position:absolute;left:-36px;top:-2px;font-size:22px;z-index:2}
+    .timeline-date-label{font-size:14px;font-weight:500;color:var(--text)}
+    .snapshot-card{background:var(--card-bg);border-radius:15px;padding:18px 20px;margin-bottom:12px;box-shadow:0 2px 12px rgba(0,0,0,0.06);border:1px solid transparent;cursor:pointer;transition:all 0.2s}
+    .snapshot-card.expanded{border-color:rgba(46,145,94,0.61)}
+    .snapshot-card-header{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+    .snapshot-card-icon{font-size:28px;flex-shrink:0}
+    .snapshot-card-title{font-family:'Lora',Georgia,serif;font-size:18px;font-weight:500;color:var(--text-dark)}
+    .snapshot-card-status{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.3px;margin-top:2px}
+    .snapshot-card-status.active{background:rgba(46,145,94,0.15);color:var(--status-active)}
+    .snapshot-card-status.improving{background:rgba(59,130,246,0.15);color:var(--status-improving)}
+    .snapshot-card-status.resolved{background:rgba(156,163,175,0.15);color:var(--status-resolved)}
+    .snapshot-card-footer{display:flex;justify-content:flex-end;margin-top:6px}
+    .see-details-link{font-size:13px;font-weight:700;color:#9a9a9a;background:none;border:none;cursor:pointer;padding:4px 0;display:flex;align-items:center;gap:4px}
+    .see-details-link svg{width:10px;height:6px;flex-shrink:0}
+    .snapshot-card-body{display:none;margin-top:12px}
+    .snapshot-card.expanded .snapshot-card-body{display:block}
+    .snapshot-card.expanded .snapshot-collapsed-footer{display:none}
+    .snapshot-paragraph{font-size:16px;font-weight:300;color:var(--text-dark);line-height:25px;margin-top:8px}
+    .snapshot-card-actions{display:flex;align-items:center;justify-content:space-between;margin-top:16px}
+    .snapshot-card-actions-left{display:flex;gap:16px}
+    .snapshot-card-actions-left a{font-size:13px;font-weight:700;color:#2d915f;text-decoration:none;cursor:pointer}
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="preview-banner">PREVIEW MODE — Click "Back to summary" to go to preview-summary.html</div>
+    <div class="topbar">
+      <a class="back-link" href="preview-summary.html">
+        <svg viewBox="0 0 7 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 1L1 6L6 11"/></svg>
+        <span>Back to summary</span>
+      </a>
+      <span class="brand">CareLog</span>
+    </div>
+
+    <div class="header"><h1>Your timeline</h1></div>
+
+    <div class="tabs">
+      <div class="tab active" onclick="filterTab(this, 'all')">ALL</div>
+      <div class="tab" onclick="filterTab(this, 'sleep')">SLEEP</div>
+      <div class="tab" onclick="filterTab(this, 'back')">BACK PAIN</div>
+    </div>
+
+    <div class="timeline" id="timeline"></div>
+  </div>
+
+  <script>
+    const mockData = [
+      { group: 'today', items: [
+        { id: 's1', title: 'Sleep Trouble', icon: '😴', status: 'active', tag: 'sleep',
+          paragraph: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam eget risus tempor, pellentesque dui in, egestas ligula.' }
+      ]},
+      { group: 'yesterday', items: [
+        { id: 's2', title: 'Sleep Routine', icon: '😴', status: 'improving', tag: 'sleep',
+          paragraph: 'Established a bedtime routine with herbal tea and no screen time after 9pm. Reported slightly better sleep quality.' }
+      ]},
+      { group: 'wed', items: [
+        { id: 's3', title: 'Sleep Med', icon: '💊', status: 'resolved', tag: 'sleep',
+          paragraph: 'Discussed melatonin supplementation with healthcare provider. Started low dose 3mg before bed.' }
+      ]}
+    ];
+
+    const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const now = new Date();
+    const yesterday = new Date(now); yesterday.setDate(yesterday.getDate()-1);
+    const wed = new Date(now); wed.setDate(wed.getDate()-2);
+
+    const dateLabels = {
+      today: `Today, ${days[now.getDay()]} ${months[now.getMonth()]} ${now.getDate()}`,
+      yesterday: `Yesterday, ${days[yesterday.getDay()]} ${months[yesterday.getMonth()]} ${yesterday.getDate()}`,
+      wed: `${days[wed.getDay()]}, ${months[wed.getMonth()]} ${wed.getDate()}`
+    };
+
+    let currentFilter = 'all';
+
+    function render() {
+      const tl = document.getElementById('timeline');
+      let html = '';
+      mockData.forEach(group => {
+        const items = currentFilter === 'all' ? group.items : group.items.filter(i => i.tag === currentFilter);
+        if (items.length === 0) return;
+
+        html += '<div class="timeline-group">';
+        html += `<div class="timeline-date-row"><span class="timeline-emoji">🗂️</span><span class="timeline-date-label">${dateLabels[group.group]}</span></div>`;
+
+        items.forEach(item => {
+          const statusLabel = item.status === 'active' ? 'Ongoing' : item.status === 'improving' ? 'Improving' : 'Resolved';
+          html += `<div class="snapshot-card" id="${item.id}" onclick="toggleCard('${item.id}')">
+            <div class="snapshot-card-header">
+              <div class="snapshot-card-icon">${item.icon}</div>
+              <div class="snapshot-card-title">${item.title}</div>
+            </div>
+            <span class="snapshot-card-status ${item.status}">${statusLabel}</span>
+            <div class="snapshot-collapsed-footer snapshot-card-footer">
+              <button class="see-details-link" onclick="event.stopPropagation(); toggleCard('${item.id}')">See details <svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1L5 5L9 1"/></svg></button>
+            </div>
+            <div class="snapshot-card-body">
+              <div class="snapshot-paragraph">${item.paragraph}</div>
+              <div class="snapshot-card-actions">
+                <div class="snapshot-card-actions-left">
+                  <a onclick="event.stopPropagation(); window.location.href='preview-update.html'">Edit</a>
+                  <a onclick="event.stopPropagation(); window.location.href='preview-update.html'">Update</a>
+                </div>
+                <button class="see-details-link" onclick="event.stopPropagation(); toggleCard('${item.id}')">See less <svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(180deg)"><path d="M1 1L5 5L9 1"/></svg></button>
+              </div>
+            </div>
+          </div>`;
+        });
+        html += '</div>';
+      });
+      tl.innerHTML = html;
+    }
+
+    function toggleCard(id) {
+      document.getElementById(id)?.classList.toggle('expanded');
+    }
+
+    function filterTab(el, tag) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      el.classList.add('active');
+      currentFilter = tag;
+      render();
+    }
+
+    render();
+  </script>
+</body>
+</html>

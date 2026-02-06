@@ -50,8 +50,9 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      gap: 6px;
       margin-bottom: 24px;
-      font-family: 'Malayalam MN', serif;
+      font-family: 'Lora', Georgia, serif;
       font-size: 20px;
       font-weight: 700;
       color: var(--primary);
@@ -71,6 +72,16 @@
       color: var(--text);
       line-height: 28px;
       margin-bottom: 8px;
+    }
+
+    .header .subtitle {
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      font-weight: 300;
+      color: var(--text-dark);
+      line-height: 20px;
+      max-width: 220px;
+      margin: 0 auto;
     }
 
     .header .date {
@@ -120,18 +131,18 @@
       padding: 18px 20px;
       margin-bottom: 14px;
       box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-      border-left: 4px solid var(--primary);
+      border: 1px solid transparent;
       position: relative;
       transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    .concern-card.expanded {
+      border-color: rgba(46, 145, 94, 0.61);
     }
 
     .concern-card.resolved {
       opacity: 0.65;
-      border-left-color: var(--status-resolved);
-    }
-
-    .concern-card.status-improving {
-      border-left-color: var(--status-improving);
     }
 
     /* Card top row: date left, dots right */
@@ -209,10 +220,10 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
     }
 
-    .concern-card-icon { font-size: 26px; flex-shrink: 0; }
+    .concern-card-icon { font-size: 28px; flex-shrink: 0; }
 
     .concern-card-title {
       font-family: 'Lora', Georgia, serif;
@@ -227,10 +238,10 @@
       border-radius: 12px;
       font-family: 'Outfit', sans-serif;
       font-size: 11px;
-      font-weight: 600;
+      font-weight: 500;
       text-transform: uppercase;
       letter-spacing: 0.3px;
-      margin-left: 8px;
+      margin-top: 2px;
     }
 
     .concern-card-status.active {
@@ -248,22 +259,32 @@
       color: var(--status-resolved);
     }
 
-    /* Collapsed card: just "View More" */
+    /* Collapsed card: "View More" at bottom right */
     .concern-card-collapsed-footer {
       display: flex;
       justify-content: flex-end;
       margin-top: 4px;
     }
 
-    .view-more-link {
+    .view-toggle-link {
       font-family: 'Outfit', sans-serif;
       font-size: 13px;
-      font-weight: 500;
-      color: var(--primary);
+      font-weight: 700;
+      color: #9a9a9a;
       background: none;
       border: none;
       cursor: pointer;
       padding: 4px 0;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .view-toggle-link svg {
+      width: 10px;
+      height: 6px;
+      flex-shrink: 0;
+      transition: transform 0.2s;
     }
 
     /* Expanded card content */
@@ -274,6 +295,15 @@
 
     .concern-card.expanded .concern-card-body { display: block; }
     .concern-card.expanded .concern-card-collapsed-footer { display: none; }
+
+    .concern-card-paragraph {
+      font-family: 'Outfit', sans-serif;
+      font-size: 16px;
+      font-weight: 300;
+      color: var(--text-dark);
+      line-height: 25px;
+      margin-top: 8px;
+    }
 
     .field-list { display: flex; flex-direction: column; gap: 10px; }
 
@@ -297,22 +327,30 @@
       line-height: 1.4;
     }
 
-    /* Expanded bottom actions */
+    /* Expanded bottom actions row */
     .concern-card-actions {
       display: flex;
-      gap: 16px;
+      align-items: center;
+      justify-content: space-between;
       margin-top: 16px;
-      padding-top: 14px;
-      border-top: 1px solid rgba(0,0,0,0.06);
     }
 
-    .concern-card-actions a {
+    .concern-card-actions-left {
+      display: flex;
+      gap: 16px;
+    }
+
+    .concern-card-actions-left a {
       font-family: 'Outfit', sans-serif;
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--primary);
+      font-size: 13px;
+      font-weight: 700;
+      color: #2d915f;
       text-decoration: none;
       cursor: pointer;
+    }
+
+    .concern-card-actions .view-toggle-link {
+      margin-left: auto;
     }
 
     /* Resolved section */
@@ -360,11 +398,11 @@
 
     .btn {
       padding: 14px 18px;
-      border-radius: 12px;
+      border-radius: 10px;
       font-family: 'Outfit', sans-serif;
-      font-size: 14px;
-      font-weight: 600;
-      line-height: 20px;
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 35px;
       border: none;
       cursor: pointer;
       transition: all 0.2s;
@@ -374,8 +412,25 @@
       text-align: center;
     }
 
-    .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(33, 111, 100, 0.3); }
-    .btn:active { transform: translateY(0); }
+    /* Auto-update message */
+    .auto-update-msg {
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    .auto-update-msg p {
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      font-weight: 300;
+      color: var(--text-dark);
+      opacity: 0.5;
+      line-height: 20px;
+      max-width: 287px;
+      margin: 0 auto;
+    }
+
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+    .btn:active { transform: translateY(0); box-shadow: none; }
 
     /* Loading */
     .loading { text-align: center; padding: 60px 20px; }
@@ -530,22 +585,23 @@
   <div class="container">
     <div class="logo">CareLog</div>
 
+    <div class="live-badge" id="liveBadge" style="display: none;">
+      <span class="live-dot"></span>
+      <span id="liveText">Updates Live</span>
+    </div>
+
     <div class="header">
       <h1 id="userName">Your Summary</h1>
-      <p class="date" id="dateText">Today</p>
+      <p class="subtitle" id="subtitleText">Everything you've shared, organized for your care</p>
     </div>
 
     <div id="loading" class="loading">
+
       <div class="spinner"></div>
       <p id="loadingText">Cargando tu resumen...</p>
     </div>
 
     <div id="content" style="display: none;">
-      <div class="live-badge" id="liveBadge" style="display: none;">
-        <span class="live-dot"></span>
-        <span id="liveText">Updates Live</span>
-      </div>
-
       <div id="concernsContainer"></div>
 
       <div id="resolvedSection" style="display: none;">
@@ -553,6 +609,10 @@
           <div class="resolved-section-title" id="resolvedTitle">Resolved Concerns</div>
           <div id="resolvedContainer"></div>
         </div>
+      </div>
+
+      <div class="auto-update-msg">
+        <p id="autoUpdateText">This page updates automatically as you message me on WhatsApp.</p>
       </div>
 
       <div class="disclaimer">
@@ -608,7 +668,9 @@
         emptyTitle: 'Aún no hay resumen',
         emptyText: 'Continúa tu conversación en WhatsApp para generar tu resumen de salud.',
         liveText: 'Actualiza en vivo',
-        disclaimer: 'Este registro fue generado por CareLog como herramienta de preparación. No sustituye la evaluación médica profesional.',
+        subtitle: 'Todo lo que has compartido, organizado para tu cuidado',
+        autoUpdate: 'Esta página se actualiza automáticamente cuando me envías un mensaje por WhatsApp.',
+        disclaimer: 'Este registro fue generado por Confianza como herramienta de preparación. No sustituye la evaluación médica profesional.',
         doctorBtn: 'Version para tu Doctor',
         appointmentBtn: 'Proxima consulta',
         doctorCta: 'Compartir con tu médico',
@@ -617,10 +679,11 @@
         days: ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'],
         months: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
         fields: { started: 'Inicio', helps: 'Mejora con', worsens: 'Empeora con', medications: 'Medicamentos', location: 'Ubicación', symptoms: 'Síntomas' },
-        status: { active: 'Activo', improving: 'Mejorando', resolved: 'Resuelto' },
+        status: { active: 'Vigente', improving: 'Mejorando', resolved: 'Resuelto' },
         defaultName: 'Tu Resumen',
         resolvedTitle: 'Preocupaciones Resueltas',
-        viewMore: 'Ver más',
+        viewMore: 'ViewMore',
+        viewLess: 'View Less',
         history: 'History',
         update: 'Update',
         menuUpdate: 'UPDATE',
@@ -636,6 +699,8 @@
         emptyTitle: 'No summary yet',
         emptyText: 'Continue your WhatsApp conversation to generate your health summary.',
         liveText: 'Updates Live',
+        subtitle: 'Everything you\'ve shared, organized for your care',
+        autoUpdate: 'This page updates automatically as you message me on WhatsApp.',
         disclaimer: 'This record was generated by CareLog as a preparation tool. It does not replace professional medical evaluation.',
         doctorBtn: 'Version for your Doctor',
         appointmentBtn: 'Next appointment',
@@ -645,10 +710,11 @@
         days: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
         months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
         fields: { started: 'Started', helps: 'Helps', worsens: 'Worsens', medications: 'Medications', location: 'Location', symptoms: 'Symptoms' },
-        status: { active: 'Active', improving: 'Improving', resolved: 'Resolved' },
+        status: { active: 'Ongoing', improving: 'Improving', resolved: 'Resolved' },
         defaultName: 'Your Summary',
         resolvedTitle: 'Resolved Concerns',
-        viewMore: 'View More',
+        viewMore: 'ViewMore',
+        viewLess: 'View Less',
         history: 'History',
         update: 'Update',
         menuUpdate: 'UPDATE',
@@ -664,6 +730,8 @@
         emptyTitle: 'Ainda não há resumo',
         emptyText: 'Continue sua conversa no WhatsApp para gerar seu resumo de saúde.',
         liveText: 'Atualiza ao vivo',
+        subtitle: 'Tudo o que você compartilhou, organizado para o seu cuidado',
+        autoUpdate: 'Esta página se atualiza automaticamente quando você me envia uma mensagem no WhatsApp.',
         disclaimer: 'Este registro foi gerado pelo CareLog como ferramenta de preparação. Não substitui a avaliação médica profissional.',
         doctorBtn: 'Versão para seu Médico',
         appointmentBtn: 'Próxima consulta',
@@ -673,10 +741,11 @@
         days: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
         months: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
         fields: { started: 'Início', helps: 'Melhora com', worsens: 'Piora com', medications: 'Medicamentos', location: 'Localização', symptoms: 'Sintomas' },
-        status: { active: 'Ativo', improving: 'Melhorando', resolved: 'Resolvido' },
+        status: { active: 'Em andamento', improving: 'Melhorando', resolved: 'Resolvido' },
         defaultName: 'Seu Resumo',
         resolvedTitle: 'Preocupações Resolvidas',
         viewMore: 'Ver mais',
+        viewLess: 'Ver menos',
         history: 'Histórico',
         update: 'Atualizar',
         menuUpdate: 'ATUALIZAR',
@@ -692,6 +761,8 @@
         emptyTitle: 'Pas encore de résumé',
         emptyText: 'Continuez votre conversation WhatsApp pour générer votre résumé de santé.',
         liveText: 'Mise à jour en direct',
+        subtitle: 'Tout ce que vous avez partagé, organisé pour vos soins',
+        autoUpdate: 'Cette page se met à jour automatiquement lorsque vous m\'envoyez un message sur WhatsApp.',
         disclaimer: 'Ce dossier a été généré par CareLog comme outil de préparation. Il ne remplace pas l\'évaluation médicale professionnelle.',
         doctorBtn: 'Version pour votre Médecin',
         appointmentBtn: 'Prochain rendez-vous',
@@ -701,10 +772,11 @@
         days: ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'],
         months: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'],
         fields: { started: 'Début', helps: 'Améliore', worsens: 'Aggrave', medications: 'Médicaments', location: 'Localisation', symptoms: 'Symptômes' },
-        status: { active: 'Actif', improving: 'En amélioration', resolved: 'Résolu' },
+        status: { active: 'En cours', improving: 'En amélioration', resolved: 'Résolu' },
         defaultName: 'Votre Résumé',
         resolvedTitle: 'Préoccupations Résolues',
         viewMore: 'Voir plus',
+        viewLess: 'Voir moins',
         history: 'Historique',
         update: 'Mettre à jour',
         menuUpdate: 'MODIFIER',
@@ -737,11 +809,12 @@
       document.getElementById('emptyTitle').textContent = lang.emptyTitle;
       document.getElementById('emptyText').textContent = lang.emptyText;
       document.getElementById('liveText').textContent = lang.liveText;
+      document.getElementById('subtitleText').textContent = lang.subtitle;
+      document.getElementById('autoUpdateText').textContent = lang.autoUpdate;
       document.getElementById('disclaimerText').textContent = lang.disclaimer;
       document.getElementById('doctorBtn').textContent = lang.doctorBtn;
       document.getElementById('appointmentBtn').textContent = lang.appointmentBtn;
       document.getElementById('resolvedTitle').textContent = lang.resolvedTitle;
-      document.getElementById('dateText').textContent = formatDate(new Date());
       // Modal
       document.getElementById('modalTitle').textContent = lang.deleteTitle;
       document.getElementById('modalText').textContent = lang.deleteText;
@@ -779,9 +852,6 @@
       const lang = getLang();
       const name = data.userName || data.user?.name || lang.defaultName || 'Your Summary';
       document.getElementById('userName').textContent = name;
-
-      const updateDate = data.updatedAt ? new Date(data.updatedAt) : new Date();
-      document.getElementById('dateText').textContent = formatDate(updateDate);
 
       if (data.concerns && data.concerns.length > 0) {
         allConcerns = data.concerns;
@@ -859,12 +929,15 @@
       const card = document.createElement('div');
       const cardId = `concern-${concern.id}`;
       card.id = cardId;
-      card.className = 'concern-card' + (isResolved ? ' resolved' : '') + (concern.status === 'improving' ? ' status-improving' : '') + (isExpanded ? ' expanded' : '');
+      card.className = 'concern-card' + (isResolved ? ' resolved' : '') + (isExpanded ? ' expanded' : '');
 
-      const fields = parseAnyFormat(concern.summaryContent || '');
       const icon = concern.icon || getIconForConcern(concern.title);
       const status = concern.status || 'active';
       const lastUpdated = concern.updatedAt ? formatDate(new Date(concern.updatedAt)) : formatDate(new Date());
+
+      // Build paragraph from summaryContent — strip field labels, show as plain text
+      const rawContent = concern.summaryContent || '';
+      const paragraph = buildParagraph(rawContent);
 
       let html = '';
 
@@ -881,44 +954,33 @@
       html += '  </div>';
       html += '</div>';
 
-      // Icon + title + status
+      // Icon + title
       html += '<div class="concern-card-header">';
       html += '  <div class="concern-card-icon">' + icon + '</div>';
       html += '  <div class="concern-card-title">' + capitalizeFirst(concern.title) + '</div>';
-      html += '  <span class="concern-card-status ' + status + '">' + (lang.status[status] || status) + '</span>';
       html += '</div>';
 
-      // Expanded body (fields + actions)
-      html += '<div class="concern-card-body"><div class="field-list" id="fields-' + concern.id + '"></div>';
+      // Status badge below title
+      html += '<span class="concern-card-status ' + status + '">' + (lang.status[status] || status) + '</span>';
+
+      // Expanded body: paragraph text + actions row with View Less
+      html += '<div class="concern-card-body">';
+      html += '  <div class="concern-card-paragraph">' + paragraph + '</div>';
       html += '  <div class="concern-card-actions">';
-      html += '    <a onclick="event.stopPropagation(); viewConcernHistory(\'' + concern.id + '\')">' + lang.history + '</a>';
-      html += '    <a onclick="event.stopPropagation(); editConcern(\'' + concern.id + '\')">' + lang.update + '</a>';
+      html += '    <div class="concern-card-actions-left">';
+      html += '      <a onclick="event.stopPropagation(); viewConcernHistory(\'' + concern.id + '\')">' + lang.history + '</a>';
+      html += '      <a onclick="event.stopPropagation(); editConcern(\'' + concern.id + '\')">' + lang.update + '</a>';
+      html += '    </div>';
+      html += '    <button class="view-toggle-link" onclick="event.stopPropagation(); expandCard(\'' + cardId + '\')">' + (lang.viewLess || 'View Less') + ' <svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(180deg)"><path d="M1 1L5 5L9 1"/></svg></button>';
       html += '  </div>';
       html += '</div>';
 
-      // Collapsed footer
+      // Collapsed footer: View More with chevron
       html += '<div class="concern-card-collapsed-footer">';
-      html += '  <button class="view-more-link" onclick="event.stopPropagation(); expandCard(\'' + cardId + '\')">' + lang.viewMore + '</button>';
+      html += '  <button class="view-toggle-link" onclick="event.stopPropagation(); expandCard(\'' + cardId + '\')">' + lang.viewMore + ' <svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1L5 5L9 1"/></svg></button>';
       html += '</div>';
 
       card.innerHTML = html;
-
-      // Build field items
-      const fieldList = card.querySelector('#fields-' + concern.id);
-      [
-        { label: lang.fields?.started || 'Started', value: fields.started },
-        { label: lang.fields?.helps || 'Helps', value: fields.whatHelps },
-        { label: lang.fields?.worsens || 'Worsens', value: fields.whatWorsens },
-        { label: lang.fields?.medications || 'Medications', value: fields.medications },
-      ].forEach(({ label, value }) => {
-        const v = cleanFieldForDisplay(value);
-        if (v && isValidFieldValue(v)) {
-          const fi = document.createElement('div');
-          fi.className = 'field-item';
-          fi.innerHTML = '<span class="field-label">' + label + '</span><span class="field-value">' + capitalizeFirst(v) + '</span>';
-          fieldList.appendChild(fi);
-        }
-      });
 
       // Click to expand/collapse
       card.addEventListener('click', (e) => {
@@ -928,6 +990,34 @@
       });
 
       return card;
+    }
+
+    function buildParagraph(text) {
+      if (!text) return '';
+      // Strip markdown, field labels, and join into flowing paragraph
+      let cleaned = text
+        .replace(/^#+\s*/gm, '')
+        .replace(/\*\*/g, '')
+        .replace(/\*([^*]+)\*/g, '$1')
+        .replace(/📝|❓|•/g, '')
+        .replace(/---+/g, '')
+        .replace(/^(?:Main concern|Concern|Motivo|Queixa|Motif)[:\s]*/gim, '')
+        .replace(/^(?:Started|Inicio|Início|Début)[:\s]*/gim, '')
+        .replace(/^(?:What helps|Helps|Mejora con|Melhora com|Améliore)[:\s]*/gim, '')
+        .replace(/^(?:What worsens|Worsens|Empeora con|Piora com|Aggrave)[:\s]*/gim, '')
+        .replace(/^(?:Medications|Medicamentos|Médicaments|Meds)[:\s]*/gim, '')
+        .replace(/^(?:Location|Ubicación|Localização)[:\s]*/gim, '')
+        .replace(/^(?:Symptoms|Síntomas|Sintomas)[:\s]*/gim, '')
+        .replace(/^(?:Notes)[:\s]*/gim, '')
+        .replace(/Patient reports (having )?/gi, '')
+        .replace(/\bpatient\b/gi, '')
+        .replace(/\breports\b/gi, '')
+        .replace(/\n{2,}/g, '\n')
+        .trim();
+
+      // Join lines into sentences
+      const lines = cleaned.split('\n').map(l => l.trim()).filter(l => l.length > 1);
+      return lines.join('. ').replace(/\.\./g, '.').replace(/\.\s*\./g, '.');
     }
 
     // ===== INTERACTIONS =====
@@ -1037,7 +1127,7 @@
       if (l.includes('head') || l.includes('cabeza') || l.includes('migraine') || l.includes('migraña')) return '🤕';
       if (l.includes('stomach') || l.includes('estómago') || l.includes('digestion')) return '🤢';
       if (l.includes('throat') || l.includes('garganta') || l.includes('cold') || l.includes('resfriado')) return '🤧';
-      if (l.includes('back') || l.includes('espalda') || l.includes('pain') || l.includes('dolor')) return '💊';
+      if (l.includes('back') || l.includes('espalda') || l.includes('pain') || l.includes('dolor')) return '😰';
       if (l.includes('skin') || l.includes('piel') || l.includes('rash')) return '🩹';
       if (l.includes('sleep') || l.includes('sueño') || l.includes('insomnia')) return '😴';
       return '📋';
@@ -1140,7 +1230,7 @@
 
     function nextAppointment() {
       if (!userId || userId === 'preview' || userId === 'summary.html') return;
-      window.location.href = '/appointment/' + userId;
+      window.location.href = '/questions/' + userId;
     }
 
     function startPolling() { pollInterval = setInterval(fetchSummary, 10000); }

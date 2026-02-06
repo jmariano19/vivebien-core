@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>CareLog - Update Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #F9F6F0;
+      --card-bg: #FFF;
+      --primary: #2E915E;
+      --btn-color: #216F64;
+      --text: #373737;
+      --text-dark: #000;
+      --muted: rgba(0,0,0,0.45);
+      --input-bg: #f8f6f2;
+      --shadow: 0 2px 12px rgba(0,0,0,0.06);
+      --radius: 15px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+    }
+
+    .page {
+      width: 402px;
+      min-height: 100vh;
+      padding: 16px 22px 120px;
+    }
+
+    .preview-banner {
+      background: #FFF3CD;
+      border: 1px solid #FFEAA7;
+      border-radius: 10px;
+      padding: 10px 16px;
+      margin-bottom: 12px;
+      text-align: center;
+      font-size: 13px;
+      color: #856404;
+    }
+
+    /* Top bar */
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 0 16px;
+      position: sticky;
+      top: 0;
+      background: var(--bg);
+      z-index: 100;
+    }
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--muted);
+      text-decoration: none;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .back-link:hover { color: var(--text); }
+    .back-link svg {
+      width: 7px;
+      height: 12px;
+      flex-shrink: 0;
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'Lora', Georgia, serif;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .header h1 {
+      font-family: 'Lora', Georgia, serif;
+      font-size: 32px;
+      font-weight: 500;
+      color: var(--text);
+      line-height: 36px;
+    }
+
+    /* Form card */
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      padding: 20px 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .field {
+      margin-bottom: 20px;
+    }
+    .field:last-child {
+      margin-bottom: 0;
+    }
+
+    .field-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+    .field-label .icon {
+      font-size: 16px;
+      color: initial;
+    }
+
+    .field-input {
+      width: 100%;
+      padding: 14px 16px;
+      border: 2px solid transparent;
+      border-radius: 12px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      line-height: 24px;
+      color: var(--text);
+      background: var(--input-bg);
+      transition: all 0.2s;
+      resize: none;
+    }
+    .field-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      background: white;
+    }
+    .field-input::placeholder {
+      color: #a0a0a0;
+    }
+    .field-input.multi-line {
+      min-height: 80px;
+    }
+
+    /* Medication chips */
+    .medication-container {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .medication-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .medication-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #e8f5ee;
+      color: var(--primary);
+      padding: 8px 12px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .medication-chip .remove-med {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.1);
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .add-medication-row {
+      display: flex;
+      gap: 8px;
+    }
+    .add-medication-row input {
+      flex: 1;
+    }
+    .add-med-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: none;
+      background: var(--btn-color);
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .empty-meds {
+      color: var(--muted);
+      font-size: 14px;
+      font-style: italic;
+    }
+
+    /* Footer */
+    .footer-actions {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--bg);
+      padding: 16px 24px;
+      padding-bottom: calc(16px + env(safe-area-inset-bottom));
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+    }
+
+    .btn {
+      flex: 1;
+      max-width: 180px;
+      padding: 14px 24px;
+      border-radius: 10px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      border: none;
+      cursor: pointer;
+      text-align: center;
+    }
+    .btn-primary {
+      background: var(--btn-color);
+      color: white;
+    }
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    }
+    .btn-secondary {
+      background: #E0D8CD;
+      color: #6B5D4F;
+    }
+    .btn-secondary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    }
+    .btn:active {
+      transform: translateY(0);
+      box-shadow: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="preview-banner">PREVIEW MODE — Click "Back to summary" to go to preview-summary.html</div>
+
+    <div class="topbar">
+      <a class="back-link" href="preview-summary.html">
+        <svg viewBox="0 0 7 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 1L1 6L6 11"/></svg>
+        <span>Back to summary</span>
+      </a>
+      <span class="brand">CareLog</span>
+    </div>
+
+    <div class="header">
+      <h1>Update Summary</h1>
+    </div>
+
+    <div class="card">
+      <!-- Main Concern -->
+      <div class="field">
+        <label class="field-label">
+          <span class="icon">✏️</span>
+          Main Concern
+        </label>
+        <input type="text" class="field-input" value="Sleep Trouble" />
+      </div>
+
+      <!-- When it started -->
+      <div class="field">
+        <label class="field-label">
+          <span class="icon">📅</span>
+          When it started
+        </label>
+        <input type="text" class="field-input" value="A few days ago" />
+      </div>
+
+      <!-- Location -->
+      <div class="field">
+        <label class="field-label">
+          <span class="icon">📍</span>
+          Location
+        </label>
+        <input type="text" class="field-input" value="Upper eyelid" />
+      </div>
+
+      <!-- Symptoms -->
+      <div class="field">
+        <label class="field-label">
+          <span class="icon">🤒</span>
+          Symptoms
+        </label>
+        <textarea class="field-input multi-line" rows="3" placeholder="Describe all the symptoms you feel..."></textarea>
+      </div>
+
+      <!-- What Helps -->
+      <div class="field">
+        <label class="field-label">
+          <span class="icon">✅</span>
+          What helps
+        </label>
+        <input type="text" class="field-input" placeholder="Describe what helps you" />
+      </div>
+
+      <!-- What Makes it Worse -->
+      <div class="field">
+        <label class="field-label">
+          <span class="icon">⚠️</span>
+          What makes it worse
+        </label>
+        <input type="text" class="field-input" value="Sitting for long periods of time, getting worse" />
+      </div>
+
+      <!-- Medications -->
+      <div class="field">
+        <label class="field-label">
+          <span class="icon">💊</span>
+          Medications
+        </label>
+        <div class="medication-container">
+          <div class="medication-chips">
+            <span class="empty-meds">No medications added</span>
+          </div>
+          <div class="add-medication-row">
+            <input type="text" class="field-input" placeholder="Add a medication..." />
+            <button type="button" class="add-med-btn">+</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Additional Notes -->
+      <div class="field">
+        <label class="field-label">
+          <span class="icon">📝</span>
+          Additional notes
+        </label>
+        <textarea class="field-input multi-line" rows="3" placeholder="Any other important information..."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-actions">
+    <button class="btn btn-secondary" onclick="window.location.href='preview-summary.html'">Cancel</button>
+    <button class="btn btn-primary" onclick="alert('Preview: Update saved!')">Update</button>
+  </div>
+</body>
+</html>

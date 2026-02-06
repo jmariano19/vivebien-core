@@ -126,6 +126,18 @@ async function bootstrap() {
     return reply.status(404).send({ error: 'Not found' });
   });
 
+  // Serve questions page for /questions/:userId URLs
+  app.get('/questions/:userId', async (request, reply) => {
+    const { userId } = request.params as { userId: string };
+
+    // Only serve for UUID-like paths
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (uuidRegex.test(userId)) {
+      return reply.sendFile('questions.html');
+    }
+    return reply.status(404).send({ error: 'Not found' });
+  });
+
   // Serve summary landing page for /:userId URLs
   app.get('/:userId', async (request, reply) => {
     const { userId } = request.params as { userId: string };

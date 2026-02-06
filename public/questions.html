@@ -1,0 +1,800 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>CareLog - Preguntas para tu Doctor</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23885955'%3E%3Cpath d='M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #F9F6F0;
+      --card-bg: #FFF;
+      --primary: #2E915E;
+      --btn-color: #216F64;
+      --text: #373737;
+      --text-dark: #1f1f1f;
+      --muted: rgba(0,0,0,0.55);
+      --shadow: 0 2px 12px rgba(0,0,0,0.06);
+      --radius: 15px;
+      --border: #f0ece6;
+      --item-bg: #F5F1EB;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+    }
+
+    .page {
+      width: 402px;
+      min-height: 100vh;
+      padding: 16px 16px 40px;
+    }
+
+    /* Top bar */
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 0 16px;
+      position: sticky;
+      top: 0;
+      background: var(--bg);
+      z-index: 100;
+    }
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--muted);
+      text-decoration: none;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .back-link:hover { color: var(--text); }
+    .back-link svg {
+      width: 7px;
+      height: 12px;
+      flex-shrink: 0;
+    }
+    .brand {
+      font-family: 'Lora', Georgia, serif;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .header h1 {
+      font-family: 'Lora', Georgia, serif;
+      font-size: 26px;
+      font-weight: 500;
+      color: var(--text);
+      line-height: 32px;
+      margin-bottom: 6px;
+    }
+    .header .subtitle {
+      font-size: 15px;
+      font-weight: 300;
+      line-height: 20px;
+      color: var(--muted);
+      max-width: 260px;
+      margin: 0 auto;
+    }
+
+    /* Card */
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 22px 18px;
+    }
+
+    /* Card sections */
+    .card-section {
+      margin-bottom: 24px;
+    }
+    .card-section:last-child {
+      margin-bottom: 0;
+    }
+    .section-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 600;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+    .section-label .icon {
+      font-size: 16px;
+      color: initial;
+    }
+
+    /* Concern value */
+    .concern-value {
+      font-size: 16px;
+      font-weight: 400;
+      line-height: 24px;
+      color: var(--text-dark);
+      padding-left: 2px;
+    }
+
+    /* Numbered list items */
+    .numbered-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .numbered-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      background: var(--item-bg);
+      border-radius: 10px;
+    }
+    .item-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+    .item-text {
+      font-size: 15px;
+      font-weight: 400;
+      line-height: 22px;
+      color: var(--text-dark);
+      flex: 1;
+    }
+    .delete-question-btn {
+      width: 32px;
+      height: 32px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      opacity: 0.4;
+      transition: opacity 0.2s;
+      padding: 0;
+    }
+    .delete-question-btn:hover {
+      opacity: 0.8;
+    }
+    .delete-question-btn svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    /* Add question button */
+    .add-question-btn {
+      width: 100%;
+      padding: 14px;
+      border: 1.5px dashed #ccc;
+      border-radius: 10px;
+      background: transparent;
+      color: var(--primary);
+      font-family: 'Outfit', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      text-align: center;
+      margin-top: 8px;
+      transition: all 0.2s;
+    }
+    .add-question-btn:hover {
+      border-color: var(--primary);
+      background: rgba(46, 145, 94, 0.04);
+    }
+
+    /* Inline input for new question */
+    .new-question-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      background: var(--item-bg);
+      border-radius: 10px;
+      border: 1.5px solid var(--primary);
+    }
+    .new-question-input {
+      flex: 1;
+      border: none;
+      background: transparent;
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      font-weight: 400;
+      color: var(--text-dark);
+      outline: none;
+      line-height: 22px;
+    }
+    .new-question-input::placeholder {
+      color: rgba(0,0,0,0.35);
+    }
+    .save-question-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--primary);
+      border: none;
+      color: white;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: all 0.2s;
+    }
+    .save-question-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    }
+    .cancel-question-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #e0dcd6;
+      border: none;
+      color: var(--text);
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: all 0.2s;
+    }
+    .cancel-question-btn:hover {
+      background: #d0ccc6;
+    }
+
+    /* Disclaimer footer */
+    .disclaimer {
+      margin-top: 24px;
+      text-align: center;
+      font-size: 15px;
+      line-height: 20px;
+      font-weight: 300;
+      color: var(--muted);
+      padding: 0 12px;
+    }
+
+    /* Loading & Error states */
+    .loading {
+      text-align: center;
+      padding: 60px 20px;
+    }
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid #e0e0e0;
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-state {
+      text-align: center;
+      padding: 60px 20px;
+    }
+    .error-state h2 {
+      font-family: 'Lora', serif;
+      font-size: 18px;
+      margin: 0 0 8px;
+    }
+    .error-state p {
+      color: var(--muted);
+      margin: 0;
+    }
+
+    /* Toast notification */
+    .toast {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: #333;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 25px;
+      font-size: 14px;
+      font-weight: 500;
+      opacity: 0;
+      transition: all 0.3s ease;
+      z-index: 1000;
+    }
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="topbar">
+      <a class="back-link" id="backButton">
+        <svg viewBox="0 0 7 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 1L1 6L6 11"/></svg>
+        <span id="backText">Back to summary</span>
+      </a>
+      <span class="brand">CareLog</span>
+    </div>
+
+    <div id="content">
+      <div class="loading">
+        <div class="loading-spinner"></div>
+        <p id="loadingText">Loading...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast notification -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // Get userId from URL path
+    const pathParts = window.location.pathname.split('/');
+    const userId = pathParts[pathParts.length - 1];
+
+    // Get optional concernId from query string
+    const urlParams = new URLSearchParams(window.location.search);
+    const concernId = urlParams.get('concern');
+
+    // Translations
+    const translations = {
+      es: {
+        title: 'Preguntas para tu Doctor',
+        subtitle: 'Agrega cualquier otra pregunta extra para que no se te olvide en tu próxima consulta.',
+        back: 'Volver al resumen',
+        loading: 'Cargando...',
+        errorTitle: 'No disponible',
+        errorText: 'No se pudo cargar la información.',
+        mainConcern: 'Motivo principal:',
+        goals: 'Objetivos para tu consulta',
+        questions: 'Preguntas para tu doctor',
+        addQuestion: '+ Agregar pregunta',
+        placeholder: 'Escribe tu pregunta...',
+        disclaimer: 'Este registro fue generado por CareLog como herramienta de preparación. No sustituye la evaluación médica profesional.',
+        saved: '✓ Pregunta guardada',
+        defaultGoal: 'Obtener diagnóstico y plan de tratamiento'
+      },
+      en: {
+        title: 'Questions for your Doctor',
+        subtitle: 'Add any other extra questions so you don\'t forget in your next visit.',
+        back: 'Back to summary',
+        loading: 'Loading...',
+        errorTitle: 'Not available',
+        errorText: 'Could not load the information.',
+        mainConcern: 'Main Concern:',
+        goals: 'Goals for your visit',
+        questions: 'Questions for your doctor',
+        addQuestion: '+ Add question',
+        placeholder: 'Type your question...',
+        disclaimer: 'This record was generated by CareLog as a preparation tool. It does not replace professional medical evaluation.',
+        saved: '✓ Question saved',
+        defaultGoal: 'Get diagnosis and treatment plan'
+      },
+      pt: {
+        title: 'Perguntas para seu Médico',
+        subtitle: 'Adicione qualquer outra pergunta extra para não esquecer na sua próxima consulta.',
+        back: 'Voltar ao resumo',
+        loading: 'Carregando...',
+        errorTitle: 'Indisponível',
+        errorText: 'Não foi possível carregar as informações.',
+        mainConcern: 'Queixa principal:',
+        goals: 'Objetivos para sua consulta',
+        questions: 'Perguntas para seu médico',
+        addQuestion: '+ Adicionar pergunta',
+        placeholder: 'Digite sua pergunta...',
+        disclaimer: 'Este registro foi gerado pelo CareLog como ferramenta de preparação. Não substitui a avaliação médica profissional.',
+        saved: '✓ Pergunta salva',
+        defaultGoal: 'Obter diagnóstico e plano de tratamento'
+      },
+      fr: {
+        title: 'Questions pour votre Médecin',
+        subtitle: 'Ajoutez toute autre question supplémentaire pour ne pas oublier lors de votre prochaine visite.',
+        back: 'Retour au résumé',
+        loading: 'Chargement...',
+        errorTitle: 'Indisponible',
+        errorText: 'Impossible de charger les informations.',
+        mainConcern: 'Motif principal :',
+        goals: 'Objectifs pour votre consultation',
+        questions: 'Questions pour votre médecin',
+        addQuestion: '+ Ajouter une question',
+        placeholder: 'Tapez votre question...',
+        disclaimer: 'Ce dossier a été généré par CareLog comme outil de préparation. Il ne remplace pas l\'évaluation médicale professionnelle.',
+        saved: '✓ Question enregistrée',
+        defaultGoal: 'Obtenir un diagnostic et un plan de traitement'
+      }
+    };
+
+    let currentLang = 'es';
+    let currentConcern = null;
+    let customQuestions = [];
+    let doctorObjetivos = null; // From doctor API
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+
+    // Clean text (same as doctor.html)
+    function cleanDoctorText(text) {
+      if (!text) return '';
+      let cleaned = text
+        .replace(/^#+\s*/gm, '')
+        .replace(/Usuario\s*(reporta|confirma|describe|caracteriza|indica|aclara|proporciona nombre?)[\s:]*["']?/gi, '')
+        .replace(/Patient\s*(reports?|confirms?|describes?|indicates?)[\s:]*["']?/gi, '')
+        .replace(/Paciente\s*(reporta|confirma|describe)[\s:]*["']?/gi, '')
+        .replace(/["']\s*$/g, '')
+        .replace(/^no\s*proporcionado$/i, '')
+        .replace(/^not\s*provided$/i, '')
+        .replace(/\.\s*Usuario\s*/gi, '. ')
+        .replace(/\.\s*Patient\s*/gi, '. ')
+        .replace(/\.\s*\./g, '.')
+        .replace(/\s+/g, ' ')
+        .trim();
+      if (cleaned.length > 0) {
+        cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+      }
+      return cleaned;
+    }
+
+    // Parse questions from doctor note objetivos text
+    function parseQuestions(text) {
+      if (!text) return [];
+      // Split by ? to separate questions, then clean
+      const questions = text
+        .split(/[?]\s*/)
+        .map(q => q.trim())
+        .filter(q => q.length > 3)
+        .map(q => q.endsWith('?') ? q : q + '?');
+      return questions.length > 0 ? questions : [text];
+    }
+
+    // Parse concern summaryContent — matches actual AI output format:
+    // Concern: / Motivo: / Queixa: / Motif: → main concern
+    // Started: / Inicio: / Início: / Début: → when started
+    // Helps: / Mejora con: / Melhora com: / Améliore: → what helps
+    // Worsens: / Empeora con: / Piora com: / Aggrave: → what worsens
+    // Medications: / Medicamentos: / Médicaments: → medications
+    function parseConcernSummary(summaryContent) {
+      const result = { motivo: '', worsens: '', helps: '', medications: '' };
+      if (!summaryContent) return result;
+
+      const lines = summaryContent.split('\n');
+      lines.forEach(line => {
+        const trimmed = line.trim();
+        if (!trimmed) return;
+
+        // Main concern
+        if (/^(concern|motivo|queixa|motif)[:\s]/i.test(trimmed)) {
+          result.motivo = trimmed.replace(/^(concern|motivo|queixa|motif)[:\s]*/i, '').trim();
+        }
+        // Worsens (useful as associated symptoms context)
+        else if (/^(worsens|empeora con|piora com|aggrave)[:\s]/i.test(trimmed)) {
+          result.worsens = trimmed.replace(/^(worsens|empeora con|piora com|aggrave)[:\s]*/i, '').trim();
+        }
+        // Helps
+        else if (/^(helps|mejora con|melhora com|améliore)[:\s]/i.test(trimmed)) {
+          result.helps = trimmed.replace(/^(helps|mejora con|melhora com|améliore)[:\s]*/i, '').trim();
+        }
+        // Medications
+        else if (/^(medications|medicamentos|médicaments)[:\s]/i.test(trimmed)) {
+          result.medications = trimmed.replace(/^(medications|medicamentos|médicaments)[:\s]*/i, '').trim();
+        }
+      });
+
+      return result;
+    }
+
+    // Render the page
+    function renderPage(concern, lang) {
+      const t = translations[lang] || translations.es;
+      const content = document.getElementById('content');
+
+      const parsed = concern.parsed || {};
+
+      // Main concern title — use concern.title (from concerns API) or parsed motivo
+      const concernTitle = cleanDoctorText(concern.title || parsed.motivo || '');
+
+      // Goals — build from what we know about the concern
+      const goals = [t.defaultGoal];
+
+      // Questions — from doctor API objetivos (if available)
+      let questions = [];
+      if (doctorObjetivos) {
+        questions = parseQuestions(cleanDoctorText(doctorObjetivos));
+      }
+      // Add any custom questions
+      questions = questions.concat(customQuestions);
+
+      // Build goals HTML
+      let goalsHtml = '';
+      goals.forEach((goal, idx) => {
+        goalsHtml += `
+          <div class="numbered-item">
+            <span class="item-num">${idx + 1}</span>
+            <span class="item-text">${escapeHtml(goal)}</span>
+          </div>
+        `;
+      });
+
+      // Build questions HTML
+      const trashIcon = `<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 2h8M3 5h14M13 5v9a2 2 0 01-2 2H9a2 2 0 01-2-2V5m-1 0V4a1 1 0 011-1h6a1 1 0 011 1v1" stroke="#8B7355" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M8.5 8v5M11.5 8v5" stroke="#8B7355" stroke-width="1.4" stroke-linecap="round"/></svg>`;
+      let questionsHtml = '';
+      questions.forEach((q, idx) => {
+        questionsHtml += `
+          <div class="numbered-item" data-question-idx="${idx}">
+            <span class="item-num">${idx + 1}</span>
+            <span class="item-text">${escapeHtml(q)}</span>
+            <button class="delete-question-btn" data-idx="${idx}" title="Delete">${trashIcon}</button>
+          </div>
+        `;
+      });
+
+      content.innerHTML = `
+        <div class="header">
+          <h1>${t.title}</h1>
+          <div class="subtitle">${t.subtitle}</div>
+        </div>
+
+        <div class="card">
+          <div class="card-section">
+            <div class="section-label"><span class="icon">📋</span> ${t.mainConcern}</div>
+            <p class="concern-value">${escapeHtml(concernTitle)}</p>
+          </div>
+
+          <div class="card-section">
+            <div class="section-label"><span class="icon">🎯</span> ${t.goals}</div>
+            <div class="numbered-list" id="goalsList">
+              ${goalsHtml}
+            </div>
+          </div>
+
+          <div class="card-section">
+            <div class="section-label"><span class="icon">❓</span> ${t.questions}</div>
+            <div class="numbered-list" id="questionsList">
+              ${questionsHtml}
+            </div>
+            <div id="newQuestionArea"></div>
+            <button class="add-question-btn" id="addQuestionBtn">${t.addQuestion}</button>
+          </div>
+        </div>
+
+        <div class="disclaimer">${t.disclaimer}</div>
+      `;
+
+      // Setup delete + add question handlers
+      setupQuestionHandlers(questions.length);
+    }
+
+    // Store all displayed questions for delete/re-render
+    let displayedQuestions = [];
+
+    function setupQuestionHandlers(baseCount) {
+      const t = translations[currentLang] || translations.es;
+      const addBtn = document.getElementById('addQuestionBtn');
+      const newQuestionArea = document.getElementById('newQuestionArea');
+      const list = document.getElementById('questionsList');
+
+      if (!addBtn || !list) return;
+
+      // Build displayed questions array from current DOM
+      displayedQuestions = [];
+      list.querySelectorAll('.numbered-item').forEach(item => {
+        const text = item.querySelector('.item-text')?.textContent || '';
+        displayedQuestions.push(text);
+      });
+
+      // Trash icon SVG
+      const trashIcon = `<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 2h8M3 5h14M13 5v9a2 2 0 01-2 2H9a2 2 0 01-2-2V5m-1 0V4a1 1 0 011-1h6a1 1 0 011 1v1" stroke="#8B7355" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M8.5 8v5M11.5 8v5" stroke="#8B7355" stroke-width="1.4" stroke-linecap="round"/></svg>`;
+
+      // Delegate delete clicks
+      list.addEventListener('click', (e) => {
+        const deleteBtn = e.target.closest('.delete-question-btn');
+        if (!deleteBtn) return;
+        const idx = parseInt(deleteBtn.getAttribute('data-idx'), 10);
+        if (isNaN(idx) || idx < 0 || idx >= displayedQuestions.length) return;
+
+        // Remove from array
+        displayedQuestions.splice(idx, 1);
+
+        // Re-render question list
+        let html = '';
+        displayedQuestions.forEach((q, i) => {
+          html += `
+            <div class="numbered-item" data-question-idx="${i}">
+              <span class="item-num">${i + 1}</span>
+              <span class="item-text">${escapeHtml(q)}</span>
+              <button class="delete-question-btn" data-idx="${i}" title="Delete">${trashIcon}</button>
+            </div>
+          `;
+        });
+        list.innerHTML = html;
+      });
+
+      // Add question button
+      addBtn.addEventListener('click', () => {
+        addBtn.style.display = 'none';
+        const nextNum = displayedQuestions.length + 1;
+
+        newQuestionArea.innerHTML = `
+          <div class="new-question-row" style="margin-top: 8px;">
+            <span class="item-num">${nextNum}</span>
+            <input type="text" class="new-question-input" id="questionInput" placeholder="${t.placeholder}" autofocus />
+            <button class="save-question-btn" id="saveQuestionBtn">✓</button>
+            <button class="cancel-question-btn" id="cancelQuestionBtn">✕</button>
+          </div>
+        `;
+
+        const input = document.getElementById('questionInput');
+        const saveBtn = document.getElementById('saveQuestionBtn');
+        const cancelBtn = document.getElementById('cancelQuestionBtn');
+
+        input.focus();
+
+        function saveQuestion() {
+          const text = input.value.trim();
+          if (text) {
+            const questionText = text.endsWith('?') ? text : text + '?';
+            displayedQuestions.push(questionText);
+
+            // Add to the list with delete icon
+            const newItem = document.createElement('div');
+            newItem.className = 'numbered-item';
+            newItem.setAttribute('data-question-idx', displayedQuestions.length - 1);
+            newItem.innerHTML = `
+              <span class="item-num">${displayedQuestions.length}</span>
+              <span class="item-text">${escapeHtml(questionText)}</span>
+              <button class="delete-question-btn" data-idx="${displayedQuestions.length - 1}" title="Delete">${trashIcon}</button>
+            `;
+            list.appendChild(newItem);
+
+            showToast(t.saved);
+          }
+          newQuestionArea.innerHTML = '';
+          addBtn.style.display = '';
+        }
+
+        function cancelQuestion() {
+          newQuestionArea.innerHTML = '';
+          addBtn.style.display = '';
+        }
+
+        saveBtn.addEventListener('click', saveQuestion);
+        cancelBtn.addEventListener('click', cancelQuestion);
+
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            saveQuestion();
+          } else if (e.key === 'Escape') {
+            cancelQuestion();
+          }
+        });
+      });
+    }
+
+    function showError(lang) {
+      const t = translations[lang] || translations.es;
+      document.getElementById('content').innerHTML = `
+        <div class="error-state">
+          <h2>${t.errorTitle}</h2>
+          <p>${t.errorText}</p>
+        </div>
+      `;
+    }
+
+    // Back button
+    document.getElementById('backButton').addEventListener('click', () => {
+      if (window.history.length > 1) {
+        window.history.back();
+      } else {
+        window.location.href = '/' + userId;
+      }
+    });
+
+    // Load data
+    async function loadQuestions() {
+      try {
+        // Fetch doctor note data (has language + objetivos/questions)
+        try {
+          const doctorResponse = await fetch('/api/doctor/' + userId);
+          if (doctorResponse.ok) {
+            const doctorData = await doctorResponse.json();
+            currentLang = doctorData.language || 'es';
+            // Store objetivos (questions) from doctor API
+            if (doctorData.objetivos) {
+              doctorObjetivos = doctorData.objetivos;
+            }
+          }
+        } catch (e) {
+          // Use default language
+        }
+
+        const t = translations[currentLang] || translations.es;
+        document.getElementById('backText').textContent = t.back;
+
+        // Fetch concerns
+        const concernsResponse = await fetch('/api/concerns/' + userId);
+        if (!concernsResponse.ok) throw new Error('Failed to load concerns');
+
+        const concernsData = await concernsResponse.json();
+        currentLang = concernsData.language || currentLang;
+
+        if (!concernsData.concerns || concernsData.concerns.length === 0) {
+          throw new Error('No concerns found');
+        }
+
+        // Find the target concern
+        let targetConcern;
+        if (concernId) {
+          targetConcern = concernsData.concerns.find(c => c.id === concernId);
+        }
+        if (!targetConcern) {
+          // Default to first active concern
+          targetConcern = concernsData.concerns.find(c => c.status === 'active')
+            || concernsData.concerns[0];
+        }
+
+        currentConcern = {
+          id: targetConcern.id,
+          title: targetConcern.title,
+          status: targetConcern.status,
+          parsed: parseConcernSummary(targetConcern.summaryContent)
+        };
+
+        renderPage(currentConcern, currentLang);
+      } catch (error) {
+        console.error('Error loading questions:', error);
+        showError(currentLang);
+      }
+    }
+
+    // Initialize
+    if (userId && userId !== 'questions') {
+      loadQuestions();
+    } else {
+      showError('es');
+    }
+  </script>
+</body>
+</html>
