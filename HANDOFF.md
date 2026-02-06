@@ -91,11 +91,12 @@ vivebien-project/
 │   └── adapters/chatwoot/client.ts  # Chatwoot API client
 ├── public/
 │   ├── index.html               # Admin dashboard
-│   ├── summary.html             # Landing page (/{userId})
-│   ├── doctor.html              # Doctor view (/doctor/{userId})
+│   ├── summary.html             # Landing page (/{userId}) — multi-concern cards
+│   ├── doctor.html              # Doctor view (/doctor/{userId}) — clinical format
 │   ├── appointment.html         # Appointment prep (/appointment/{userId})
-│   ├── suggest.html             # Edit summary (/suggest/{userId})
-│   └── history.html             # View history (/history/{userId})
+│   ├── suggest.html             # Edit summary (/suggest/{userId}) — per-concern editing + status selector
+│   ├── history.html             # View history (/history/{userId}) — supports ?concern= filter
+│   └── questions.html           # Questions for Doctor (/questions/{userId}) — recommended + custom questions
 ├── Dockerfile
 └── package.json
 ```
@@ -217,11 +218,35 @@ CareLog now tracks multiple health concerns per user instead of a single summary
 - `src/api/routes/concerns.ts` — REST API for concerns
 - `migrations/003_health_concerns.sql` — Database migration (already applied)
 
-### Frontend Pages (Updated)
-- **summary.html** — Shows multiple concern cards with status badges, tap to expand
-- **history.html** — Concern tabs + snapshot timeline, status change modal, delete flow
-- **suggest.html** — Accepts `?concernId=X&returnTo=history` for per-concern editing
-- **doctor.html** — Renders each concern as a separate clinical section
+### Frontend Pages (Updated Feb 6, 2026)
+- **summary.html** — Redesigned per Figma. Multi-concern cards with status badges (Ongoing/Improving/Resolved), expand/collapse, History + Update CTAs. History link passes `?concern=` param for concern-specific filtering.
+- **history.html** — Concern tabs + snapshot timeline. Deduplication: only latest snapshot per concern per day. Supports `?concern={id}` URL param to pre-select a specific concern tab.
+- **suggest.html** — Per-concern editing with `?concernId=X&returnTo=history`. Status selector field with interactive pill buttons (Ongoing/Improving/Resolved). Saves status via `PUT /api/concerns/:userId/:concernId/status`.
+- **doctor.html** — Redesigned per Figma. Each concern rendered as separate clinical section. Parses AI summaryContent into motivo, HPI, síntomas asociados, medidas, objetivos.
+- **questions.html** — NEW. Questions for your Doctor page. Shows recommended questions (5 per language) as defaults, plus custom questions from doctor API objetivos field. Users can add/delete questions.
+
+### AI summaryContent Format
+The AI generates `summaryContent` for each concern using a simple 5-line format with localized labels (defined in `src/domain/ai/service.ts` lines 276-281):
+
+```
+Concern: [description]         (ES: Motivo: / PT: Queixa: / FR: Motif:)
+Started: [when]                (ES: Inicio: / PT: Início: / FR: Début:)
+Helps: [what helps]            (ES: Mejora con: / PT: Melhora com: / FR: Améliore:)
+Worsens: [what worsens]        (ES: Empeora con: / PT: Piora com: / FR: Aggrave:)
+Medications: [meds]            (ES: Medicamentos: / PT: Medicamentos: / FR: Médicaments:)
+```
+
+**IMPORTANT**: All frontend parsers (doctor.html, suggest.html, questions.html) must match this exact format. The parsers use regex to detect each label variant across all 4 languages.
+
+### Page Routes (src/index.ts)
+```
+GET /{userId}                → summary.html
+GET /doctor/{userId}         → doctor.html
+GET /suggest/{userId}        → suggest.html
+GET /history/{userId}        → history.html
+GET /questions/{userId}      → questions.html
+GET /appointment/{userId}    → appointment.html
+```
 
 ### Backward Compatibility
 - `GET /api/summary/:userId` still works and now includes a `concerns` array alongside the existing `summary` field
@@ -367,7 +392,7 @@ Link appears after AI generates a summary in WhatsApp.
 
 ---
 
-## Current State (Feb 5, 2026)
+## Current State (Feb 6, 2026)
 
 ### Working:
 - ✅ WhatsApp conversations via Chatwoot (direct, no n8n)
@@ -377,22 +402,46 @@ Link appears after AI generates a summary in WhatsApp.
 - ✅ CareLog onboarding flow (value-first, AI disclosure after summary)
 - ✅ Summary generation in chat with WhatsApp formatting
 - ✅ Summary link after summaries (localized): 📋 View my summary 👇 + URL
-- ✅ Landing page at carelog.vivebien.io/{userId} (multi-concern cards)
-- ✅ Doctor view page at carelog.vivebien.io/doctor/{userId} (multi-concern clinical sections)
+- ✅ Landing page at carelog.vivebien.io/{userId} — redesigned per Figma with expandable concern cards
+- ✅ Doctor view page at carelog.vivebien.io/doctor/{userId} — redesigned per Figma, clinical sections per concern
 - ✅ Appointment preparation page at carelog.vivebien.io/appointment/{userId}
-- ✅ Edit Summary page at carelog.vivebien.io/suggest/{userId} (per-concern editing)
-- ✅ View History page at carelog.vivebien.io/history/{userId} (concern tabs + snapshot timeline)
+- ✅ Edit Summary page at carelog.vivebien.io/suggest/{userId} — per-concern editing with interactive status selector
+- ✅ View History page at carelog.vivebien.io/history/{userId} — deduped snapshots, supports ?concern= deep linking
+- ✅ Questions page at carelog.vivebien.io/questions/{userId} — recommended + custom questions per language
 - ✅ Multi-concern health tracking with status lifecycle (active → improving → resolved)
 - ✅ Concern change history with snapshots (auto_update, user_edit, status_change)
-- ✅ Concerns API (/api/concerns/:userId) with full CRUD
-- ✅ Multi-language support (es, en, pt, fr)
+- ✅ Concerns API (/api/concerns/:userId) with full CRUD + status update
+- ✅ Multi-language support (es, en, pt, fr) — all frontend pages and parsers support all 4 languages
 - ✅ Language auto-detection from user messages AND voice
 - ✅ Name extraction from conversations (including proactive name sharing)
 - ✅ WhatsApp bold formatting (*text*)
 - ✅ 24-hour check-in feature
 - ✅ Direct database access (no n8n required)
+- ✅ n8n DevOps Gateway available for database operations via MCP
 
-### Recent Changes (Feb 5, 2026):
+### Recent Changes (Feb 6, 2026):
+
+#### Frontend Redesign per Figma (Feb 6)
+- **summary.html**: Redesigned per Figma node 105-66. Expandable concern cards with status badges, date headers, History/Update CTAs. History link now passes `?concern=` param for concern-specific filtering.
+- **doctor.html**: Redesigned per Figma node 105-112. Each concern as clinical section with motivo, HPI, síntomas, medidas, objetivos. Parser rewritten to match actual AI summaryContent format.
+- **questions.html**: NEW page per Figma node 105-298. Recommended questions (5 per language: ES/EN/PT/FR), custom question add/delete, fetches doctor API for objetivos.
+- **suggest.html**: Added interactive status selector (Ongoing/Improving/Resolved pill buttons) inside the edit form. Saves status via `PUT /api/concerns/:userId/:concernId/status`.
+- **history.html**: Added dedup logic (latest snapshot per concern per day only). Added `?concern=` URL parameter support for deep linking from summary page.
+
+#### Data Parsing Alignment (Feb 6)
+- All frontend parsers (doctor.html, suggest.html, questions.html) rewritten to match the actual AI 5-line summaryContent format
+- Added Portuguese (Melhora com, Piora com) and French (Améliore, Aggrave) variants to all parsers
+- Fixed stray `:` prefix in concern value HTML
+
+#### New Routes (Feb 6)
+- Added `/questions/:userId` route in `src/index.ts` for the new questions page
+
+#### Design System
+- **Fonts**: Outfit (headings/UI) + Lora (body text) ONLY
+- **Colors**: `--bg: #F9F6F0`, `--primary: #2E915E`, `--btn-color: #216F64`, `--text: #373737`
+- **Figma file key**: `UgbafTWqp5i0sMZgT9GMrE`
+
+### Earlier Changes (Feb 5, 2026):
 
 #### Multi-Concern Health Tracking
 - New tables: `health_concerns` and `concern_snapshots` (migration: `003_health_concerns.sql`)
@@ -438,28 +487,17 @@ Link appears after AI generates a summary in WhatsApp.
 
 ### Test Phone: +12017370113
 
-### Clear Test Data (via Database):
+### Clear Test Data
+Use the n8n `Claude_DevOps_Gateway_v3` workflow via MCP (tool: "database") or the Easypanel Service Console.
+
+**⚠️ NOTE**: `health_concerns` does NOT have `ON DELETE CASCADE` on the user foreign key. You must delete child records first:
+
 ```sql
--- 1. Delete concern snapshots (cascades from health_concerns, but explicit is safer)
-DELETE FROM concern_snapshots WHERE user_id IN (SELECT id FROM users WHERE phone IN ('+12017370113', '12017370113', '2017370113'));
-
--- 2. Delete health concerns
-DELETE FROM health_concerns WHERE user_id IN (SELECT id FROM users WHERE phone IN ('+12017370113', '12017370113', '2017370113'));
-
--- 3. Delete messages
-DELETE FROM messages WHERE user_id IN (SELECT id FROM users WHERE phone IN ('+12017370113', '12017370113', '2017370113'));
-
--- 4. Delete memories
-DELETE FROM memories WHERE user_id IN (SELECT id FROM users WHERE phone IN ('+12017370113', '12017370113', '2017370113'));
-
--- 5. Delete conversation state
-DELETE FROM conversation_state WHERE user_id IN (SELECT id FROM users WHERE phone IN ('+12017370113', '12017370113', '2017370113'));
-
--- 6. Delete billing accounts
-DELETE FROM billing_accounts WHERE user_id IN (SELECT id FROM users WHERE phone IN ('+12017370113', '12017370113', '2017370113'));
-
--- 7. Delete user (run last)
-DELETE FROM users WHERE phone IN ('+12017370113', '12017370113', '2017370113') RETURNING phone;
+-- Delete in order (child → parent)
+DELETE FROM concern_snapshots WHERE concern_id IN (SELECT id FROM health_concerns WHERE user_id = (SELECT id FROM users WHERE phone = '+12017370113'));
+DELETE FROM health_concerns WHERE user_id = (SELECT id FROM users WHERE phone = '+12017370113');
+DELETE FROM users WHERE phone = '+12017370113' RETURNING id, name, phone;
+-- Messages, memories, conversation_state, credit_transactions cascade automatically
 ```
 
 ### Test Scenarios:
@@ -488,11 +526,17 @@ This pushes to GitHub and triggers both API + Worker deployments in one go.
 
 After making changes:
 - [ ] Commit changes to git
-- [ ] Push to GitHub
+- [ ] Push to GitHub (HTTPS with token: `git remote set-url origin https://jmariano19:TOKEN@github.com/jmariano19/vivebien-core.git`)
 - [ ] Deploy API service in Easypanel
 - [ ] Deploy Worker service in Easypanel
 - [ ] Wait ~30 seconds for builds to complete
+- [ ] **Clear browser cache** or use incognito tab to verify (static HTML files are cached aggressively)
 - [ ] Test the changes on production
+
+### Deployment Notes
+- The deploy webhook may show "0 seconds" build time — this can mean it restarted without rebuilding. Use the Easypanel UI "Deploy" button to force a full rebuild if needed.
+- The Dockerfile correctly copies `public/` into the image (line 41). If static files aren't updating, the Docker image needs a no-cache rebuild.
+- **Browser cache is the most common reason changes don't appear** after a successful deploy. The container may have the correct files (verify via Easypanel Service Console: `ls -la /app/public/` or `grep "someNewFunction" /app/public/suggest.html`).
 
 ---
 
@@ -534,10 +578,38 @@ After making changes:
 
 ---
 
+## n8n Workflows (Available via MCP)
+
+| Workflow | ID | Purpose |
+|----------|----|---------|
+| Claude_DevOps_Gateway_v3 | dEoR_KiQ2LQYAE7Q9Jv9E | Database queries, health check, context |
+| Claude_GitHub_Deploy | X_HtoNPd4J1RpmkShMgqi | Push files to GitHub + trigger deploy |
+| CareLog_Claude Database Access | AofV_qusW1Vz9XZQtIksN | Direct database queries |
+| CareLog_Claude_FileManager_HTTP_v2 | Jq8tlq176ilHzJsDLyRuv | Google Drive file operations |
+
+### Using DevOps Gateway for Database Queries
+```json
+{
+  "type": "webhook",
+  "webhookData": {
+    "body": {
+      "tool": "database",
+      "query": "SELECT * FROM users LIMIT 5"
+    }
+  }
+}
+```
+Available tools: `database`, `get_context`, `health_check`
+
+---
+
 ## Notes
 - **Product name**: "CareLog" (AI tool for health documentation)
 - **Domain**: carelog.vivebien.io
 - **GitHub**: https://github.com/jmariano19/vivebien-core
-- **n8n**: No longer required for core functionality, but Claude_DevOps_Gateway_v3 workflow is available for database queries via MCP
+- **Figma**: https://figma.com/design/UgbafTWqp5i0sMZgT9GMrE
+- **n8n**: No longer required for core functionality, but DevOps Gateway + Database Access workflows available via MCP for database operations
 - System prompt is in conversation/service.ts, not a separate file
 - If summary link doesn't appear, check BOTH services are deployed
+- **Fonts**: Only Outfit + Lora (design system requirement)
+- **Valid concern statuses**: `active`, `improving`, `resolved` only
