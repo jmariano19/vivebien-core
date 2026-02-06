@@ -1072,9 +1072,11 @@
       }
     }
 
-    function viewConcernHistory() {
+    function viewConcernHistory(concernId) {
       if (userId && userId !== 'preview' && userId !== 'summary.html') {
-        window.location.href = '/history/' + userId;
+        let url = '/history/' + userId;
+        if (concernId) url += '?concern=' + encodeURIComponent(concernId);
+        window.location.href = url;
       }
     }
 

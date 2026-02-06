@@ -633,8 +633,13 @@
           });
         allSnapshots = Object.values(deduped);
 
-        if (concerns.length > 0) {
-          selectedConcernId = null; // Start with ALL
+        // Check URL for concern filter
+        const urlParams = new URLSearchParams(window.location.search);
+        const filterConcern = urlParams.get('concern');
+        if (filterConcern && concerns.find(c => c.id === filterConcern)) {
+          selectedConcernId = filterConcern;
+        } else {
+          selectedConcernId = null;
         }
 
         renderPage();
