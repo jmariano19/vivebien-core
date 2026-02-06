@@ -298,31 +298,22 @@ interface ChatwootWebhook {
 
 ---
 
-## n8n Deprecation Notice
+## n8n Usage
 
-**As of Feb 5, 2026, n8n is NO LONGER required for CareLog.**
+**n8n is NOT required for CareLog's core functionality** (messaging, AI, webhooks). However, n8n IS used for database access via MCP.
 
-### What n8n Was Used For (Previously)
-- ❌ Chatwoot webhook relay → Now handled by `/ingest/chatwoot` endpoint
-- ❌ Database access → Now handled by `src/infra/db/client.ts`
-- ❌ Voice transcription → Now handled by MediaService (Whisper)
-- ❌ Image analysis → Now handled by MediaService (Claude Vision)
+### n8n Database Access (Active)
+The `SQL_Runner` workflow provides direct PostgreSQL access via MCP:
+- **Workflow ID**: `rWG8DN8q_HT9q6EZ_wFel`
+- **Trigger**: Webhook (POST)
+- **Input**: `{ "query": "SQL statement here" }`
+- **Use for**: Deleting test users, querying data, debugging
 
-### What Still Works Without n8n
-| Function | Status | Implementation |
-|----------|--------|----------------|
-| Chatwoot Webhooks | ✅ Direct | `/ingest/chatwoot` endpoint |
-| Database Access | ✅ Direct | PostgreSQL via pg module |
-| Voice Transcription | ✅ Direct | OpenAI Whisper API |
-| Image Analysis | ✅ Direct | Claude Vision API |
-| Send Responses | ✅ Direct | ChatwootClient |
-| 24h Check-ins | ✅ Direct | BullMQ scheduler |
-| Message Queue | ✅ Direct | Redis + BullMQ |
-
-### n8n Workflows (Can Be Disabled)
-These workflows are no longer needed but may still exist:
-- Chatwoot Webhook relay
-- Claude DevOps Gateway (optional, for database queries only)
+### What n8n Is NOT Used For
+- ❌ Chatwoot webhook relay → Handled by `/ingest/chatwoot` endpoint
+- ❌ Voice transcription → Handled by MediaService (Whisper)
+- ❌ Image analysis → Handled by MediaService (Claude Vision)
+- ❌ Message processing → Handled by BullMQ workers
 
 ---
 
@@ -362,21 +353,32 @@ These workflows are no longer needed but may still exist:
 - **Endpoint**: `POST /ingest/chatwoot`
 - **Also supports**: `POST /api/ingest` (backwards compatibility)
 
-### Summary Link Feature
-Link appears after AI generates a summary in WhatsApp.
+### Summary Split Delivery (3-Message Flow)
+When AI generates a health note, it's delivered as 3 separate WhatsApp messages with timed delays.
+
+**Flow:**
+1. **Ack** (immediate): "That's helpful — I've noted that coffee doesn't seem to help."
+2. **Health Note** (10s delay): 📋 *Your Health Note* + fields + containment text + link
+3. **Name Ask** (5s delay, only if no name): "By the way, what's your name? Totally optional."
 
 **Files:**
-1. src/domain/ai/service.ts
-   - postProcess() - Cleans AI response, adds summary link
-   - looksLikeSummary() - Detects if response is a summary
-   - getSummaryLinkText() - Returns localized link text
+1. `src/domain/ai/service.ts`
+   - `postProcess()` — Basic cleaning only (bold conversion, code block removal)
+   - `looksLikeSummary()` — Detects summary responses (2+ indicators: 📋 emoji, field labels in all 4 languages)
+   - `splitSummaryResponse()` — Splits at 📋 marker into ack + summary parts
+   - `stripContainmentText()` — Removes AI containment to avoid duplication
+   - `buildSummaryMessage()` — Appends containment text + link to summary
+   - `getNameAskMessage()` — Localized name ask (ES/EN/PT/FR)
+   - `getSummaryLinkText()` — Localized link: 📋 *Your note is here* 👇
 
-2. src/domain/conversation/service.ts
-   - buildSystemPrompt() - Builds AI system prompt
-   - updateHealthSummary() - Saves summary to memories table
+2. `src/domain/conversation/service.ts`
+   - `getDefaultSystemPrompt()` — 7-principle containment-first prompt
+   - `updateHealthSummary()` — Multi-concern summary + legacy aggregation
 
-3. src/worker/handlers/inbound.ts
-   - Main handler: load user → call AI → postProcess → send response
+3. `src/worker/handlers/inbound.ts`
+   - Steps 8-8.5: Clean response, detect summary, determine split strategy
+   - Step 12: Split delivery (ack → 10s delay → note+link → 5s delay → name ask)
+   - Step 16: Delayed name ask saved to history for `extractUserName()` detection
 
 ### Landing Page (Patient Summary)
 - **URL**: https://carelog.vivebien.io/{userId}
@@ -420,6 +422,54 @@ Link appears after AI generates a summary in WhatsApp.
 - ✅ n8n DevOps Gateway available for database operations via MCP
 
 ### Recent Changes (Feb 6, 2026):
+
+#### Containment-First Philosophy Rewrite (Feb 6, session 2)
+Complete rewrite of the conversation engine based on the CareLog design philosophy: "CareLog is a containment system for human health uncertainty."
+
+**System Prompt** (`conversation/service.ts`):
+- Rewrote `getDefaultSystemPrompt()` with 7 design principles: start where user is, ask only high-signal questions, contain uncertainty don't resolve it, summarize early then refine, explicitly offload mental burden, identity handled automatically by system, encourage return without pressure
+- Tone: calm, grounded, reassuring without false reassurance
+- Success criteria: "If the flow feels impressive but not calming, it has failed"
+
+**3-Message Split Delivery** (`worker/handlers/inbound.ts`):
+When the AI generates a health note summary, the response is split into 3 separate WhatsApp messages:
+1. **Message 1** (immediate): Conversational acknowledgment ("That's helpful — I've noted that...")
+2. **Message 2** (10s delay): Health note + containment text + landing page link
+3. **Message 3** (5s delay): Name ask ("By the way, what's your name? I'll personalize your Health Note. Totally optional.")
+
+Key implementation:
+- `aiService.splitSummaryResponse()` — splits at 📋 marker, strips AI containment text
+- `aiService.buildSummaryMessage()` — adds containment + link programmatically
+- `aiService.getNameAskMessage()` — 4-language name ask
+- `aiService.looksLikeSummary()` — detects summary responses (2+ indicators including 📋, field labels in all 4 languages)
+- Name ask only sent if user doesn't have a name yet
+- Name ask saved to message history so `extractUserName()` can detect responses
+- Delays use `setTimeout` within the BullMQ handler (lock duration is 120s, well within limits)
+
+**AI Service Changes** (`ai/service.ts`):
+- Moved containment+link out of `postProcess()` — now handled by inbound handler for split control
+- `postProcess()` is now basic cleaning only (markdown→WhatsApp bold, remove code blocks, limit length)
+- Added `stripContainmentText()` to remove AI-generated containment before adding system containment
+- Bold link text: `📋 *Your note is here* 👇`
+- System prompt Principle 6 tells AI NOT to ask for name (system handles it automatically)
+- **Fixed `looksLikeSummary()` detection** — Expanded from 16 to 30+ indicators, lowered threshold from 3 to 2. Added 📋 emoji, 'health note'/'nota de salud', and all field labels (started:/helps:/worsens:/medications: + ES/PT/FR equivalents). Previously only matched 1 indicator for English responses (just 'concern'), which prevented summary detection and broke split delivery.
+- **Fixed AI URL hallucination** — Added rule in system prompt: "If the user asks where their note is, tell them the system will send a link. Do NOT make up URLs."
+
+**Check-in Service** (`checkin/service.ts`):
+- Rewrote to permission-based continuity instead of push-based re-engagement
+- "Your note is still here, organized and ready. If anything has changed, you can tell me."
+
+**Doctor API** (`api/routes/doctor.ts`):
+- Updated to fetch from `health_concerns` table as primary source
+- Returns per-concern parsed data (motivo, HPI, síntomas, medidas, objetivos)
+
+**Summary Landing Page** (`public/summary.html`):
+- Fixed concern cards to use `parseAnyFormat()` for structured field display
+- Fallback to paragraph only when no fields parse
+
+**Legacy Memories Aggregation** (`conversation/service.ts`):
+- `updateHealthSummary()` Step 5 now aggregates ALL active concerns into legacy memories
+- Uses `--- Title ---` separators between concerns
 
 #### Frontend Redesign per Figma (Feb 6)
 - **summary.html**: Redesigned per Figma node 105-66. Expandable concern cards with status badges, date headers, History/Update CTAs. History link now passes `?concern=` param for concern-specific filtering.
@@ -487,24 +537,51 @@ Link appears after AI generates a summary in WhatsApp.
 
 ### Test Phone: +12017370113
 
-### Clear Test Data
-Use the n8n `Claude_DevOps_Gateway_v3` workflow via MCP (tool: "database") or the Easypanel Service Console.
+### Deleting Test Users (Database Cleanup)
 
-**⚠️ NOTE**: `health_concerns` does NOT have `ON DELETE CASCADE` on the user foreign key. You must delete child records first:
+**Use the n8n `SQL_Runner` workflow** (ID: `rWG8DN8q_HT9q6EZ_wFel`) via MCP to run database queries directly.
 
-```sql
--- Delete in order (child → parent)
-DELETE FROM concern_snapshots WHERE concern_id IN (SELECT id FROM health_concerns WHERE user_id = (SELECT id FROM users WHERE phone = '+12017370113'));
-DELETE FROM health_concerns WHERE user_id = (SELECT id FROM users WHERE phone = '+12017370113');
-DELETE FROM users WHERE phone = '+12017370113' RETURNING id, name, phone;
--- Messages, memories, conversation_state, credit_transactions cascade automatically
+**⚠️ IMPORTANT**: Foreign keys do NOT cascade on the users table. You must delete child records first, one table at a time. When asked to "delete test number" or "clean up test data", run these queries in order:
+
 ```
+Step 1: Look up the user ID
+  SELECT id FROM users WHERE phone = '+12017370113'
+
+Step 2: Delete child records (use the UUID from step 1)
+  DELETE FROM messages WHERE user_id = '{uuid}';
+  DELETE FROM health_concerns WHERE user_id = '{uuid}';
+  DELETE FROM memories WHERE user_id = '{uuid}';
+  DELETE FROM conversation_state WHERE user_id = '{uuid}';
+  DELETE FROM experiment_assignments WHERE user_id = '{uuid}';
+  DELETE FROM credit_transactions WHERE user_id = '{uuid}';
+
+Step 3: Delete the user
+  DELETE FROM users WHERE id = '{uuid}';
+```
+
+**Each query must be run separately** — the n8n SQL_Runner and pgweb both fail when running multiple statements in one call.
+
+**NOTE**: Sending a new WhatsApp message after deletion will auto-recreate the user via `loadOrCreate()`. This is expected — the user gets a fresh record with 100 credits.
+
+### n8n SQL_Runner Usage (via MCP)
+```json
+{
+  "type": "webhook",
+  "webhookData": {
+    "body": {
+      "query": "SELECT * FROM users WHERE phone = '+12017370113'"
+    }
+  }
+}
+```
+Workflow ID: `rWG8DN8q_HT9q6EZ_wFel`
 
 ### Test Scenarios:
 1. **Text message**: Send "Hello" → Should respond in English
 2. **Voice message in English**: Record "I have pain in my left eye" → Should transcribe and respond in English
 3. **Voice message in Spanish**: Record "Tengo dolor de cabeza" → Should transcribe and respond in Spanish
 4. **Image**: Send photo of medication → Should analyze and describe
+5. **Summary split test**: After enough info shared, AI should send 3 separate messages: ack (immediate) → health note (10s) → name ask (5s)
 
 ---
 
@@ -582,24 +659,24 @@ After making changes:
 
 | Workflow | ID | Purpose |
 |----------|----|---------|
+| **SQL_Runner** | **rWG8DN8q_HT9q6EZ_wFel** | **Direct PostgreSQL queries — USE THIS for all DB operations** |
 | Claude_DevOps_Gateway_v3 | dEoR_KiQ2LQYAE7Q9Jv9E | Database queries, health check, context |
 | Claude_GitHub_Deploy | X_HtoNPd4J1RpmkShMgqi | Push files to GitHub + trigger deploy |
 | CareLog_Claude Database Access | AofV_qusW1Vz9XZQtIksN | Direct database queries |
 | CareLog_Claude_FileManager_HTTP_v2 | Jq8tlq176ilHzJsDLyRuv | Google Drive file operations |
 
-### Using DevOps Gateway for Database Queries
+### Using SQL_Runner for Database Queries (Preferred)
 ```json
 {
   "type": "webhook",
   "webhookData": {
     "body": {
-      "tool": "database",
       "query": "SELECT * FROM users LIMIT 5"
     }
   }
 }
 ```
-Available tools: `database`, `get_context`, `health_check`
+**Run one query per call** — multiple statements in one call will fail.
 
 ---
 
@@ -608,8 +685,13 @@ Available tools: `database`, `get_context`, `health_check`
 - **Domain**: carelog.vivebien.io
 - **GitHub**: https://github.com/jmariano19/vivebien-core
 - **Figma**: https://figma.com/design/UgbafTWqp5i0sMZgT9GMrE
-- **n8n**: No longer required for core functionality, but DevOps Gateway + Database Access workflows available via MCP for database operations
-- System prompt is in conversation/service.ts, not a separate file
+- **n8n**: Used for database access via SQL_Runner workflow (ID: `rWG8DN8q_HT9q6EZ_wFel`). Not required for core messaging.
+- **Database access**: Use n8n SQL_Runner via MCP `execute_workflow` tool. Run one query per call.
+- **Deleting test users**: When asked to delete a test phone number, use SQL_Runner to delete from all child tables first (messages, health_concerns, memories, conversation_state, experiment_assignments, credit_transactions), then delete from users. See Testing section for full procedure.
+- System prompt is in `conversation/service.ts` `getDefaultSystemPrompt()` — containment-first philosophy with 7 design principles
+- AI does NOT ask for user's name — the system sends it as a separate delayed message after summary delivery
+- Summary delivery is split into 3 messages: ack (immediate) → note (10s) → name ask (5s)
 - If summary link doesn't appear, check BOTH services are deployed
 - **Fonts**: Only Outfit + Lora (design system requirement)
 - **Valid concern statuses**: `active`, `improving`, `resolved` only
+- **AI Models**: Opus 4.5 (conversations), Sonnet 4.5 (summaries), Haiku 4.5 (concern detection)

@@ -191,11 +191,21 @@ export class AIService {
    */
   looksLikeSummary(content: string): boolean {
     const summaryIndicators = [
+      // Note emoji — strongest single signal
+      '📋',
+      // Note title variations
+      'health note', 'nota de salud', 'nota de saúde', 'note de santé',
+      // Field labels (English)
+      'concern:', 'started:', 'helps:', 'worsens:', 'medications:',
+      // Field labels (Spanish)
+      'motivo:', 'inicio:', 'mejora con:', 'empeora con:', 'medicamentos:',
+      // Field labels (Portuguese)
+      'queixa:', 'início:', 'melhora com:', 'piora com:',
+      // Field labels (French)
+      'motif:', 'début:', 'améliore:', 'aggrave:', 'médicaments:',
+      // Legacy/alternate labels
       'resumen', 'summary', 'resumo', 'résumé',
-      'motivo', 'concern', 'queixa', 'motif',
-      'preguntas para', 'questions for', 'perguntas para', 'questions pour',
-      'inicio:', 'onset:', 'início:', 'début:',
-      'empeora con', 'worsens with', 'piora com', 'aggrave avec',
+      'onset:', 'preguntas para', 'questions for', 'perguntas para', 'questions pour',
       '---', // Common separator in summaries
     ];
 
@@ -204,8 +214,9 @@ export class AIService {
       lowerContent.includes(indicator.toLowerCase())
     ).length;
 
-    // If 3+ indicators found, it's likely a summary
-    return matchCount >= 3;
+    // 📋 emoji alone is a strong signal — if present with any 1 field, it's a summary
+    // Otherwise need 2+ field indicators
+    return matchCount >= 2;
   }
 
   /**
