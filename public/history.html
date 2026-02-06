@@ -636,6 +636,21 @@
       return div.innerHTML;
     }
 
+    function cleanMarkdown(text) {
+      if (!text) return '';
+      return text
+        // Remove header lines like "# Health Note" or "**Jeffrey's Health Notes**"
+        .replace(/^#+ .+\n*/gm, '')
+        .replace(/^\*\*[^*]+Health Notes?\*\*\n*/gm, '')
+        // Remove horizontal rules
+        .replace(/^---+\n*/gm, '')
+        // Convert **Label:** to clean "Label:"
+        .replace(/\*\*([^*]+)\*\*/g, '$1')
+        // Clean up extra blank lines
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+    }
+
     function truncate(text, maxLength) {
       if (!text) return '';
       if (text.length <= maxLength) return text;
@@ -688,8 +703,9 @@
           'status_change': t.statusChange
         }[changeTypeKey] || changeTypeKey;
 
-        const summary = escapeHtml(truncate(snapshot.summary || '', 120));
-        const fullSummary = escapeHtml(snapshot.summary || '');
+        const cleaned = cleanMarkdown(snapshot.summary || '');
+        const summary = escapeHtml(truncate(cleaned, 120));
+        const fullSummary = escapeHtml(cleaned);
         const itemId = `item-${snapshot.concernId}-${snapshot.date}`;
 
         timelineHtml += `
@@ -712,7 +728,7 @@
                   ${t.delete}
                 </button>
               </div>
-              <div class="expanded-content" style="display: none;">${fullSummary}</div>
+              <div class="expanded-content" style="display: none;">${fullSummary.replace(/\n/g, '<br>')}</div>
             </div>
           </div>
         `;
