@@ -113,6 +113,60 @@
     .status-badge.improving { background: rgba(59,130,246,0.15); color: #3B82F6; }
     .status-badge.resolved { background: rgba(156,163,175,0.15); color: #9CA3AF; }
 
+    /* Status dropdown field */
+    .status-field {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .status-options {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .status-option {
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .status-option.active-opt {
+      background: rgba(46,145,94,0.1);
+      color: #2E915E;
+      border-color: rgba(46,145,94,0.2);
+    }
+    .status-option.active-opt.selected {
+      background: rgba(46,145,94,0.2);
+      border-color: #2E915E;
+    }
+    .status-option.improving-opt {
+      background: rgba(59,130,246,0.1);
+      color: #3B82F6;
+      border-color: rgba(59,130,246,0.2);
+    }
+    .status-option.improving-opt.selected {
+      background: rgba(59,130,246,0.2);
+      border-color: #3B82F6;
+    }
+    .status-option.resolved-opt {
+      background: rgba(156,163,175,0.1);
+      color: #6B7280;
+      border-color: rgba(156,163,175,0.2);
+    }
+    .status-option.resolved-opt.selected {
+      background: rgba(156,163,175,0.25);
+      border-color: #9CA3AF;
+    }
+    .status-option:hover {
+      transform: translateY(-1px);
+    }
+
     /* Form card */
     .card {
       background: var(--card-bg);
@@ -403,6 +457,7 @@
         saved: '✓ Actualizado',
         error: 'Error al actualizar',
         status: { active: 'En curso', improving: 'Mejorando', resolved: 'Resuelto' },
+        statusLabel: 'Estado',
         fields: {
           mainConcern: { label: 'Motivo principal', icon: '✏️', placeholder: 'Ej: Dolor de cabeza, tos persistente...' },
           onset: { label: 'Cuándo comenzó', icon: '📅', placeholder: 'Ej: Hace 3 días, Esta mañana...' },
@@ -424,6 +479,7 @@
         saved: '✓ Updated',
         error: 'Error updating',
         status: { active: 'Ongoing', improving: 'Improving', resolved: 'Resolved' },
+        statusLabel: 'Status',
         fields: {
           mainConcern: { label: 'Main Concern', icon: '✏️', placeholder: 'E.g.: Headache, persistent cough...' },
           onset: { label: 'When it started', icon: '📅', placeholder: 'E.g.: 3 days ago, This morning...' },
@@ -445,6 +501,7 @@
         saved: '✓ Atualizado',
         error: 'Erro ao atualizar',
         status: { active: 'Em andamento', improving: 'Melhorando', resolved: 'Resolvido' },
+        statusLabel: 'Status',
         fields: {
           mainConcern: { label: 'Queixa principal', icon: '✏️', placeholder: 'Ex: Dor de cabeça, tosse persistente...' },
           onset: { label: 'Quando começou', icon: '📅', placeholder: 'Ex: Há 3 dias, Esta manhã...' },
@@ -466,6 +523,7 @@
         saved: '✓ Mis à jour',
         error: 'Erreur de mise à jour',
         status: { active: 'En cours', improving: 'En amélioration', resolved: 'Résolu' },
+        statusLabel: 'Statut',
         fields: {
           mainConcern: { label: 'Motif principal', icon: '✏️', placeholder: 'Ex: Mal de tête, toux persistante...' },
           onset: { label: 'Quand ça a commencé', icon: '📅', placeholder: 'Ex: Il y a 3 jours, Ce matin...' },
@@ -484,6 +542,7 @@
     let hasChanges = false;
     let medications = [];
     let concernMeta = { title: '', status: '' }; // For header badge
+    let selectedStatus = null; // Track status changes
 
     function showToast(message, isSuccess = false) {
       const toast = document.getElementById('toast');
@@ -713,14 +772,26 @@
         `;
       }).join('');
 
-      // Build concern header with status badge
-      let concernHeaderHtml = '';
-      if (concernMeta.title && concernMeta.status) {
-        const statusLabel = (t.status && t.status[concernMeta.status]) || concernMeta.status;
-        concernHeaderHtml = `
-          <div class="header-concern">
-            <span class="header-concern-title">${escapeHtml(concernMeta.title)}</span>
-            <span class="status-badge ${concernMeta.status}">${escapeHtml(statusLabel)}</span>
+      // Build status selector field (inside card, as first field)
+      let statusFieldHtml = '';
+      if (concernMeta.title && concernMeta.status && t.status) {
+        const statuses = ['active', 'improving', 'resolved'];
+        const optionsHtml = statuses.map(s => {
+          const label = t.status[s] || s;
+          const selected = s === concernMeta.status ? 'selected' : '';
+          return `<div class="status-option ${s}-opt ${selected}" data-status="${s}">${escapeHtml(label)}</div>`;
+        }).join('');
+
+        statusFieldHtml = `
+          <div class="field">
+            <label class="field-label">
+              <span class="icon">📊</span>
+              ${t.statusLabel || 'Status'} — ${escapeHtml(concernMeta.title)}
+              <span class="change-dot" id="dot-status"></span>
+            </label>
+            <div class="status-options" id="statusOptions">
+              ${optionsHtml}
+            </div>
           </div>
         `;
       }
@@ -728,9 +799,9 @@
       content.innerHTML = `
         <div class="header">
           <h1>${t.title}</h1>
-          ${concernHeaderHtml}
         </div>
         <div class="card">
+          ${statusFieldHtml}
           ${fieldsHtml}
         </div>
       `;
@@ -742,6 +813,7 @@
       renderMedicationChips();
       setupMedicationHandlers();
       setupFieldListeners(fieldKeys);
+      setupStatusSelector();
     }
 
     function renderMedicationChips() {
@@ -799,6 +871,35 @@
       });
 
       setupRemoveHandlers();
+    }
+
+    function setupStatusSelector() {
+      const container = document.getElementById('statusOptions');
+      if (!container) return;
+
+      selectedStatus = concernMeta.status; // Initialize with current
+
+      container.querySelectorAll('.status-option').forEach(opt => {
+        opt.addEventListener('click', () => {
+          const newStatus = opt.dataset.status;
+          selectedStatus = newStatus;
+
+          // Update visual selection
+          container.querySelectorAll('.status-option').forEach(o => o.classList.remove('selected'));
+          opt.classList.add('selected');
+
+          // Show change dot if different from original
+          const dot = document.getElementById('dot-status');
+          if (dot) {
+            if (newStatus !== concernMeta.status) {
+              dot.classList.add('show');
+              hasChanges = true;
+            } else {
+              dot.classList.remove('show');
+            }
+          }
+        });
+      });
     }
 
     function setupRemoveHandlers() {
@@ -912,6 +1013,16 @@
           });
 
           if (!response.ok) throw new Error('Failed to save');
+
+          // Save status change if different
+          if (concernId && selectedStatus && selectedStatus !== concernMeta.status) {
+            const statusRes = await fetch(`/api/concerns/${userId}/${concernId}/status`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ status: selectedStatus })
+            });
+            if (!statusRes.ok) console.error('Status update failed');
+          }
 
           showToast(t.saved, true);
           setTimeout(() => {
