@@ -434,23 +434,30 @@ export async function handleInboundMessage(
   );
 
   // Step 14: Update health summary (async, non-blocking for response)
-  // This runs in background to update the live summary for the website
-  logExecution(
-    correlationId,
-    'update_summary',
-    async () => conversationService.updateHealthSummary(
-      user.id,
-      processedMessage,
-      responseForHistory,
-      aiService
-    ),
-    logger
-  ).catch((err) => {
-    logger.error(
-      { err, userId: user.id, correlationId },
-      'Failed to update health summary - data may be inconsistent'
-    );
-  });
+  // Only update when there's actual health content to save:
+  // - isSummary: AI generated a health note → always update
+  // - messageCount >= 2: user has shared health info in prior messages → update
+  // Skip on first exchange (greeting) to avoid creating bogus "Health concern" entries
+  if (isSummary || context.messageCount >= 2) {
+    logExecution(
+      correlationId,
+      'update_summary',
+      async () => conversationService.updateHealthSummary(
+        user.id,
+        processedMessage,
+        responseForHistory,
+        aiService
+      ),
+      logger
+    ).catch((err) => {
+      logger.error(
+        { err, userId: user.id, correlationId },
+        'Failed to update health summary - data may be inconsistent'
+      );
+    });
+  } else {
+    logger.info({ userId: user.id, messageCount: context.messageCount }, 'Skipping summary update — no health content yet');
+  }
 
   // Step 15: Schedule 24h check-in if this is a summary handoff message
   if (isSummary) {
