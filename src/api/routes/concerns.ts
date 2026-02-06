@@ -1,6 +1,5 @@
 import { FastifyInstance, FastifyPluginAsync } from 'fastify';
-import { queryOne } from '../../infra/db/client';
-import { db } from '../../infra/db/client';
+import { queryOne, db } from '../../infra/db/client';
 import { ConcernService, ConcernStatus } from '../../domain/concern/service';
 
 const concernService = new ConcernService(db);

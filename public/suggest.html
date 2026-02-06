@@ -824,6 +824,9 @@
       if (returnTo === 'history') {
         return `/history/${userId}`;
       }
+      if (returnTo === 'summary') {
+        return `/${userId}`;
+      }
       return `/${userId}`;
     }
 

@@ -925,7 +925,7 @@
       const fields = parseAnyFormat(concern.summaryContent || '');
       const icon = concern.icon || getIconForConcern(concern.title);
       const status = concern.status || 'active';
-      const lastUpdated = concern.lastUpdated ? formatDate(new Date(concern.lastUpdated)) : formatDate(new Date());
+      const lastUpdated = concern.updatedAt ? formatDate(new Date(concern.updatedAt)) : formatDate(new Date());
 
       // Get preview text from first field
       let preview = '';
@@ -952,8 +952,8 @@
         <div class="concern-card-expanded-content">
           <div class="field-list"></div>
           <div class="concern-card-actions">
-            <button class="concern-card-action-btn" onclick="editConcern('${cardId}')">${lang.editBtn}</button>
-            <button class="concern-card-action-btn" onclick="viewConcernHistory('${cardId}')">${lang.historyBtn}</button>
+            <button class="concern-card-action-btn" onclick="editConcern('${concern.id}')">${lang.editBtn}</button>
+            <button class="concern-card-action-btn" onclick="viewConcernHistory('${concern.id}')">${lang.historyBtn}</button>
           </div>
         </div>
       `;
@@ -1008,17 +1008,14 @@
     }
 
     // Edit concern action
-    function editConcern(cardId) {
-      console.log('Edit concern:', cardId);
-      // Navigate to edit page if needed
+    function editConcern(concernId) {
       if (userId && userId !== 'preview' && userId !== 'summary.html') {
-        window.location.href = `/suggest/${userId}`;
+        window.location.href = `/suggest/${userId}?concernId=${concernId}&returnTo=summary`;
       }
     }
 
     // View concern history
-    function viewConcernHistory(cardId) {
-      console.log('View history for:', cardId);
+    function viewConcernHistory(concernId) {
       if (userId && userId !== 'preview' && userId !== 'summary.html') {
         window.location.href = `/history/${userId}`;
       }
