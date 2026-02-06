@@ -787,7 +787,6 @@
             <label class="field-label">
               <span class="icon">📊</span>
               ${t.statusLabel || 'Status'} — ${escapeHtml(concernMeta.title)}
-              <span class="change-dot" id="dot-status"></span>
             </label>
             <div class="status-options" id="statusOptions">
               ${optionsHtml}
@@ -888,15 +887,8 @@
           container.querySelectorAll('.status-option').forEach(o => o.classList.remove('selected'));
           opt.classList.add('selected');
 
-          // Show change dot if different from original
-          const dot = document.getElementById('dot-status');
-          if (dot) {
-            if (newStatus !== concernMeta.status) {
-              dot.classList.add('show');
+          if (newStatus !== concernMeta.status) {
               hasChanges = true;
-            } else {
-              dot.classList.remove('show');
-            }
           }
         });
       });
