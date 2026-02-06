@@ -96,11 +96,9 @@ export class AIService {
 
   /**
    * Post-process AI response to clean up formatting
-   * @param content - The AI response content
-   * @param userId - Optional user ID to add summary link
-   * @param language - Optional language for the link text
+   * Basic cleaning only — containment + link are added by the handler
    */
-  postProcess(content: string, userId?: string, language?: string): string {
+  postProcess(content: string): string {
     let cleaned = content;
 
     // Convert markdown double asterisks to WhatsApp single asterisks for bold
@@ -121,14 +119,6 @@ export class AIService {
     // Trim whitespace
     cleaned = cleaned.trim();
 
-    // For summary messages: add containment reinforcement + link
-    // This is enforced at the code level to guarantee Principle 5 (offload mental burden)
-    if (userId && this.looksLikeSummary(cleaned) && !cleaned.includes('carelog.vivebien.io')) {
-      const containmentText = this.getContainmentText(language || 'es');
-      const linkText = this.getSummaryLinkText(language || 'es', userId);
-      cleaned += '\n\n' + containmentText + '\n\n' + linkText;
-    }
-
     // Limit response length (WhatsApp has a 4096 character limit)
     if (cleaned.length > 4000) {
       cleaned = cleaned.substring(0, 3997) + '...';
@@ -137,9 +127,69 @@ export class AIService {
   }
 
   /**
+   * Split a summary response into acknowledgment + health note parts.
+   * Returns null if response doesn't contain a splittable summary.
+   */
+  splitSummaryResponse(content: string): { acknowledgment: string; summary: string } | null {
+    const noteIndex = content.indexOf('📋');
+    if (noteIndex === -1) return null;
+
+    // Look for a transition phrase before 📋 that belongs with the summary
+    const beforeNote = content.substring(0, noteIndex);
+    const transitionPattern = /\n+((?:here'?s|aquí|voici|aqui|esto es|this is)[^\n]*)\n*$/i;
+
+    let splitIndex = noteIndex;
+    const transitionMatch = beforeNote.match(transitionPattern);
+    if (transitionMatch && transitionMatch.index !== undefined) {
+      splitIndex = transitionMatch.index;
+    }
+
+    const acknowledgment = content.substring(0, splitIndex).trim();
+    let summary = content.substring(splitIndex).trim();
+
+    // Need meaningful acknowledgment text
+    if (!acknowledgment || acknowledgment.length < 10) return null;
+
+    // Strip AI-generated containment text from summary (we add our own)
+    summary = this.stripContainmentText(summary);
+
+    return { acknowledgment, summary };
+  }
+
+  /**
+   * Strip AI-generated containment/continuity text to prevent duplication
+   */
+  private stripContainmentText(content: string): string {
+    const patterns = [
+      /\n+(?:no necesitas recordar|you don'?t need to remember|você não precisa lembrar|vous n'avez pas besoin de tout retenir)[^\n]*/gi,
+      /\n+(?:si algo cambia|if anything changes|se algo mudar|si quelque chose change)[^\n]*/gi,
+      /\n+(?:tu nota está segura|your note is safe|sua nota está segura|votre note est sûre)[^\n]*/gi,
+      /\n+(?:esto está listo|this is ready|está pronto|c'est prêt)[^\n]*/gi,
+      /\n+(?:no tienes que cargar|you don'?t have to carry|não precisa carregar)[^\n]*/gi,
+      /\n+(?:puedes volver|come back to it|pode voltar|revenez)[^\n]*/gi,
+    ];
+
+    let cleaned = content;
+    for (const pattern of patterns) {
+      cleaned = cleaned.replace(pattern, '');
+    }
+
+    return cleaned.replace(/\n{3,}/g, '\n\n').trim();
+  }
+
+  /**
+   * Build the formatted summary message with containment + link
+   */
+  buildSummaryMessage(summary: string, userId: string, language: string): string {
+    const containment = this.getContainmentText(language);
+    const link = this.getSummaryLinkText(language, userId);
+    return `${summary}\n\n${containment}\n\n${link}`;
+  }
+
+  /**
    * Check if the response looks like a summary
    */
-  private looksLikeSummary(content: string): boolean {
+  looksLikeSummary(content: string): boolean {
     const summaryIndicators = [
       'resumen', 'summary', 'resumo', 'résumé',
       'motivo', 'concern', 'queixa', 'motif',
@@ -181,12 +231,26 @@ export class AIService {
   private getSummaryLinkText(language: string, userId: string): string {
     const link = `https://carelog.vivebien.io/${userId}`;
     const texts: Record<string, string> = {
-      es: `📋 Tu nota está aquí 👇\n${link}`,
-      en: `📋 Your note is here 👇\n${link}`,
-      pt: `📋 Sua nota está aqui 👇\n${link}`,
-      fr: `📋 Votre note est ici 👇\n${link}`,
+      es: `📋 *Tu nota está aquí* 👇\n${link}`,
+      en: `📋 *Your note is here* 👇\n${link}`,
+      pt: `📋 *Sua nota está aqui* 👇\n${link}`,
+      fr: `📋 *Votre note est ici* 👇\n${link}`,
     };
     return texts[language] || texts.es!;
+  }
+
+  /**
+   * Get the name ask message for post-summary delivery
+   * Sent as a separate message after the health note to feel natural
+   */
+  getNameAskMessage(language: string): string {
+    const messages: Record<string, string> = {
+      es: 'Por cierto, ¿cómo te gustaría que te llame? Así personalizo tu Nota de Salud. Totalmente opcional.',
+      en: "By the way, what's your name? I'll personalize your Health Note. Totally optional.",
+      pt: 'A propósito, como gostaria que eu te chamasse? Assim personalizo sua Nota de Saúde. Totalmente opcional.',
+      fr: "Au fait, quel nom aimeriez-vous que j'utilise? Je personnaliserai votre Note de Santé. Totalement optionnel.",
+    };
+    return messages[language] || messages.en!;
   }
 
   /**

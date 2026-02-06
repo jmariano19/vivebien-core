@@ -34,9 +34,10 @@ function extractUserName(userMessage: string, recentMessages: Message[]): string
     /what name should i use/i,
     /what's your name/i,
     /what is your name/i,
-    /como você gostaria que eu te chamasse/i,
+    /como (?:você )?gostaria que eu te chamasse/i,
     /qual é o seu nome/i,
     /comment aimeriez-vous que je vous appelle/i,
+    /quel (?:est votre )?nom aimeriez-vous/i,
     /quel est votre nom/i,
   ];
 
@@ -333,8 +334,24 @@ export async function handleInboundMessage(
     logger
   );
 
-  // Step 8: Post-process response (includes adding summary link if applicable)
-  const cleanedResponse = aiService.postProcess(aiResponse.content, user.id, user.language);
+  // Step 8: Post-process response (basic cleaning)
+  const cleanedResponse = aiService.postProcess(aiResponse.content);
+
+  // Step 8.5: Determine delivery strategy — split summary into separate messages
+  const isSummary = aiService.looksLikeSummary(cleanedResponse);
+  const summaryParts = isSummary ? aiService.splitSummaryResponse(cleanedResponse) : null;
+
+  // Build the full response for history (includes containment + link if summary)
+  let responseForHistory: string;
+  if (isSummary) {
+    const summaryContent = summaryParts ? summaryParts.summary : cleanedResponse;
+    const summaryMsg = aiService.buildSummaryMessage(summaryContent, user.id, user.language || 'en');
+    responseForHistory = summaryParts
+      ? summaryParts.acknowledgment + '\n\n' + summaryMsg
+      : summaryMsg;
+  } else {
+    responseForHistory = cleanedResponse;
+  }
 
   // Step 9: Extract and save user name if provided (works during onboarding or active phase)
   // IMPORTANT: Must happen BEFORE saving new messages, so getRecentMessages returns
@@ -361,7 +378,7 @@ export async function handleInboundMessage(
     'save_messages',
     async () => conversationService.saveMessages(user.id, conversationId, [
       { role: 'user', content: processedMessage },
-      { role: 'assistant', content: cleanedResponse },
+      { role: 'assistant', content: responseForHistory },
     ]),
     logger
   );
@@ -377,12 +394,36 @@ export async function handleInboundMessage(
   }
 
   // Step 12: Send response via Chatwoot
-  await logExecution(
-    correlationId,
-    'send_response',
-    async () => chatwootClient.sendMessage(conversationId, cleanedResponse),
-    logger
-  );
+  // If summary was split: Message 1 = ack (immediate), Message 2 = note (10s), Message 3 = name (5s)
+  if (summaryParts) {
+    // Message 1: Conversational acknowledgment (immediate)
+    await logExecution(
+      correlationId,
+      'send_ack',
+      async () => chatwootClient.sendMessage(conversationId, summaryParts.acknowledgment),
+      logger
+    );
+
+    // 10 second delay — feels like CareLog is organizing the note
+    await new Promise(resolve => setTimeout(resolve, 10000));
+
+    // Message 2: Health note + containment + link
+    const summaryMsg = aiService.buildSummaryMessage(summaryParts.summary, user.id, user.language || 'en');
+    await logExecution(
+      correlationId,
+      'send_summary',
+      async () => chatwootClient.sendMessage(conversationId, summaryMsg),
+      logger
+    );
+  } else {
+    // Single message (non-summary, or summary that couldn't be split)
+    await logExecution(
+      correlationId,
+      'send_response',
+      async () => chatwootClient.sendMessage(conversationId, responseForHistory),
+      logger
+    );
+  }
 
   // Step 13: Update conversation state
   await logExecution(
@@ -400,7 +441,7 @@ export async function handleInboundMessage(
     async () => conversationService.updateHealthSummary(
       user.id,
       processedMessage,
-      cleanedResponse,
+      responseForHistory,
       aiService
     ),
     logger
@@ -412,11 +453,9 @@ export async function handleInboundMessage(
   });
 
   // Step 15: Schedule 24h check-in if this is a summary handoff message
-  // Detect summary handoff by looking for the summary link in the response
-  if (cleanedResponse.includes('carelog.vivebien.io')) {
+  if (isSummary) {
     try {
-      // Extract case label from the AI response for personalized check-in
-      const caseLabel = checkinSvc.extractCaseLabel(cleanedResponse, user.language);
+      const caseLabel = checkinSvc.extractCaseLabel(responseForHistory, user.language);
 
       await checkinSvc.scheduleCheckin(user.id, conversationId, caseLabel || undefined);
       logger.info({ userId: user.id, caseLabel }, '24h check-in scheduled after summary');
@@ -428,6 +467,28 @@ export async function handleInboundMessage(
 
   // Update last bot message timestamp
   await checkinSvc.updateLastBotMessageAt(user.id);
+
+  // Step 16: Send name ask as separate message after delay
+  // Only after a summary is delivered AND user doesn't have a name yet
+  if (isSummary && !user.name) {
+    await new Promise(resolve => setTimeout(resolve, 5000)); // 5 second delay after note
+
+    const nameAsk = aiService.getNameAskMessage(user.language || 'en');
+    await logExecution(
+      correlationId,
+      'send_name_ask',
+      async () => chatwootClient.sendMessage(conversationId, nameAsk),
+      logger
+    );
+
+    // Save name ask to message history so extractUserName can detect it
+    await conversationService.saveMessages(user.id, conversationId, [
+      { role: 'assistant', content: nameAsk },
+    ]);
+    await checkinSvc.updateLastBotMessageAt(user.id);
+
+    logger.info({ userId: user.id }, 'Sent delayed name ask after summary');
+  }
 
   return {
     status: 'completed',
