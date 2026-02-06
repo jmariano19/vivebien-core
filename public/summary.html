@@ -19,6 +19,7 @@
       --bg: #F9F6F0;
       --card-bg: #FFFFFF;
       --primary: #2E915E;
+      --primary-dark: #247a4d;
       --btn-color: #216F64;
       --link-color: #885955;
       --text: #373737;
@@ -27,6 +28,7 @@
       --status-active: #2E915E;
       --status-improving: #3B82F6;
       --status-resolved: #9CA3AF;
+      --danger: #DC2626;
     }
 
     body {
@@ -43,7 +45,7 @@
       min-height: 100vh;
     }
 
-    /* Logo with CareLog text */
+    /* Logo */
     .logo {
       display: flex;
       align-items: center;
@@ -80,164 +82,7 @@
       line-height: 20px;
     }
 
-    /* Main Card */
-    .card {
-      background: var(--card-bg);
-      border-radius: 15px;
-      padding: 28px 22px;
-      margin-bottom: 24px;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-    }
-
-    /* Concern card (collapsed view) */
-    .concern-card {
-      background: var(--card-bg);
-      border-radius: 15px;
-      padding: 20px 22px;
-      margin-bottom: 16px;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .concern-card:active {
-      transform: scale(0.98);
-    }
-
-    .concern-card.resolved {
-      opacity: 0.7;
-    }
-
-    .concern-card-header {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      margin-bottom: 12px;
-    }
-
-    .concern-card-icon {
-      font-size: 28px;
-      flex-shrink: 0;
-    }
-
-    .concern-card-title-section {
-      flex: 1;
-    }
-
-    .concern-card-title {
-      font-family: 'Lora', Georgia, serif;
-      font-size: 18px;
-      font-weight: 500;
-      color: var(--text-dark);
-      margin-bottom: 6px;
-    }
-
-    .concern-card-status {
-      display: inline-block;
-      padding: 3px 8px;
-      border-radius: 12px;
-      font-family: 'Outfit', sans-serif;
-      font-size: 11px;
-      font-weight: 500;
-      text-transform: uppercase;
-      letter-spacing: 0.3px;
-    }
-
-    .concern-card-status.active {
-      background: rgba(46, 145, 94, 0.15);
-      color: var(--status-active);
-    }
-
-    .concern-card-status.improving {
-      background: rgba(59, 130, 246, 0.15);
-      color: var(--status-improving);
-    }
-
-    .concern-card-status.resolved {
-      background: rgba(156, 163, 175, 0.15);
-      color: var(--status-resolved);
-    }
-
-    .concern-card-preview {
-      font-family: 'Outfit', sans-serif;
-      font-size: 14px;
-      color: var(--text);
-      opacity: 0.7;
-      line-height: 1.4;
-      margin-top: 8px;
-    }
-
-    .concern-card-date {
-      font-family: 'Outfit', sans-serif;
-      font-size: 12px;
-      color: var(--text);
-      opacity: 0.5;
-      margin-top: 8px;
-    }
-
-    /* Expanded concern card */
-    .concern-card.expanded {
-      padding: 28px 22px;
-    }
-
-    .concern-card-expanded-content {
-      margin-top: 16px;
-      display: none;
-    }
-
-    .concern-card.expanded .concern-card-expanded-content {
-      display: block;
-    }
-
-    .concern-card-expanded-content .field-list {
-      margin-top: 16px;
-    }
-
-    .concern-card-actions {
-      display: flex;
-      gap: 12px;
-      margin-top: 16px;
-      padding-top: 16px;
-      border-top: 1px solid rgba(0,0,0,0.08);
-    }
-
-    .concern-card-action-btn {
-      flex: 1;
-      padding: 10px 12px;
-      background: rgba(46, 145, 94, 0.1);
-      color: var(--primary);
-      border: none;
-      border-radius: 10px;
-      font-family: 'Outfit', sans-serif;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .concern-card-action-btn:active {
-      background: rgba(46, 145, 94, 0.2);
-    }
-
-    /* Resolved concerns section */
-    .resolved-section {
-      margin-top: 32px;
-      padding-top: 24px;
-      border-top: 1px solid rgba(0,0,0,0.08);
-    }
-
-    .resolved-section-title {
-      font-family: 'Outfit', sans-serif;
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text);
-      opacity: 0.6;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 16px;
-    }
-
-    /* Live Updates - now inside card at top */
+    /* Live badge */
     .live-badge {
       display: flex;
       align-items: center;
@@ -268,42 +113,171 @@
       letter-spacing: 0.5px;
     }
 
-    .card-title {
-      font-family: 'Lora', Georgia, serif;
-      font-size: 24px;
-      font-weight: 500;
-      color: var(--text-dark);
-      margin-bottom: 16px;
+    /* ===== CONCERN CARDS ===== */
+    .concern-card {
+      background: var(--card-bg);
+      border-radius: 15px;
+      padding: 18px 20px;
+      margin-bottom: 14px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+      border-left: 4px solid var(--primary);
+      position: relative;
+      transition: all 0.2s;
+    }
+
+    .concern-card.resolved {
+      opacity: 0.65;
+      border-left-color: var(--status-resolved);
+    }
+
+    .concern-card.status-improving {
+      border-left-color: var(--status-improving);
+    }
+
+    /* Card top row: date left, dots right */
+    .concern-card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .concern-card-date {
+      font-family: 'Outfit', sans-serif;
+      font-size: 12px;
+      color: var(--text);
+      opacity: 0.5;
+    }
+
+    /* Three-dot menu */
+    .dots-menu-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px 2px;
+      font-size: 18px;
+      color: var(--text);
+      opacity: 0.4;
+      letter-spacing: 2px;
+      line-height: 1;
+    }
+
+    .dots-menu-btn:hover { opacity: 0.7; }
+
+    .dots-menu-wrapper {
+      position: relative;
+      z-index: 10;
+    }
+
+    .dots-dropdown {
+      display: none;
+      position: absolute;
+      top: 100%;
+      right: 0;
+      background: var(--card-bg);
+      border-radius: 10px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      overflow: hidden;
+      min-width: 120px;
+      z-index: 20;
+    }
+
+    .dots-dropdown.open { display: block; }
+
+    .dots-dropdown button {
+      display: block;
+      width: 100%;
+      padding: 10px 16px;
+      background: none;
+      border: none;
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.15s;
+    }
+
+    .dots-dropdown button:hover { background: rgba(0,0,0,0.04); }
+
+    .dots-dropdown .menu-update { color: var(--btn-color); }
+    .dots-dropdown .menu-history { color: var(--btn-color); }
+    .dots-dropdown .menu-delete { color: var(--danger); }
+
+    /* Card icon + title row */
+    .concern-card-header {
       display: flex;
       align-items: center;
       gap: 10px;
+      margin-bottom: 6px;
     }
 
-    .card-title .icon {
-      font-size: 28px;
-    }
+    .concern-card-icon { font-size: 26px; flex-shrink: 0; }
 
-    .card-content {
-      font-family: 'Outfit', sans-serif;
-      font-size: 17px;
-      font-weight: 400;
-      line-height: 1.7;
+    .concern-card-title {
+      font-family: 'Lora', Georgia, serif;
+      font-size: 18px;
+      font-weight: 500;
       color: var(--text-dark);
-      text-align: left;
-      white-space: pre-line;
     }
 
-    .field-list {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
+    .concern-card-status {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      margin-left: 8px;
     }
 
-    .field-item {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
+    .concern-card-status.active {
+      background: rgba(46, 145, 94, 0.15);
+      color: var(--status-active);
     }
+
+    .concern-card-status.improving {
+      background: rgba(59, 130, 246, 0.15);
+      color: var(--status-improving);
+    }
+
+    .concern-card-status.resolved {
+      background: rgba(156, 163, 175, 0.15);
+      color: var(--status-resolved);
+    }
+
+    /* Collapsed card: just "View More" */
+    .concern-card-collapsed-footer {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 4px;
+    }
+
+    .view-more-link {
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--primary);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px 0;
+    }
+
+    /* Expanded card content */
+    .concern-card-body {
+      display: none;
+      margin-top: 12px;
+    }
+
+    .concern-card.expanded .concern-card-body { display: block; }
+    .concern-card.expanded .concern-card-collapsed-footer { display: none; }
+
+    .field-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .field-item { display: flex; flex-direction: column; gap: 2px; }
 
     .field-label {
       font-family: 'Outfit', sans-serif;
@@ -317,76 +291,46 @@
 
     .field-value {
       font-family: 'Outfit', sans-serif;
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 400;
       color: var(--text-dark);
       line-height: 1.4;
     }
 
-    .doctor-cta {
-      margin-top: 20px;
-      padding-top: 16px;
-      border-top: 1px solid rgba(0,0,0,0.08);
+    /* Expanded bottom actions */
+    .concern-card-actions {
+      display: flex;
+      gap: 16px;
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(0,0,0,0.06);
     }
 
-    .doctor-cta-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      width: 100%;
-      padding: 14px 20px;
-      background: var(--primary);
-      color: white;
-      border: none;
-      border-radius: 12px;
+    .concern-card-actions a {
       font-family: 'Outfit', sans-serif;
-      font-size: 15px;
+      font-size: 14px;
       font-weight: 600;
+      color: var(--primary);
+      text-decoration: none;
       cursor: pointer;
-      transition: all 0.2s;
     }
 
-    .doctor-cta-btn:hover {
-      background: #247a4d;
-      transform: translateY(-1px);
-    }
+    /* Resolved section */
+    .resolved-section { margin-top: 28px; padding-top: 20px; border-top: 1px solid rgba(0,0,0,0.08); }
 
-    .doctor-cta-btn svg {
-      width: 18px;
-      height: 18px;
-    }
-
-    /* Action Links */
-    .action-links {
-      display: flex;
-      justify-content: center;
-      gap: 24px;
-      margin-bottom: 20px;
-    }
-
-    .action-links a {
+    .resolved-section-title {
       font-family: 'Outfit', sans-serif;
-      color: var(--link-color);
       font-size: 13px;
       font-weight: 600;
-      text-decoration: none;
-      padding: 8px 16px;
-      border-radius: 20px;
-      background: rgba(136, 89, 85, 0.08);
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .action-links a:hover {
-      background: rgba(136, 89, 85, 0.15);
+      color: var(--text);
+      opacity: 0.6;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 14px;
     }
 
     /* Disclaimer */
-    .disclaimer {
-      text-align: center;
-      margin-top: 16px;
-    }
+    .disclaimer { text-align: center; margin-top: 20px; }
 
     .disclaimer p {
       font-family: 'Outfit', sans-serif;
@@ -399,7 +343,7 @@
       margin: 0 auto;
     }
 
-    /* Footer Actions */
+    /* Footer */
     .footer-actions {
       position: fixed;
       bottom: 0;
@@ -430,20 +374,11 @@
       text-align: center;
     }
 
-    .btn:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(33, 111, 100, 0.3);
-    }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(33, 111, 100, 0.3); }
+    .btn:active { transform: translateY(0); }
 
-    .btn:active {
-      transform: translateY(0);
-    }
-
-    /* Loading state */
-    .loading {
-      text-align: center;
-      padding: 60px 20px;
-    }
+    /* Loading */
+    .loading { text-align: center; padding: 60px 20px; }
 
     .spinner {
       width: 40px;
@@ -455,103 +390,176 @@
       margin: 0 auto 16px;
     }
 
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
-    .loading p {
-      font-family: 'Outfit', sans-serif;
-      color: var(--text-dark);
-      opacity: 0.5;
-      font-size: 15px;
-    }
+    .loading p { font-family: 'Outfit', sans-serif; color: var(--text-dark); opacity: 0.5; font-size: 15px; }
 
     /* Empty state */
-    .empty-state {
+    .empty-state { text-align: center; padding: 60px 20px; }
+
+    .empty-state svg { width: 64px; height: 64px; color: var(--text); margin-bottom: 16px; opacity: 0.3; }
+
+    .empty-state h3 { font-family: 'Lora', Georgia, serif; font-size: 20px; font-weight: 500; margin-bottom: 8px; color: var(--text); }
+
+    .empty-state p { font-family: 'Outfit', sans-serif; color: var(--text-dark); opacity: 0.5; font-size: 15px; line-height: 20px; max-width: 260px; margin: 0 auto; }
+
+    /* ===== DELETE MODAL ===== */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 28px 24px 20px;
+      width: 300px;
       text-align: center;
-      padding: 60px 20px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.2);
     }
 
-    .empty-state svg {
-      width: 64px;
-      height: 64px;
-      color: var(--text);
-      margin-bottom: 16px;
-      opacity: 0.3;
-    }
-
-    .empty-state h3 {
+    .modal h2 {
       font-family: 'Lora', Georgia, serif;
       font-size: 20px;
       font-weight: 500;
+      color: var(--text-dark);
       margin-bottom: 8px;
-      color: var(--text);
     }
 
-    .empty-state p {
+    .modal p {
       font-family: 'Outfit', sans-serif;
-      color: var(--text-dark);
-      opacity: 0.5;
-      font-size: 15px;
-      line-height: 20px;
-      max-width: 260px;
-      margin: 0 auto;
+      font-size: 14px;
+      color: var(--text);
+      opacity: 0.6;
+      margin-bottom: 24px;
     }
+
+    .modal-buttons {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+    }
+
+    .modal-btn {
+      padding: 12px 28px;
+      border-radius: 10px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid rgba(0,0,0,0.12);
+      background: var(--card-bg);
+      color: var(--text);
+      transition: all 0.15s;
+    }
+
+    .modal-btn:hover { background: rgba(0,0,0,0.04); }
+
+    .modal-btn.danger {
+      background: var(--danger);
+      color: white;
+      border-color: var(--danger);
+    }
+
+    .modal-btn.danger:hover { background: #b91c1c; }
+
+    /* Old single-card styles (backward compat) */
+    .card {
+      background: var(--card-bg);
+      border-radius: 15px;
+      padding: 28px 22px;
+      margin-bottom: 24px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+
+    .card-title {
+      font-family: 'Lora', Georgia, serif;
+      font-size: 24px;
+      font-weight: 500;
+      color: var(--text-dark);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .card-title .icon { font-size: 28px; }
+
+    .card-content {
+      font-family: 'Outfit', sans-serif;
+      font-size: 17px;
+      font-weight: 400;
+      line-height: 1.7;
+      color: var(--text-dark);
+      text-align: left;
+      white-space: pre-line;
+    }
+
+    .doctor-cta { margin-top: 20px; padding-top: 16px; border-top: 1px solid rgba(0,0,0,0.08); }
+
+    .doctor-cta-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 14px 20px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .doctor-cta-btn:hover { background: var(--primary-dark); transform: translateY(-1px); }
+    .doctor-cta-btn svg { width: 18px; height: 18px; }
   </style>
 </head>
 <body>
   <div class="container">
-    <!-- Logo -->
     <div class="logo">CareLog</div>
 
-    <!-- Header -->
     <div class="header">
       <h1 id="userName">Your Summary</h1>
       <p class="date" id="dateText">Today</p>
     </div>
 
-    <!-- Loading State -->
     <div id="loading" class="loading">
       <div class="spinner"></div>
       <p id="loadingText">Cargando tu resumen...</p>
     </div>
 
-    <!-- Main Content (hidden initially) -->
     <div id="content" style="display: none;">
-      <!-- Live Badge (shown at top of concerns) -->
       <div class="live-badge" id="liveBadge" style="display: none;">
         <span class="live-dot"></span>
         <span id="liveText">Updates Live</span>
       </div>
 
-      <!-- Concerns Container -->
-      <div id="concernsContainer">
-        <!-- Concerns will be rendered here -->
-      </div>
+      <div id="concernsContainer"></div>
 
-      <!-- Resolved Concerns Section (hidden by default) -->
       <div id="resolvedSection" style="display: none;">
         <div class="resolved-section">
           <div class="resolved-section-title" id="resolvedTitle">Resolved Concerns</div>
-          <div id="resolvedContainer">
-            <!-- Resolved concerns will be rendered here -->
-          </div>
+          <div id="resolvedContainer"></div>
         </div>
       </div>
 
-      <!-- Action Links -->
-      <div class="action-links">
-        <a onclick="suggestChange()" id="suggestLink">Sugiere un cambio</a>
-        <a onclick="viewHistory()" id="historyLink">Ver Historia</a>
-      </div>
-
-      <!-- Disclaimer -->
       <div class="disclaimer">
         <p id="disclaimerText">Este registro fue generado por CareLog como herramienta de preparación. No sustituye la evaluación médica profesional.</p>
       </div>
     </div>
 
-    <!-- Empty State -->
     <div id="empty" class="empty-state" style="display: none;">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -561,172 +569,156 @@
     </div>
   </div>
 
-  <!-- Footer Actions -->
+  <!-- Footer -->
   <div class="footer-actions">
     <button class="btn" onclick="copyForDoctor()" id="doctorBtn">Version para tu Doctor</button>
     <button class="btn" onclick="nextAppointment()" id="appointmentBtn">Proxima consulta</button>
   </div>
 
+  <!-- Delete Modal -->
+  <div class="modal-overlay" id="deleteModal">
+    <div class="modal">
+      <h2 id="modalTitle">Delete concern</h2>
+      <p id="modalText">This action cannot be undone</p>
+      <div class="modal-buttons">
+        <button class="modal-btn" onclick="closeDeleteModal()" id="modalCancel">CANCEL</button>
+        <button class="modal-btn danger" onclick="confirmDelete()" id="modalDelete">DELETE</button>
+      </div>
+    </div>
+  </div>
+
   <script>
-    // Get user ID from URL path
     const pathParts = window.location.pathname.split('/').filter(p => p);
     const userId = pathParts[pathParts.length - 1] || null;
-
-    // API endpoint
     const API_BASE = window.location.origin + '/api';
 
     let summaryData = null;
     let summaryText = '';
     let pollInterval = null;
-    let userLang = 'es'; // Default to Spanish, will be updated from API
-    let expandedConcernId = null; // Track which concern is expanded
+    let userLang = 'es';
+    let expandedConcernId = null;
+    let openMenuId = null;
+    let pendingDeleteConcernId = null;
+    let allConcerns = []; // store for delete operations
 
-    // Localization
+    // ===== LOCALIZATION =====
     const i18n = {
       es: {
         loading: 'Cargando tu resumen...',
         emptyTitle: 'Aún no hay resumen',
         emptyText: 'Continúa tu conversación en WhatsApp para generar tu resumen de salud.',
-        suggestLink: 'Actualizar',
-        historyLink: 'Ver Historia',
         liveText: 'Actualiza en vivo',
         disclaimer: 'Este registro fue generado por CareLog como herramienta de preparación. No sustituye la evaluación médica profesional.',
         doctorBtn: 'Version para tu Doctor',
         appointmentBtn: 'Proxima consulta',
         doctorCta: 'Compartir con tu médico',
         copied: '¡Copiado!',
-        footer: 'Generado con CareLog by ViveBien',
         today: 'Hoy',
         days: ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'],
         months: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
-        fields: {
-          started: 'Inicio',
-          helps: 'Mejora con',
-          worsens: 'Empeora con',
-          medications: 'Medicamentos',
-          location: 'Ubicación',
-          symptoms: 'Síntomas'
-        },
-        status: {
-          active: 'Activo',
-          improving: 'Mejorando',
-          resolved: 'Resuelto'
-        },
+        fields: { started: 'Inicio', helps: 'Mejora con', worsens: 'Empeora con', medications: 'Medicamentos', location: 'Ubicación', symptoms: 'Síntomas' },
+        status: { active: 'Activo', improving: 'Mejorando', resolved: 'Resuelto' },
         defaultName: 'Tu Resumen',
         resolvedTitle: 'Preocupaciones Resueltas',
-        editBtn: 'Editar',
-        historyBtn: 'Ver Historia'
+        viewMore: 'Ver más',
+        history: 'History',
+        update: 'Update',
+        menuUpdate: 'UPDATE',
+        menuHistory: 'HISTORY',
+        menuDelete: 'DELETE',
+        deleteTitle: 'Eliminar preocupación',
+        deleteText: 'Esta acción no se puede deshacer',
+        cancel: 'CANCELAR',
+        delete: 'ELIMINAR'
       },
       en: {
         loading: 'Loading your summary...',
         emptyTitle: 'No summary yet',
         emptyText: 'Continue your WhatsApp conversation to generate your health summary.',
-        suggestLink: 'Update',
-        historyLink: 'View History',
         liveText: 'Updates Live',
         disclaimer: 'This record was generated by CareLog as a preparation tool. It does not replace professional medical evaluation.',
         doctorBtn: 'Version for your Doctor',
         appointmentBtn: 'Next appointment',
         doctorCta: 'Share with your doctor',
         copied: 'Copied!',
-        footer: 'Generated with CareLog by ViveBien',
         today: 'Today',
         days: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
         months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-        fields: {
-          started: 'Started',
-          helps: 'Helps',
-          worsens: 'Worsens',
-          medications: 'Medications',
-          location: 'Location',
-          symptoms: 'Symptoms'
-        },
-        status: {
-          active: 'Active',
-          improving: 'Improving',
-          resolved: 'Resolved'
-        },
+        fields: { started: 'Started', helps: 'Helps', worsens: 'Worsens', medications: 'Medications', location: 'Location', symptoms: 'Symptoms' },
+        status: { active: 'Active', improving: 'Improving', resolved: 'Resolved' },
         defaultName: 'Your Summary',
         resolvedTitle: 'Resolved Concerns',
-        editBtn: 'Edit',
-        historyBtn: 'View History'
+        viewMore: 'View More',
+        history: 'History',
+        update: 'Update',
+        menuUpdate: 'UPDATE',
+        menuHistory: 'HISTORY',
+        menuDelete: 'DELETE',
+        deleteTitle: 'Delete concern',
+        deleteText: 'This action cannot be undone',
+        cancel: 'CANCEL',
+        delete: 'DELETE'
       },
       pt: {
         loading: 'Carregando seu resumo...',
         emptyTitle: 'Ainda não há resumo',
         emptyText: 'Continue sua conversa no WhatsApp para gerar seu resumo de saúde.',
-        suggestLink: 'Atualizar',
-        historyLink: 'Ver Histórico',
         liveText: 'Atualiza ao vivo',
         disclaimer: 'Este registro foi gerado pelo CareLog como ferramenta de preparação. Não substitui a avaliação médica profissional.',
         doctorBtn: 'Versão para seu Médico',
         appointmentBtn: 'Próxima consulta',
         doctorCta: 'Compartilhar com seu médico',
         copied: 'Copiado!',
-        footer: 'Gerado com CareLog by ViveBien',
         today: 'Hoje',
         days: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
         months: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
-        fields: {
-          started: 'Início',
-          helps: 'Melhora com',
-          worsens: 'Piora com',
-          medications: 'Medicamentos',
-          location: 'Localização',
-          symptoms: 'Sintomas'
-        },
-        status: {
-          active: 'Ativo',
-          improving: 'Melhorando',
-          resolved: 'Resolvido'
-        },
+        fields: { started: 'Início', helps: 'Melhora com', worsens: 'Piora com', medications: 'Medicamentos', location: 'Localização', symptoms: 'Sintomas' },
+        status: { active: 'Ativo', improving: 'Melhorando', resolved: 'Resolvido' },
         defaultName: 'Seu Resumo',
         resolvedTitle: 'Preocupações Resolvidas',
-        editBtn: 'Editar',
-        historyBtn: 'Ver Histórico'
+        viewMore: 'Ver mais',
+        history: 'Histórico',
+        update: 'Atualizar',
+        menuUpdate: 'ATUALIZAR',
+        menuHistory: 'HISTÓRICO',
+        menuDelete: 'EXCLUIR',
+        deleteTitle: 'Excluir preocupação',
+        deleteText: 'Esta ação não pode ser desfeita',
+        cancel: 'CANCELAR',
+        delete: 'EXCLUIR'
       },
       fr: {
         loading: 'Chargement de votre résumé...',
         emptyTitle: 'Pas encore de résumé',
         emptyText: 'Continuez votre conversation WhatsApp pour générer votre résumé de santé.',
-        suggestLink: 'Mettre à jour',
-        historyLink: 'Voir l\'historique',
         liveText: 'Mise à jour en direct',
         disclaimer: 'Ce dossier a été généré par CareLog comme outil de préparation. Il ne remplace pas l\'évaluation médicale professionnelle.',
         doctorBtn: 'Version pour votre Médecin',
         appointmentBtn: 'Prochain rendez-vous',
         doctorCta: 'Partager avec votre médecin',
         copied: 'Copié!',
-        footer: 'Généré avec CareLog by ViveBien',
         today: 'Aujourd\'hui',
         days: ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'],
         months: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'],
-        fields: {
-          started: 'Début',
-          helps: 'Améliore',
-          worsens: 'Aggrave',
-          medications: 'Médicaments',
-          location: 'Localisation',
-          symptoms: 'Symptômes'
-        },
-        status: {
-          active: 'Actif',
-          improving: 'En amélioration',
-          resolved: 'Résolu'
-        },
+        fields: { started: 'Début', helps: 'Améliore', worsens: 'Aggrave', medications: 'Médicaments', location: 'Localisation', symptoms: 'Symptômes' },
+        status: { active: 'Actif', improving: 'En amélioration', resolved: 'Résolu' },
         defaultName: 'Votre Résumé',
         resolvedTitle: 'Préoccupations Résolues',
-        editBtn: 'Modifier',
-        historyBtn: 'Voir l\'historique'
+        viewMore: 'Voir plus',
+        history: 'Historique',
+        update: 'Mettre à jour',
+        menuUpdate: 'MODIFIER',
+        menuHistory: 'HISTORIQUE',
+        menuDelete: 'SUPPRIMER',
+        deleteTitle: 'Supprimer préoccupation',
+        deleteText: 'Cette action ne peut pas être annulée',
+        cancel: 'ANNULER',
+        delete: 'SUPPRIMER'
       }
     };
 
-    // Get current language
-    function getLang() {
-      return i18n[userLang] || i18n.es;
-    }
+    function getLang() { return i18n[userLang] || i18n.es; }
 
-    // Format date
     function formatDate(date) {
       const lang = getLang();
       const now = new Date();
@@ -734,106 +726,78 @@
       const dayName = lang.days[d.getDay()];
       const monthName = lang.months[d.getMonth()];
       const dayNum = d.getDate();
-
       const isToday = d.toDateString() === now.toDateString();
-
-      if (isToday) {
-        return `${lang.today}, ${dayName} ${monthName} ${dayNum}`;
-      }
+      if (isToday) return `${lang.today}, ${dayName} ${monthName} ${dayNum}`;
       return `${dayName} ${monthName} ${dayNum}`;
     }
 
-    // Apply localization
     function applyLocalization() {
       const lang = getLang();
       document.getElementById('loadingText').textContent = lang.loading;
       document.getElementById('emptyTitle').textContent = lang.emptyTitle;
       document.getElementById('emptyText').textContent = lang.emptyText;
-      document.getElementById('suggestLink').textContent = lang.suggestLink;
-      document.getElementById('historyLink').textContent = lang.historyLink;
       document.getElementById('liveText').textContent = lang.liveText;
       document.getElementById('disclaimerText').textContent = lang.disclaimer;
       document.getElementById('doctorBtn').textContent = lang.doctorBtn;
       document.getElementById('appointmentBtn').textContent = lang.appointmentBtn;
       document.getElementById('resolvedTitle').textContent = lang.resolvedTitle;
       document.getElementById('dateText').textContent = formatDate(new Date());
+      // Modal
+      document.getElementById('modalTitle').textContent = lang.deleteTitle;
+      document.getElementById('modalText').textContent = lang.deleteText;
+      document.getElementById('modalCancel').textContent = lang.cancel;
+      document.getElementById('modalDelete').textContent = lang.delete;
     }
 
-    // Fetch summary data
+    // ===== FETCH =====
     async function fetchSummary() {
-      if (!userId || userId === 'preview' || userId === 'summary.html') {
-        showDemo();
-        return;
-      }
+      if (!userId || userId === 'preview' || userId === 'summary.html') { showDemo(); return; }
 
       try {
         const response = await fetch(`${API_BASE}/summary/${userId}`);
-        if (!response.ok) {
-          if (response.status === 404) {
-            showEmpty();
-            return;
-          }
-          throw new Error('Failed to fetch');
-        }
+        if (!response.ok) { if (response.status === 404) { showEmpty(); return; } throw new Error('Failed'); }
 
         const data = await response.json();
         if (data && (data.summary || (data.concerns && data.concerns.length > 0))) {
           summaryData = data;
           summaryText = data.summary;
-
-          // Update language from API response
-          if (data.language && i18n[data.language]) {
-            userLang = data.language;
-            applyLocalization();
-          }
-
+          if (data.language && i18n[data.language]) { userLang = data.language; applyLocalization(); }
           renderSummary(data);
-        } else {
-          showEmpty();
-        }
+        } else { showEmpty(); }
       } catch (error) {
         console.error('Error fetching summary:', error);
         setTimeout(fetchSummary, 5000);
       }
     }
 
-    // Render summary data - supports both single card and multiple concerns
+    // ===== RENDER =====
     function renderSummary(data) {
       document.getElementById('loading').style.display = 'none';
       document.getElementById('empty').style.display = 'none';
       document.getElementById('content').style.display = 'block';
 
-      // User name (use localized default if no name provided)
       const lang = getLang();
       const name = data.userName || data.user?.name || lang.defaultName || 'Your Summary';
       document.getElementById('userName').textContent = name;
 
-      // Date
       const updateDate = data.updatedAt ? new Date(data.updatedAt) : new Date();
       document.getElementById('dateText').textContent = formatDate(updateDate);
 
-      // Check if we have concerns array (new multi-concern format)
       if (data.concerns && data.concerns.length > 0) {
+        allConcerns = data.concerns;
         renderMultipleConcerns(data.concerns, data.summary);
       } else {
-        // Fallback to old single-card format
         renderSingleSummary(data);
       }
     }
 
-    // Render single summary (backward compatibility)
     function renderSingleSummary(data) {
       document.getElementById('liveBadge').style.display = 'none';
-
-      // Clear containers
       document.getElementById('concernsContainer').innerHTML = '';
       document.getElementById('resolvedSection').style.display = 'none';
 
-      // Parse summary
       const summary = data.summary || '';
       const fields = parseAnyFormat(summary);
-
-      // Create single card from old format
       const card = document.createElement('div');
       card.className = 'card';
 
@@ -841,257 +805,263 @@
       const icon = getIconForConcern(mainConcern);
       const lang = getLang();
 
-      let html = '<div class="live-badge">';
-      html += '<span class="live-dot"></span>';
-      html += `<span id="liveTextSingle">${lang.liveText}</span>`;
-      html += '</div>';
-
-      html += '<div class="card-title">';
-      html += `<span class="icon">${icon}</span>`;
-      html += `<span>${capitalizeFirst(mainConcern)}</span>`;
-      html += '</div>';
-
+      let html = '<div class="live-badge"><span class="live-dot"></span><span>' + lang.liveText + '</span></div>';
+      html += '<div class="card-title"><span class="icon">' + icon + '</span><span>' + capitalizeFirst(mainConcern) + '</span></div>';
       html += '<div class="field-list">';
 
-      const fieldConfig = [
-        { key: 'started', label: lang.fields?.started || 'Started', value: fields.started },
-        { key: 'helps', label: lang.fields?.helps || 'Helps', value: fields.whatHelps },
-        { key: 'worsens', label: lang.fields?.worsens || 'Worsens', value: fields.whatWorsens },
-        { key: 'medications', label: lang.fields?.medications || 'Medications', value: fields.medications },
-      ];
-
-      fieldConfig.forEach(({ label, value }) => {
-        const cleanValue = cleanFieldForDisplay(value);
-        if (cleanValue && isValidFieldValue(cleanValue)) {
-          html += '<div class="field-item">';
-          html += `<span class="field-label">${label}</span>`;
-          html += `<span class="field-value">${capitalizeFirst(cleanValue)}</span>`;
-          html += '</div>';
+      [
+        { label: lang.fields?.started || 'Started', value: fields.started },
+        { label: lang.fields?.helps || 'Helps', value: fields.whatHelps },
+        { label: lang.fields?.worsens || 'Worsens', value: fields.whatWorsens },
+        { label: lang.fields?.medications || 'Medications', value: fields.medications },
+      ].forEach(({ label, value }) => {
+        const v = cleanFieldForDisplay(value);
+        if (v && isValidFieldValue(v)) {
+          html += '<div class="field-item"><span class="field-label">' + label + '</span><span class="field-value">' + capitalizeFirst(v) + '</span></div>';
         }
       });
 
       html += '</div>';
-      html += '<div class="doctor-cta">';
-      html += '<button class="doctor-cta-btn" onclick="copyForDoctor()">';
-      html += '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">';
-      html += '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />';
-      html += '</svg>';
-      html += `<span>${lang.doctorCta}</span>`;
-      html += '</button>';
-      html += '</div>';
-
+      html += '<div class="doctor-cta"><button class="doctor-cta-btn" onclick="copyForDoctor()"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg><span>' + lang.doctorCta + '</span></button></div>';
       card.innerHTML = html;
       document.getElementById('concernsContainer').appendChild(card);
     }
 
-    // Render multiple concerns as cards
-    function renderMultipleConcerns(concerns, summaryText) {
+    function renderMultipleConcerns(concerns) {
       document.getElementById('liveBadge').style.display = 'flex';
-      const lang = getLang();
-
-      // Clear containers
       document.getElementById('concernsContainer').innerHTML = '';
       document.getElementById('resolvedContainer').innerHTML = '';
       document.getElementById('resolvedSection').style.display = 'none';
 
-      // Separate active and resolved concerns
       const activeConcerns = concerns.filter(c => c.status !== 'resolved');
       const resolvedConcerns = concerns.filter(c => c.status === 'resolved');
 
-      // Render active concerns
+      // Sort by updatedAt descending — most recent first
+      activeConcerns.sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
+
       activeConcerns.forEach((concern, index) => {
-        const card = createConcernCard(concern, index);
+        const isFirst = index === 0; // most recent is expanded
+        const card = createConcernCard(concern, index, false, isFirst);
         document.getElementById('concernsContainer').appendChild(card);
       });
 
-      // Render resolved concerns if any
       if (resolvedConcerns.length > 0) {
         document.getElementById('resolvedSection').style.display = 'block';
         resolvedConcerns.forEach((concern, index) => {
-          const card = createConcernCard(concern, index, true);
+          const card = createConcernCard(concern, index, true, false);
           document.getElementById('resolvedContainer').appendChild(card);
         });
       }
     }
 
-    // Create a single concern card element
-    function createConcernCard(concern, index, isResolved = false) {
+    function createConcernCard(concern, index, isResolved, isExpanded) {
       const lang = getLang();
       const card = document.createElement('div');
-      const cardId = `concern-${index}`;
+      const cardId = `concern-${concern.id}`;
       card.id = cardId;
-      card.className = `concern-card ${isResolved ? 'resolved' : ''}`;
+      card.className = 'concern-card' + (isResolved ? ' resolved' : '') + (concern.status === 'improving' ? ' status-improving' : '') + (isExpanded ? ' expanded' : '');
 
       const fields = parseAnyFormat(concern.summaryContent || '');
       const icon = concern.icon || getIconForConcern(concern.title);
       const status = concern.status || 'active';
       const lastUpdated = concern.updatedAt ? formatDate(new Date(concern.updatedAt)) : formatDate(new Date());
 
-      // Get preview text from first field
-      let preview = '';
-      if (fields.started) {
-        preview = cleanFieldForDisplay(fields.started);
-      } else if (fields.whatHelps) {
-        preview = cleanFieldForDisplay(fields.whatHelps);
-      } else if (fields.summaryContent) {
-        preview = cleanFieldForDisplay(concern.summaryContent);
-      }
-      preview = preview.substring(0, 60) + (preview.length > 60 ? '...' : '');
+      let html = '';
 
-      // Build card HTML
-      let html = `
-        <div class="concern-card-header">
-          <div class="concern-card-icon">${icon}</div>
-          <div class="concern-card-title-section">
-            <div class="concern-card-title">${capitalizeFirst(concern.title)}</div>
-            <span class="concern-card-status ${status}">${lang.status[status] || status}</span>
-          </div>
-        </div>
-        <div class="concern-card-preview">${preview}</div>
-        <div class="concern-card-date">${lastUpdated}</div>
-        <div class="concern-card-expanded-content">
-          <div class="field-list"></div>
-          <div class="concern-card-actions">
-            <button class="concern-card-action-btn" onclick="editConcern('${concern.id}')">${lang.editBtn}</button>
-            <button class="concern-card-action-btn" onclick="viewConcernHistory('${concern.id}')">${lang.historyBtn}</button>
-          </div>
-        </div>
-      `;
+      // Top row: date + dots menu
+      html += '<div class="concern-card-top">';
+      html += '  <div class="concern-card-date">' + lastUpdated + '</div>';
+      html += '  <div class="dots-menu-wrapper">';
+      html += '    <button class="dots-menu-btn" onclick="event.stopPropagation(); toggleDotsMenu(\'' + concern.id + '\')">•••</button>';
+      html += '    <div class="dots-dropdown" id="menu-' + concern.id + '">';
+      html += '      <button class="menu-update" onclick="event.stopPropagation(); editConcern(\'' + concern.id + '\')">' + lang.menuUpdate + '</button>';
+      html += '      <button class="menu-history" onclick="event.stopPropagation(); viewConcernHistory(\'' + concern.id + '\')">' + lang.menuHistory + '</button>';
+      html += '      <button class="menu-delete" onclick="event.stopPropagation(); openDeleteModal(\'' + concern.id + '\')">' + lang.menuDelete + '</button>';
+      html += '    </div>';
+      html += '  </div>';
+      html += '</div>';
+
+      // Icon + title + status
+      html += '<div class="concern-card-header">';
+      html += '  <div class="concern-card-icon">' + icon + '</div>';
+      html += '  <div class="concern-card-title">' + capitalizeFirst(concern.title) + '</div>';
+      html += '  <span class="concern-card-status ' + status + '">' + (lang.status[status] || status) + '</span>';
+      html += '</div>';
+
+      // Expanded body (fields + actions)
+      html += '<div class="concern-card-body"><div class="field-list" id="fields-' + concern.id + '"></div>';
+      html += '  <div class="concern-card-actions">';
+      html += '    <a onclick="event.stopPropagation(); viewConcernHistory(\'' + concern.id + '\')">' + lang.history + '</a>';
+      html += '    <a onclick="event.stopPropagation(); editConcern(\'' + concern.id + '\')">' + lang.update + '</a>';
+      html += '  </div>';
+      html += '</div>';
+
+      // Collapsed footer
+      html += '<div class="concern-card-collapsed-footer">';
+      html += '  <button class="view-more-link" onclick="event.stopPropagation(); expandCard(\'' + cardId + '\')">' + lang.viewMore + '</button>';
+      html += '</div>';
 
       card.innerHTML = html;
 
-      // Build expanded fields
-      const fieldList = card.querySelector('.field-list');
-      const fieldConfig = [
-        { key: 'started', label: lang.fields?.started || 'Started', value: fields.started },
-        { key: 'helps', label: lang.fields?.helps || 'Helps', value: fields.whatHelps },
-        { key: 'worsens', label: lang.fields?.worsens || 'Worsens', value: fields.whatWorsens },
-        { key: 'medications', label: lang.fields?.medications || 'Medications', value: fields.medications },
-      ];
-
-      fieldConfig.forEach(({ label, value }) => {
-        const cleanValue = cleanFieldForDisplay(value);
-        if (cleanValue && isValidFieldValue(cleanValue)) {
-          const fieldItem = document.createElement('div');
-          fieldItem.className = 'field-item';
-          fieldItem.innerHTML = `
-            <span class="field-label">${label}</span>
-            <span class="field-value">${capitalizeFirst(cleanValue)}</span>
-          `;
-          fieldList.appendChild(fieldItem);
+      // Build field items
+      const fieldList = card.querySelector('#fields-' + concern.id);
+      [
+        { label: lang.fields?.started || 'Started', value: fields.started },
+        { label: lang.fields?.helps || 'Helps', value: fields.whatHelps },
+        { label: lang.fields?.worsens || 'Worsens', value: fields.whatWorsens },
+        { label: lang.fields?.medications || 'Medications', value: fields.medications },
+      ].forEach(({ label, value }) => {
+        const v = cleanFieldForDisplay(value);
+        if (v && isValidFieldValue(v)) {
+          const fi = document.createElement('div');
+          fi.className = 'field-item';
+          fi.innerHTML = '<span class="field-label">' + label + '</span><span class="field-value">' + capitalizeFirst(v) + '</span>';
+          fieldList.appendChild(fi);
         }
       });
 
-      // Add click handler to expand/collapse
+      // Click to expand/collapse
       card.addEventListener('click', (e) => {
-        if (!e.target.closest('button')) {
-          toggleConcernExpanded(cardId);
+        if (!e.target.closest('button') && !e.target.closest('a') && !e.target.closest('.dots-dropdown')) {
+          toggleExpanded(cardId);
         }
       });
 
       return card;
     }
 
-    // Toggle concern card expansion
-    function toggleConcernExpanded(cardId) {
+    // ===== INTERACTIONS =====
+    function expandCard(cardId) {
+      toggleExpanded(cardId);
+    }
+
+    function toggleExpanded(cardId) {
       const card = document.getElementById(cardId);
-      if (expandedConcernId === cardId) {
+      if (!card) return;
+
+      if (card.classList.contains('expanded')) {
         card.classList.remove('expanded');
-        expandedConcernId = null;
+        if (expandedConcernId === cardId) expandedConcernId = null;
       } else {
-        if (expandedConcernId) {
-          document.getElementById(expandedConcernId).classList.remove('expanded');
+        // Collapse any other expanded card
+        if (expandedConcernId && expandedConcernId !== cardId) {
+          const prev = document.getElementById(expandedConcernId);
+          if (prev) prev.classList.remove('expanded');
         }
         card.classList.add('expanded');
         expandedConcernId = cardId;
       }
     }
 
-    // Edit concern action
+    function toggleDotsMenu(concernId) {
+      const menuEl = document.getElementById('menu-' + concernId);
+      if (!menuEl) return;
+
+      // Close any other open menu
+      if (openMenuId && openMenuId !== concernId) {
+        const prevMenu = document.getElementById('menu-' + openMenuId);
+        if (prevMenu) prevMenu.classList.remove('open');
+      }
+
+      menuEl.classList.toggle('open');
+      openMenuId = menuEl.classList.contains('open') ? concernId : null;
+    }
+
+    // Close menus when clicking elsewhere
+    document.addEventListener('click', () => {
+      if (openMenuId) {
+        const m = document.getElementById('menu-' + openMenuId);
+        if (m) m.classList.remove('open');
+        openMenuId = null;
+      }
+    });
+
     function editConcern(concernId) {
       if (userId && userId !== 'preview' && userId !== 'summary.html') {
-        window.location.href = `/suggest/${userId}?concernId=${concernId}&returnTo=summary`;
+        window.location.href = '/suggest/' + userId + '?concernId=' + concernId + '&returnTo=summary';
       }
     }
 
-    // View concern history
-    function viewConcernHistory(concernId) {
+    function viewConcernHistory() {
       if (userId && userId !== 'preview' && userId !== 'summary.html') {
-        window.location.href = `/history/${userId}`;
+        window.location.href = '/history/' + userId;
       }
     }
 
-    // Get icon for concern type
+    // ===== DELETE MODAL =====
+    function openDeleteModal(concernId) {
+      // Close dots menu
+      if (openMenuId) {
+        const m = document.getElementById('menu-' + openMenuId);
+        if (m) m.classList.remove('open');
+        openMenuId = null;
+      }
+      pendingDeleteConcernId = concernId;
+      document.getElementById('deleteModal').classList.add('open');
+    }
+
+    function closeDeleteModal() {
+      document.getElementById('deleteModal').classList.remove('open');
+      pendingDeleteConcernId = null;
+    }
+
+    async function confirmDelete() {
+      if (!pendingDeleteConcernId) return;
+      try {
+        const response = await fetch(API_BASE + '/concerns/' + userId + '/' + pendingDeleteConcernId, { method: 'DELETE' });
+        if (response.ok) {
+          // Remove from local data and re-render
+          allConcerns = allConcerns.filter(c => c.id !== pendingDeleteConcernId);
+          closeDeleteModal();
+          if (allConcerns.length > 0) {
+            renderMultipleConcerns(allConcerns);
+          } else {
+            showEmpty();
+          }
+        }
+      } catch (err) {
+        console.error('Delete failed:', err);
+      }
+      closeDeleteModal();
+    }
+
+    // Close modal on overlay click
+    document.getElementById('deleteModal').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) closeDeleteModal();
+    });
+
+    // ===== HELPERS =====
     function getIconForConcern(concern) {
-      const lower = concern.toLowerCase();
-      if (lower.includes('eye') || lower.includes('ojo') || lower.includes('sty') || lower.includes('orzuelo')) return '👁️';
-      if (lower.includes('head') || lower.includes('cabeza') || lower.includes('migraine') || lower.includes('migraña')) return '🤕';
-      if (lower.includes('stomach') || lower.includes('estómago') || lower.includes('digestion')) return '🤢';
-      if (lower.includes('throat') || lower.includes('garganta') || lower.includes('cold') || lower.includes('resfriado')) return '🤧';
-      if (lower.includes('back') || lower.includes('espalda') || lower.includes('pain') || lower.includes('dolor')) return '💊';
-      if (lower.includes('skin') || lower.includes('piel') || lower.includes('rash')) return '🩹';
-      if (lower.includes('sleep') || lower.includes('sueño') || lower.includes('insomnia')) return '😴';
+      const l = concern.toLowerCase();
+      if (l.includes('eye') || l.includes('ojo') || l.includes('sty') || l.includes('orzuelo')) return '👁️';
+      if (l.includes('head') || l.includes('cabeza') || l.includes('migraine') || l.includes('migraña')) return '🤕';
+      if (l.includes('stomach') || l.includes('estómago') || l.includes('digestion')) return '🤢';
+      if (l.includes('throat') || l.includes('garganta') || l.includes('cold') || l.includes('resfriado')) return '🤧';
+      if (l.includes('back') || l.includes('espalda') || l.includes('pain') || l.includes('dolor')) return '💊';
+      if (l.includes('skin') || l.includes('piel') || l.includes('rash')) return '🩹';
+      if (l.includes('sleep') || l.includes('sueño') || l.includes('insomnia')) return '😴';
       return '📋';
     }
 
-    // Clean field value for display
     function cleanFieldForDisplay(value) {
       if (!value) return '';
-      return value
-        .replace(/^#+\s*/g, '')
-        .replace(/^usuario\s*reporta\s*["']?/i, '')
-        .replace(/^patient\s*reports?\s*/i, '')
-        .replace(/["']+$/g, '')
-        .replace(/\*+/g, '')
-        .trim();
+      return value.replace(/^#+\s*/g, '').replace(/^usuario\s*reporta\s*["']?/i, '').replace(/^patient\s*reports?\s*/i, '').replace(/["']+$/g, '').replace(/\*+/g, '').trim();
     }
 
-    // Check if field value is meaningful
     function isValidFieldValue(value) {
       if (!value || value.length < 2) return false;
-      const invalidPatterns = [
-        /^no\s*proporcionado/i,
-        /^not\s*provided/i,
-        /^n\/a$/i,
-        /^none$/i,
-        /^ninguno/i,
-        /^no\s*aplica/i,
-        /^-+$/,
-      ];
-      return !invalidPatterns.some(p => p.test(value.trim()));
+      return ![/^no\s*proporcionado/i, /^not\s*provided/i, /^n\/a$/i, /^none$/i, /^ninguno/i, /^no\s*aplica/i, /^-+$/].some(p => p.test(value.trim()));
     }
 
-    // Capitalize first letter
-    function capitalizeFirst(str) {
-      if (!str) return '';
-      return str.charAt(0).toUpperCase() + str.slice(1);
-    }
+    function capitalizeFirst(str) { return str ? str.charAt(0).toUpperCase() + str.slice(1) : ''; }
 
-    // Universal parser that handles ALL format types
     function parseAnyFormat(text) {
-      const fields = {
-        mainConcern: '',
-        started: '',
-        location: '',
-        symptoms: '',
-        whatHelps: '',
-        whatWorsens: '',
-        medications: '',
-        notes: ''
-      };
-
+      const fields = { mainConcern: '', started: '', location: '', symptoms: '', whatHelps: '', whatWorsens: '', medications: '', notes: '' };
       if (!text) return fields;
 
-      // Clean text first
-      let cleaned = text
-        .replace(/^#+\s*/gm, '')  // Remove markdown headers (# Health Note)
-        .replace(/\*\*/g, '')
-        .replace(/\*([^*]+)\*/g, '$1')
-        .replace(/📝|❓|•/g, '')
-        .replace(/---+/g, '\n');
+      let cleaned = text.replace(/^#+\s*/gm, '').replace(/\*\*/g, '').replace(/\*([^*]+)\*/g, '$1').replace(/📝|❓|•/g, '').replace(/---+/g, '\n');
 
-      // FORMAT 1: Simple format (Concern: X, Motivo: X)
-      const updatePagePatterns = {
+      const simple = {
         mainConcern: /^(?:Main concern|Concern|Motivo|Queixa|Motif):\s*(.+)/im,
         started: /^(?:Started|Inicio|Início|Début):\s*(.+)/im,
         location: /^Location:\s*(.+)/im,
@@ -1102,230 +1072,88 @@
         notes: /^Notes:\s*(.+)/im
       };
 
-      // FORMAT 2: AI-generated format (multi-language headers)
-      const aiPatterns = {
-        mainConcern: [
-          /(?:MOTIVO PRINCIPAL|MAIN CONCERN|QUEIXA PRINCIPAL|MOTIF PRINCIPAL)[:\s]*\n?([^\n]+)/i,
-          /(?:Motivo de consulta|Chief complaint)[:\s]*([^\n]+)/i,
-        ],
-        started: [
-          /(?:INICIO|ONSET|INÍCIO|DÉBUT)[^:]*[:\s]*\n?([^\n]+)/i,
-          /(?:DURACIÓN|DURATION|DURAÇÃO)[:\s]*([^\n]+)/i,
-          /(?:Started|Comenzó|Início)[:\s]*([^\n]+)/i,
-        ],
-        location: [
-          /(?:LOCALIZACIÓN|LOCATION|LOCALIZAÇÃO)[:\s]*\n?([^\n]+)/i,
-        ],
-        whatHelps: [
-          /(?:QUÉ AYUDA|WHAT HELPS|O QUE AJUDA)[^:]*[:\s]*\n?([^\n]+)/i,
-          /[-•]\s*Helps?:\s*([^\n]+)/i,
-          /Factores que alivian[:\s]*([^\n]+)/i,
-        ],
-        whatWorsens: [
-          /(?:EMPEORA|WORSENS|PIORA|AGGRAVE)[^:]*[:\s]*\n?([^\n]+)/i,
-          /[-•]\s*Worsens?:\s*([^\n]+)/i,
-          /Factores que agravan[:\s]*([^\n]+)/i,
-        ],
-        medications: [
-          /(?:MEDICAMENTOS|MEDICATIONS|MÉDICAMENTS)[^:]*[:\s]*\n?([^\n]+)/i,
-        ]
+      const ai = {
+        mainConcern: [/(?:MOTIVO PRINCIPAL|MAIN CONCERN|QUEIXA PRINCIPAL|MOTIF PRINCIPAL)[:\s]*\n?([^\n]+)/i, /(?:Motivo de consulta|Chief complaint)[:\s]*([^\n]+)/i],
+        started: [/(?:INICIO|ONSET|INÍCIO|DÉBUT)[^:]*[:\s]*\n?([^\n]+)/i, /(?:DURACIÓN|DURATION|DURAÇÃO)[:\s]*([^\n]+)/i, /(?:Started|Comenzó|Início)[:\s]*([^\n]+)/i],
+        location: [/(?:LOCALIZACIÓN|LOCATION|LOCALIZAÇÃO)[:\s]*\n?([^\n]+)/i],
+        whatHelps: [/(?:QUÉ AYUDA|WHAT HELPS|O QUE AJUDA)[^:]*[:\s]*\n?([^\n]+)/i, /[-•]\s*Helps?:\s*([^\n]+)/i, /Factores que alivian[:\s]*([^\n]+)/i],
+        whatWorsens: [/(?:EMPEORA|WORSENS|PIORA|AGGRAVE)[^:]*[:\s]*\n?([^\n]+)/i, /[-•]\s*Worsens?:\s*([^\n]+)/i, /Factores que agravan[:\s]*([^\n]+)/i],
+        medications: [/(?:MEDICAMENTOS|MEDICATIONS|MÉDICAMENTS)[^:]*[:\s]*\n?([^\n]+)/i]
       };
 
-      // Try Update page format first (simpler, more reliable)
-      for (const [key, pattern] of Object.entries(updatePagePatterns)) {
-        const match = cleaned.match(pattern);
-        if (match && match[1]) {
-          fields[key] = cleanFieldValue(match[1]);
-        }
-      }
+      for (const [key, pattern] of Object.entries(simple)) { const m = cleaned.match(pattern); if (m && m[1]) fields[key] = cleanFieldValue(m[1]); }
 
-      // If Update page format didn't find main concern, try AI patterns
       if (!fields.mainConcern) {
-        for (const [key, patterns] of Object.entries(aiPatterns)) {
-          if (fields[key]) continue; // Skip if already found
-          for (const pattern of patterns) {
-            const match = cleaned.match(pattern);
-            if (match && match[1]) {
-              fields[key] = cleanFieldValue(match[1]);
-              break;
-            }
-          }
+        for (const [key, patterns] of Object.entries(ai)) {
+          if (fields[key]) continue;
+          for (const pattern of patterns) { const m = cleaned.match(pattern); if (m && m[1]) { fields[key] = cleanFieldValue(m[1]); break; } }
         }
       }
 
-      // If still no main concern, try to extract from first meaningful sentence
       if (!fields.mainConcern) {
-        const sentences = cleaned.split(/[.\n]+/).map(s => s.trim()).filter(s => s.length > 10);
-        const meaningful = sentences.find(s =>
-          !s.match(/^(MOTIVO|MAIN|ONSET|INICIO|WHAT|QUÉ|MEDICAMENTOS|PREGUNTAS|Health Record|Patient)/i)
-        );
-        if (meaningful) {
-          fields.mainConcern = cleanFieldValue(meaningful);
-        }
+        const s = cleaned.split(/[.\n]+/).map(s => s.trim()).filter(s => s.length > 10);
+        const meaningful = s.find(s => !s.match(/^(MOTIVO|MAIN|ONSET|INICIO|WHAT|QUÉ|MEDICAMENTOS|PREGUNTAS|Health Record|Patient)/i));
+        if (meaningful) fields.mainConcern = cleanFieldValue(meaningful);
       }
 
-      // Extract timing if not found (look for X days ago pattern)
-      if (!fields.started) {
-        const timingMatch = cleaned.match(/(\d+\s*(?:days?|hours?|weeks?|días?|horas?|semanas?)\s*(?:ago)?)/i);
-        if (timingMatch) {
-          fields.started = timingMatch[1].trim();
-        }
-      }
+      if (!fields.started) { const m = cleaned.match(/(\d+\s*(?:days?|hours?|weeks?|días?|horas?|semanas?)\s*(?:ago)?)/i); if (m) fields.started = m[1].trim(); }
+      if (!fields.whatHelps) { const m = cleaned.match(/(warm compresses|cold compresses|compresas tibias|compresas frías|rest|descanso|medication|sleep|ice|heat)[^,.\n]*/i); if (m) fields.whatHelps = cleanFieldValue(m[0]); }
 
-      // Extract what helps if not found (look for common remedies)
-      if (!fields.whatHelps) {
-        const helpsMatch = cleaned.match(/(warm compresses|cold compresses|compresas tibias|compresas frías|rest|descanso|medication|sleep|ice|heat)[^,.\n]*/i);
-        if (helpsMatch) {
-          fields.whatHelps = cleanFieldValue(helpsMatch[0]);
-        }
-      }
-
-      // Handle corruption: if whatWorsens contains embedded "Helps:" text, extract it
       if (fields.whatWorsens && fields.whatWorsens.includes('Helps:')) {
-        const embeddedHelps = fields.whatWorsens.match(/Helps?:\s*([^,.\n]+)/i);
-        if (embeddedHelps && !fields.whatHelps) {
-          fields.whatHelps = cleanFieldValue(embeddedHelps[1]);
-        }
-        // Remove the embedded Helps part from whatWorsens
+        const em = fields.whatWorsens.match(/Helps?:\s*([^,.\n]+)/i);
+        if (em && !fields.whatHelps) fields.whatHelps = cleanFieldValue(em[1]);
         fields.whatWorsens = cleanFieldValue(fields.whatWorsens.replace(/[\-•]?\s*Helps?:\s*[^,.\n]+/gi, ''));
       }
 
-      // Validate and clean: if field value is just garbage labels, clear it
       for (const key of Object.keys(fields)) {
-        const val = fields[key];
-        if (val && /^[\s\/\-•]*$/i.test(val)) {
-          fields[key] = '';
-        }
-        // Clear if it's just "WORSENS" or "HELPS" without meaningful content
-        if (val && /^(\/?\s*WORSENS|\/?\s*HELPS|\.not much)$/i.test(val.trim())) {
-          fields[key] = '';
-        }
+        const v = fields[key];
+        if (v && /^[\s\/\-•]*$/i.test(v)) fields[key] = '';
+        if (v && /^(\/?\s*WORSENS|\/?\s*HELPS|\.not much)$/i.test(v.trim())) fields[key] = '';
       }
 
       return fields;
     }
 
-    // Clean a field value
     function cleanFieldValue(value) {
       if (!value) return '';
-
-      let cleaned = value
-        // Remove repeated label patterns (corruption from multiple saves)
-        .replace(/(What worsens:\s*)+/gi, '')
-        .replace(/(What helps:\s*)+/gi, '')
-        .replace(/(Medications:\s*)+/gi, '')
-        .replace(/(Started:\s*)+/gi, '')
-        .replace(/(Location:\s*)+/gi, '')
-        .replace(/(Symptoms:\s*)+/gi, '')
-        .replace(/(Main concern:\s*)+/gi, '')
-        // Remove embedded labels that don't belong (multiple patterns for reliability)
-        .replace(/- Helps?:\s*/gi, '')
-        .replace(/• Helps?:\s*/gi, '')
-        .replace(/- Worsens?:\s*/gi, '')
-        .replace(/• Worsens?:\s*/gi, '')
-        .replace(/Helps?:\s*/gi, '')
-        .replace(/Worsens?:\s*/gi, '')
-        // Remove WORSENS/HELPS as standalone labels
-        .replace(/^\s*\/?\s*WORSENS\s*/gi, '')
-        .replace(/^\s*\/?\s*HELPS\s*/gi, '')
-        // Standard cleanup
-        .replace(/^[\-•*\s\/]+/, '')
-        .replace(/[\-•*\s\/]+$/, '')
-        .replace(/Patient reports (having )?/gi, '')
-        .replace(/\bpatient\b/gi, '')
-        .replace(/\breports\b/gi, '')
-        .replace(/\bapproximately\b/gi, 'about')
-        // Clean up multiple spaces
-        .replace(/\s+/g, ' ')
-        .trim();
-
-      // If the result is just garbage or too short, return empty
-      if (cleaned.length < 2 || /^[\.\,\s\-\/]+$/.test(cleaned)) {
-        return '';
-      }
-
-      return cleaned;
+      let c = value.replace(/(What worsens:\s*)+/gi, '').replace(/(What helps:\s*)+/gi, '').replace(/(Medications:\s*)+/gi, '').replace(/(Started:\s*)+/gi, '').replace(/(Location:\s*)+/gi, '').replace(/(Symptoms:\s*)+/gi, '').replace(/(Main concern:\s*)+/gi, '').replace(/- Helps?:\s*/gi, '').replace(/• Helps?:\s*/gi, '').replace(/- Worsens?:\s*/gi, '').replace(/• Worsens?:\s*/gi, '').replace(/Helps?:\s*/gi, '').replace(/Worsens?:\s*/gi, '').replace(/^\s*\/?\s*WORSENS\s*/gi, '').replace(/^\s*\/?\s*HELPS\s*/gi, '').replace(/^[\-•*\s\/]+/, '').replace(/[\-•*\s\/]+$/, '').replace(/Patient reports (having )?/gi, '').replace(/\bpatient\b/gi, '').replace(/\breports\b/gi, '').replace(/\bapproximately\b/gi, 'about').replace(/\s+/g, ' ').trim();
+      if (c.length < 2 || /^[\.\,\s\-\/]+$/.test(c)) return '';
+      return c;
     }
 
-    // Show empty state
     function showEmpty() {
       document.getElementById('loading').style.display = 'none';
       document.getElementById('content').style.display = 'none';
       document.getElementById('empty').style.display = 'block';
     }
 
-    // Show demo data
     function showDemo() {
-      const demoSummary = 'Dolor persistente en la parte baja de la espalda desde hace aproximadamente dos semanas, más intenso por las mañanas. Ha mejorado con compresas tibias y actualmente está probando estiramientos suaves.';
-
-      summaryText = demoSummary;
-      renderSummary({
-        userName: 'Alfa Mariano',
-        updatedAt: new Date().toISOString(),
-        summary: demoSummary
-      });
+      const demo = 'Dolor persistente en la parte baja de la espalda desde hace aproximadamente dos semanas.';
+      summaryText = demo;
+      renderSummary({ userName: 'Alfa Mariano', updatedAt: new Date().toISOString(), summary: demo });
     }
 
-    // Navigate to doctor view
     function copyForDoctor() {
-      if (!userId || userId === 'preview' || userId === 'summary.html') {
-        alert('Esta función estará disponible cuando tengas un resumen guardado.');
-        return;
-      }
-      // Navigate to the doctor view page
-      window.location.href = `/doctor/${userId}`;
+      if (!userId || userId === 'preview' || userId === 'summary.html') return;
+      window.location.href = '/doctor/' + userId;
     }
 
-    // Next appointment action
     function nextAppointment() {
-      if (!userId || userId === 'preview' || userId === 'summary.html') {
-        alert('Esta función estará disponible cuando tengas un resumen guardado.');
-        return;
-      }
-      // Navigate to the appointment page
-      window.location.href = `/appointment/${userId}`;
+      if (!userId || userId === 'preview' || userId === 'summary.html') return;
+      window.location.href = '/appointment/' + userId;
     }
 
-    // Suggest a change
-    function suggestChange() {
-      if (!userId || userId === 'preview' || userId === 'summary.html') {
-        alert('Esta función estará disponible cuando tengas un resumen guardado.');
-        return;
-      }
-      window.location.href = `/suggest/${userId}`;
-    }
+    function startPolling() { pollInterval = setInterval(fetchSummary, 10000); }
 
-    // View history
-    function viewHistory() {
-      if (!userId || userId === 'preview' || userId === 'summary.html') {
-        alert('Esta función estará disponible cuando tengas un resumen guardado.');
-        return;
-      }
-      window.location.href = `/history/${userId}`;
-    }
-
-    // Start polling
-    function startPolling() {
-      pollInterval = setInterval(fetchSummary, 10000);
-    }
-
-    // Initialize
     document.addEventListener('DOMContentLoaded', () => {
       applyLocalization();
       fetchSummary();
-      if (userId && userId !== 'preview' && userId !== 'summary.html') {
-        startPolling();
-      }
+      if (userId && userId !== 'preview' && userId !== 'summary.html') startPolling();
     });
 
-    // Cleanup on page hide
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden && pollInterval) {
-        clearInterval(pollInterval);
-      } else if (!document.hidden && userId && userId !== 'preview') {
-        fetchSummary();
-        startPolling();
-      }
+      if (document.hidden && pollInterval) clearInterval(pollInterval);
+      else if (!document.hidden && userId && userId !== 'preview') { fetchSummary(); startPolling(); }
     });
   </script>
 </body>
