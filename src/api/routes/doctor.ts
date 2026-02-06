@@ -1,5 +1,6 @@
 import { FastifyInstance, FastifyPluginAsync } from 'fastify';
-import { queryOne } from '../../infra/db/client';
+import { queryOne, db } from '../../infra/db/client';
+import { ConcernService } from '../../domain/concern/service';
 
 /**
  * Doctor Note Data Structure
@@ -387,26 +388,79 @@ export const doctorRoutes: FastifyPluginAsync = async (app: FastifyInstance) => 
       // Table may not exist yet
     }
 
-    if (!summary) {
+    // Fetch per-concern data from health_concerns table (primary source)
+    let concerns: Array<{
+      id: string;
+      title: string;
+      status: string;
+      summaryContent: string | null;
+      icon: string | null;
+      updatedAt: Date;
+      parsed: DoctorNote;
+    }> = [];
+
+    try {
+      const concernService = new ConcernService(db);
+      const allConcerns = await concernService.getAllConcerns(userId);
+      concerns = allConcerns.map(c => ({
+        id: c.id,
+        title: c.title,
+        status: c.status,
+        summaryContent: c.summaryContent,
+        icon: c.icon,
+        updatedAt: c.updatedAt,
+        parsed: parseSummaryToDoctorNote(c.summaryContent || '', user.language),
+      }));
+    } catch {
+      // Table may not exist yet — fall through to legacy
+    }
+
+    // Parse legacy summary as fallback
+    let doctorNote: DoctorNote | null = null;
+    let dateLabel = '';
+    let updatedAt: Date | null = null;
+
+    if (summary) {
+      doctorNote = parseSummaryToDoctorNote(summary.content, user.language);
+      dateLabel = formatDateLabel(summary.created_at, user.language);
+      updatedAt = summary.created_at;
+    } else if (concerns.length === 0) {
       return reply.status(404).send({ error: 'No summary found' });
     }
 
-    // Parse summary into doctor note structure
-    const doctorNote = parseSummaryToDoctorNote(summary.content, user.language);
+    // Use the most recent concern's date if available
+    if (concerns.length > 0) {
+      const newestConcern = concerns[0]!;
+      dateLabel = formatDateLabel(newestConcern.updatedAt, user.language);
+      updatedAt = newestConcern.updatedAt;
+    }
 
-    // Return formatted response
+    // Return formatted response with both legacy and per-concern data
     return {
       userId: user.id,
       userName: user.name,
       language: user.language,
-      dateLabel: formatDateLabel(summary.created_at, user.language),
-      updatedAt: summary.created_at,
-      // Doctor note fields (flat for easy consumption)
-      motivo: doctorNote.motivo,
-      hpi: doctorNote.hpi,
-      sintomasAsociados: doctorNote.sintomasAsociados,
-      medidas: doctorNote.medidas,
-      objetivos: doctorNote.objetivos,
+      dateLabel,
+      updatedAt,
+      // Legacy doctor note fields (for backward compat)
+      motivo: doctorNote?.motivo || '',
+      hpi: doctorNote?.hpi || {},
+      sintomasAsociados: doctorNote?.sintomasAsociados || null,
+      medidas: doctorNote?.medidas || [],
+      objetivos: doctorNote?.objetivos || null,
+      // Per-concern data (primary — each concern parsed into clinical format)
+      concerns: concerns.map(c => ({
+        id: c.id,
+        title: c.title,
+        status: c.status,
+        icon: c.icon,
+        updatedAt: c.updatedAt,
+        motivo: c.parsed.motivo,
+        hpi: c.parsed.hpi,
+        sintomasAsociados: c.parsed.sintomasAsociados,
+        medidas: c.parsed.medidas,
+        objetivos: c.parsed.objetivos,
+      })),
     };
   });
 };

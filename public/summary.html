@@ -935,9 +935,9 @@
       const status = concern.status || 'active';
       const lastUpdated = concern.updatedAt ? formatDate(new Date(concern.updatedAt)) : formatDate(new Date());
 
-      // Build paragraph from summaryContent — strip field labels, show as plain text
+      // Parse summaryContent into structured fields for display
       const rawContent = concern.summaryContent || '';
-      const paragraph = buildParagraph(rawContent);
+      const fields = parseAnyFormat(rawContent);
 
       let html = '';
 
@@ -963,9 +963,27 @@
       // Status badge below title
       html += '<span class="concern-card-status ' + status + '">' + (lang.status[status] || status) + '</span>';
 
-      // Expanded body: paragraph text + actions row with View Less
+      // Expanded body: structured fields (like single summary) + actions row
       html += '<div class="concern-card-body">';
-      html += '  <div class="concern-card-paragraph">' + paragraph + '</div>';
+      html += '  <div class="field-list">';
+      const fieldDefs = [
+        { label: lang.fields?.started || 'Started', value: fields.started },
+        { label: lang.fields?.helps || 'Helps', value: fields.whatHelps },
+        { label: lang.fields?.worsens || 'Worsens', value: fields.whatWorsens },
+        { label: lang.fields?.medications || 'Medications', value: fields.medications },
+      ];
+      fieldDefs.forEach(function(f) {
+        const v = cleanFieldForDisplay(f.value);
+        if (v && isValidFieldValue(v)) {
+          html += '<div class="field-item"><span class="field-label">' + f.label + '</span><span class="field-value">' + capitalizeFirst(v) + '</span></div>';
+        }
+      });
+      // Fallback: if no fields parsed, show as paragraph
+      const hasFields = fieldDefs.some(function(f) { const v = cleanFieldForDisplay(f.value); return v && isValidFieldValue(v); });
+      if (!hasFields && rawContent) {
+        html += '<div class="concern-card-paragraph">' + buildParagraph(rawContent) + '</div>';
+      }
+      html += '  </div>';
       html += '  <div class="concern-card-actions">';
       html += '    <div class="concern-card-actions-left">';
       html += '      <a onclick="event.stopPropagation(); viewConcernHistory(\'' + concern.id + '\')">' + lang.history + '</a>';

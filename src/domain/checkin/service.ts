@@ -25,70 +25,57 @@ export class CheckinService {
   // ============================================================================
 
   private getCheckinMessage(name: string | null, caseLabel: string | null, language: string): string {
+    // Permission-based continuity: gentle reminder that their note exists,
+    // not a push to report back. The user should feel they have a calm place
+    // to return to, not that they're being monitored.
     const templates: Record<string, { withName: string; withoutName: string }> = {
       es: {
         withName: `Hola {name} 👋
 
-Solo quería ver cómo sigues.
+Tu nota sobre ${caseLabel || 'tu salud'} sigue aquí, organizada y lista.
 
-¿Cómo se siente ${caseLabel || 'tu síntoma'} hoy comparado con ayer?
-
-Si algo ha cambiado, puedo agregarlo a tu registro.`,
+Si algo ha cambiado — aunque sea algo pequeño — puedes contarme y lo agrego.`,
         withoutName: `Hola 👋
 
-Solo quería ver cómo sigues.
+Tu nota sobre ${caseLabel || 'tu salud'} sigue aquí, organizada y lista.
 
-¿Cómo se siente ${caseLabel || 'tu síntoma'} hoy comparado con ayer?
-
-Si algo ha cambiado, puedo agregarlo a tu registro.`,
+Si algo ha cambiado — aunque sea algo pequeño — puedes contarme y lo agrego.`,
       },
       en: {
         withName: `Hi {name} 👋
 
-Just checking in.
+Your note about ${caseLabel || 'your health'} is still here, organized and ready.
 
-How is ${caseLabel || 'your symptom'} feeling today compared to yesterday?
-
-If anything has changed, I can add it to your note.`,
+If anything has changed — even something small — you can tell me and I'll add it.`,
         withoutName: `Hi 👋
 
-Just checking in.
+Your note about ${caseLabel || 'your health'} is still here, organized and ready.
 
-How is ${caseLabel || 'your symptom'} feeling today compared to yesterday?
-
-If anything has changed, I can add it to your note.`,
+If anything has changed — even something small — you can tell me and I'll add it.`,
       },
       pt: {
         withName: `Oi {name} 👋
 
-Só passando para ver como você está.
+Sua nota sobre ${caseLabel || 'sua saúde'} continua aqui, organizada e pronta.
 
-Como está ${caseLabel || 'seu sintoma'} hoje comparado a ontem?
-
-Se algo mudou, posso adicionar ao seu registro.`,
+Se algo mudou — mesmo algo pequeno — pode me contar que eu adiciono.`,
         withoutName: `Oi 👋
 
-Só passando para ver como você está.
+Sua nota sobre ${caseLabel || 'sua saúde'} continua aqui, organizada e pronta.
 
-Como está ${caseLabel || 'seu sintoma'} hoje comparado a ontem?
-
-Se algo mudou, posso adicionar ao seu registro.`,
+Se algo mudou — mesmo algo pequeno — pode me contar que eu adiciono.`,
       },
       fr: {
         withName: `Bonjour {name} 👋
 
-Je voulais juste prendre des nouvelles.
+Votre note sur ${caseLabel || 'votre santé'} est toujours là, organisée et prête.
 
-Comment va ${caseLabel || 'votre symptôme'} aujourd'hui par rapport à hier?
-
-Si quelque chose a changé, je peux l'ajouter à votre dossier.`,
+Si quelque chose a changé — même quelque chose de petit — vous pouvez me le dire et je l'ajouterai.`,
         withoutName: `Bonjour 👋
 
-Je voulais juste prendre des nouvelles.
+Votre note sur ${caseLabel || 'votre santé'} est toujours là, organisée et prête.
 
-Comment va ${caseLabel || 'votre symptôme'} aujourd'hui par rapport à hier?
-
-Si quelque chose a changé, je peux l'ajouter à votre dossier.`,
+Si quelque chose a changé — même quelque chose de petit — vous pouvez me le dire et je l'ajouterai.`,
       },
     };
 
@@ -108,77 +95,78 @@ Si quelque chose a changé, je peux l'ajouter à votre dossier.`,
     const isBetter = /\b(better|mejor|melhor|mieux|less pain|menos dolor|improvement|mejora)\b/i.test(lowerResponse);
     const isWorse = /\b(worse|peor|pior|pire|more pain|más dolor|swelling|hincha|empeor)\b/i.test(lowerResponse);
 
+    // Containment-first acknowledgments: calm, grounded, reinforce that info is safely captured
     const responses: Record<string, Record<string, { message: string; noteEntry: string }>> = {
       same: {
         es: {
-          message: 'Entendido — he añadido que se siente más o menos igual hoy. Si cambia después, solo escríbeme y actualizo tu registro.',
-          noteEntry: `Seguimiento 24h: Sin cambios significativos - "${userResponse}"`,
+          message: 'Anotado — tu nota ahora refleja que sigue igual. No necesitas recordar esto, está guardado.\n\nSi algo cambia después, solo escríbeme.',
+          noteEntry: `Seguimiento: Sin cambios significativos - "${userResponse}"`,
         },
         en: {
-          message: "Got it — I've added that it feels about the same today. If it changes later, just message me and I'll update your note.",
-          noteEntry: `24h follow-up: No significant changes - "${userResponse}"`,
+          message: "Noted — your note now reflects that it's about the same. You don't need to remember this, it's saved.\n\nIf anything changes later, just tell me.",
+          noteEntry: `Follow-up: No significant changes - "${userResponse}"`,
         },
         pt: {
-          message: 'Entendi — adicionei que está mais ou menos igual hoje. Se mudar depois, é só me escrever que atualizo seu registro.',
-          noteEntry: `Acompanhamento 24h: Sem mudanças significativas - "${userResponse}"`,
+          message: 'Anotado — sua nota agora reflete que continua igual. Você não precisa lembrar disso, está salvo.\n\nSe algo mudar depois, é só me escrever.',
+          noteEntry: `Acompanhamento: Sem mudanças significativas - "${userResponse}"`,
         },
         fr: {
-          message: "Compris — j'ai noté que c'est à peu près pareil aujourd'hui. Si ça change plus tard, écrivez-moi et je mettrai à jour votre dossier.",
-          noteEntry: `Suivi 24h: Pas de changements significatifs - "${userResponse}"`,
+          message: "Noté — votre note reflète maintenant que c'est à peu près pareil. Vous n'avez pas besoin de retenir cela, c'est sauvegardé.\n\nSi ça change plus tard, dites-le moi.",
+          noteEntry: `Suivi: Pas de changements significatifs - "${userResponse}"`,
         },
       },
       better: {
         es: {
-          message: 'Me alegra que haya mejoría — he añadido eso a tu registro. Si algo cambia después, puedes escribirme cuando quieras.',
-          noteEntry: `Seguimiento 24h: Mejoría reportada - "${userResponse}"`,
+          message: 'Qué bueno — he actualizado tu nota con la mejoría. Está todo organizado.\n\nSi algo más cambia, aquí estoy.',
+          noteEntry: `Seguimiento: Mejoría reportada - "${userResponse}"`,
         },
         en: {
-          message: "Glad to hear there's some improvement — I've added that to your note. If anything changes later, you can message me anytime.",
-          noteEntry: `24h follow-up: Improvement reported - "${userResponse}"`,
+          message: "Good to hear — I've updated your note with the improvement. Everything's organized.\n\nIf anything else changes, I'm here.",
+          noteEntry: `Follow-up: Improvement reported - "${userResponse}"`,
         },
         pt: {
-          message: 'Que bom que melhorou — adicionei isso ao seu registro. Se algo mudar depois, pode me escrever a qualquer momento.',
-          noteEntry: `Acompanhamento 24h: Melhora reportada - "${userResponse}"`,
+          message: 'Que bom — atualizei sua nota com a melhora. Está tudo organizado.\n\nSe algo mais mudar, estou aqui.',
+          noteEntry: `Acompanhamento: Melhora reportada - "${userResponse}"`,
         },
         fr: {
-          message: "Content d'apprendre qu'il y a une amélioration — j'ai ajouté cela à votre dossier. Si quelque chose change, vous pouvez m'écrire à tout moment.",
-          noteEntry: `Suivi 24h: Amélioration signalée - "${userResponse}"`,
+          message: "Bonne nouvelle — j'ai mis à jour votre note avec l'amélioration. Tout est organisé.\n\nSi autre chose change, je suis là.",
+          noteEntry: `Suivi: Amélioration signalée - "${userResponse}"`,
         },
       },
       worse: {
         es: {
-          message: 'Gracias por contarme — he añadido que se siente peor hoy. Si quieres, dime qué ha cambiado más (dolor, hinchazón, etc.) y lo capturo claramente.',
-          noteEntry: `Seguimiento 24h: Empeoramiento reportado - "${userResponse}"`,
+          message: 'Gracias por contarme. He añadido esto a tu nota.\n\nSi quieres, cuéntame un poco más sobre qué cambió y lo organizo claramente para tu médico.',
+          noteEntry: `Seguimiento: Empeoramiento reportado - "${userResponse}"`,
         },
         en: {
-          message: "Thanks for letting me know — I've added that it feels worse today. If you'd like, tell me what changed most (pain, swelling, etc.) and I'll capture it clearly.",
-          noteEntry: `24h follow-up: Worsening reported - "${userResponse}"`,
+          message: "Thank you for sharing that. I've added it to your note.\n\nIf you'd like, tell me a bit more about what changed and I'll organize it clearly for your doctor.",
+          noteEntry: `Follow-up: Worsening reported - "${userResponse}"`,
         },
         pt: {
-          message: 'Obrigado por me contar — adicionei que está pior hoje. Se quiser, me diga o que mudou mais (dor, inchaço, etc.) e eu registro claramente.',
-          noteEntry: `Acompanhamento 24h: Piora reportada - "${userResponse}"`,
+          message: 'Obrigado por compartilhar. Adicionei isso à sua nota.\n\nSe quiser, me conte um pouco mais sobre o que mudou e eu organizo claramente para seu médico.',
+          noteEntry: `Acompanhamento: Piora reportada - "${userResponse}"`,
         },
         fr: {
-          message: "Merci de me le dire — j'ai noté que c'est pire aujourd'hui. Si vous voulez, dites-moi ce qui a le plus changé (douleur, gonflement, etc.) et je le noterai clairement.",
-          noteEntry: `Suivi 24h: Aggravation signalée - "${userResponse}"`,
+          message: "Merci de me le dire. J'ai ajouté cela à votre note.\n\nSi vous voulez, dites-moi ce qui a changé et je l'organiserai clairement pour votre médecin.",
+          noteEntry: `Suivi: Aggravation signalée - "${userResponse}"`,
         },
       },
       default: {
         es: {
-          message: 'Gracias por la actualización — lo he añadido a tu registro. Si algo más cambia, puedes escribirme cuando quieras.',
-          noteEntry: `Seguimiento 24h: "${userResponse}"`,
+          message: 'Anotado — he actualizado tu nota. No necesitas recordar esto, está guardado.\n\nSi algo más cambia, solo escríbeme.',
+          noteEntry: `Seguimiento: "${userResponse}"`,
         },
         en: {
-          message: "Thanks for the update — I've added it to your note. If anything else changes, you can message me anytime.",
-          noteEntry: `24h follow-up: "${userResponse}"`,
+          message: "Noted — I've updated your note. You don't need to remember this, it's saved.\n\nIf anything else changes, just tell me.",
+          noteEntry: `Follow-up: "${userResponse}"`,
         },
         pt: {
-          message: 'Obrigado pela atualização — adicionei ao seu registro. Se algo mais mudar, pode me escrever a qualquer momento.',
-          noteEntry: `Acompanhamento 24h: "${userResponse}"`,
+          message: 'Anotado — atualizei sua nota. Você não precisa lembrar disso, está salvo.\n\nSe algo mais mudar, é só me escrever.',
+          noteEntry: `Acompanhamento: "${userResponse}"`,
         },
         fr: {
-          message: "Merci pour la mise à jour — je l'ai ajoutée à votre dossier. Si quelque chose d'autre change, vous pouvez m'écrire à tout moment.",
-          noteEntry: `Suivi 24h: "${userResponse}"`,
+          message: "Noté — j'ai mis à jour votre note. Vous n'avez pas besoin de retenir cela, c'est sauvegardé.\n\nSi autre chose change, dites-le moi.",
+          noteEntry: `Suivi: "${userResponse}"`,
         },
       },
     };

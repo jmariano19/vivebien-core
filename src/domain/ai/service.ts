@@ -121,10 +121,12 @@ export class AIService {
     // Trim whitespace
     cleaned = cleaned.trim();
 
-    // Add summary link only for summary messages, if not already present
+    // For summary messages: add containment reinforcement + link
+    // This is enforced at the code level to guarantee Principle 5 (offload mental burden)
     if (userId && this.looksLikeSummary(cleaned) && !cleaned.includes('carelog.vivebien.io')) {
+      const containmentText = this.getContainmentText(language || 'es');
       const linkText = this.getSummaryLinkText(language || 'es', userId);
-      cleaned += '\n\n' + linkText;
+      cleaned += '\n\n' + containmentText + '\n\n' + linkText;
     }
 
     // Limit response length (WhatsApp has a 4096 character limit)
@@ -157,16 +159,32 @@ export class AIService {
   }
 
   /**
+   * Get containment reinforcement text — emotionally critical
+   * Appended after every summary to offload mental burden
+   * "You don't need to remember this — it's saved."
+   */
+  private getContainmentText(language: string): string {
+    const texts: Record<string, string> = {
+      es: 'No necesitas recordar todo esto — está guardado y organizado. Si algo cambia, solo escríbeme.',
+      en: "You don't need to remember all this — it's saved and organized. If anything changes, just tell me.",
+      pt: 'Você não precisa lembrar de tudo isso — está salvo e organizado. Se algo mudar, é só me escrever.',
+      fr: "Vous n'avez pas besoin de tout retenir — c'est sauvegardé et organisé. Si quelque chose change, dites-le moi.",
+    };
+    return texts[language] || texts.en!;
+  }
+
+  /**
    * Get the summary link text in the appropriate language
    * Only shown after summaries, not on every message
+   * Reinforces containment: the note is safely saved and accessible
    */
   private getSummaryLinkText(language: string, userId: string): string {
     const link = `https://carelog.vivebien.io/${userId}`;
     const texts: Record<string, string> = {
-      es: `📋 Ver mi resumen 👇\n${link}`,
-      en: `📋 View my summary 👇\n${link}`,
-      pt: `📋 Ver meu resumo 👇\n${link}`,
-      fr: `📋 Voir mon résumé 👇\n${link}`,
+      es: `📋 Tu nota está aquí 👇\n${link}`,
+      en: `📋 Your note is here 👇\n${link}`,
+      pt: `📋 Sua nota está aqui 👇\n${link}`,
+      fr: `📋 Votre note est ici 👇\n${link}`,
     };
     return texts[language] || texts.es!;
   }
@@ -282,7 +300,7 @@ export class AIService {
     const sl = simpleLabels[detectedLang] || simpleLabels.en!;
 
     const prompt = currentSummary
-      ? `You are CareLog. Update this health note based on new information.
+      ? `You are CareLog, a calm health documentation companion. Update this health note based on new information.
 
 CURRENT NOTE:
 ${currentSummary}
@@ -292,40 +310,42 @@ ${conversationText}
 
 Generate a SIMPLE, CLEAN health note. Use this format:
 
-${sl.concern}: [what's happening, in one sentence]
+${sl.concern}: [what's happening, using the person's own words]
 ${sl.started}: [when it began]
-${sl.helps}: [what makes it better, if known]
-${sl.worsens}: [what makes it worse, if known]
+${sl.helps}: [what makes it better, if mentioned]
+${sl.worsens}: [what makes it worse, if mentioned]
 ${sl.meds}: [any medications, if mentioned]
 
 Rules:
 - Keep it SHORT and simple (no more than 5 lines)
-- Use the user's exact words when possible
+- Use the person's exact words and language when possible — this is THEIR record
 - ONLY include fields where information was actually provided
-- Do NOT include fields where information is unknown
-- No headers like "MOTIVO PRINCIPAL" - use simple labels
+- Do NOT include fields where information is unknown — never write "not provided" or "N/A"
+- No headers like "MOTIVO PRINCIPAL" — use simple labels only
 - No bullet points or complex formatting
+- No medical jargon unless the person used it first
 - Write in ${languageName}`
-      : `You are CareLog. Create a simple health note from this conversation.
+      : `You are CareLog, a calm health documentation companion. Create a simple health note from this conversation.
 
 CONVERSATION:
 ${conversationText}
 
 Generate a SIMPLE, CLEAN health note. Use this format:
 
-${sl.concern}: [what's happening, in one sentence]
+${sl.concern}: [what's happening, using the person's own words]
 ${sl.started}: [when it began]
-${sl.helps}: [what makes it better, if known]
-${sl.worsens}: [what makes it worse, if known]
+${sl.helps}: [what makes it better, if mentioned]
+${sl.worsens}: [what makes it worse, if mentioned]
 ${sl.meds}: [any medications, if mentioned]
 
 Rules:
 - Keep it SHORT and simple (no more than 5 lines)
-- Use the user's exact words when possible
+- Use the person's exact words and language when possible — this is THEIR record
 - ONLY include fields where information was actually provided
-- Do NOT include fields where information is unknown
-- No headers like "MOTIVO PRINCIPAL" - use simple labels
+- Do NOT include fields where information is unknown — never write "not provided" or "N/A"
+- No headers like "MOTIVO PRINCIPAL" — use simple labels only
 - No bullet points or complex formatting
+- No medical jargon unless the person used it first
 - Write in ${languageName}`;
 
     try {
