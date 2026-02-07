@@ -539,27 +539,27 @@ Key implementation:
 
 ### Deleting Test Users (Database Cleanup)
 
-**Use the n8n `SQL_Runner` workflow** (ID: `rWG8DN8q_HT9q6EZ_wFel`) via MCP to run database queries directly.
+**Use `psql` for direct database access** (preferred) or n8n SQL_Runner as a backup.
 
-**⚠️ IMPORTANT**: Foreign keys do NOT cascade on the users table. You must delete child records first, one table at a time. When asked to "delete test number" or "clean up test data", run these queries in order:
+**⚠️ IMPORTANT**: Foreign keys do NOT cascade on the users table. You must delete child records first. When asked to "delete test number" or "clean up test data", run these queries in order:
 
+```sql
+-- Step 1: Look up the user ID
+SELECT id FROM users WHERE phone = '+12017370113';
+
+-- Step 2: Delete child records (use the UUID from step 1)
+DELETE FROM messages WHERE user_id = '{uuid}';
+DELETE FROM health_concerns WHERE user_id = '{uuid}';
+DELETE FROM memories WHERE user_id = '{uuid}';
+DELETE FROM conversation_state WHERE user_id = '{uuid}';
+DELETE FROM experiment_assignments WHERE user_id = '{uuid}';
+DELETE FROM credit_transactions WHERE user_id = '{uuid}';
+
+-- Step 3: Delete the user
+DELETE FROM users WHERE id = '{uuid}';
 ```
-Step 1: Look up the user ID
-  SELECT id FROM users WHERE phone = '+12017370113'
 
-Step 2: Delete child records (use the UUID from step 1)
-  DELETE FROM messages WHERE user_id = '{uuid}';
-  DELETE FROM health_concerns WHERE user_id = '{uuid}';
-  DELETE FROM memories WHERE user_id = '{uuid}';
-  DELETE FROM conversation_state WHERE user_id = '{uuid}';
-  DELETE FROM experiment_assignments WHERE user_id = '{uuid}';
-  DELETE FROM credit_transactions WHERE user_id = '{uuid}';
-
-Step 3: Delete the user
-  DELETE FROM users WHERE id = '{uuid}';
-```
-
-**Each query must be run separately** — the n8n SQL_Runner and pgweb both fail when running multiple statements in one call.
+**With psql**, multiple statements can be run in one call. With n8n SQL_Runner, each query must be run separately.
 
 **NOTE**: Sending a new WhatsApp message after deletion will auto-recreate the user via `loadOrCreate()`. This is expected — the user gets a fresh record with 100 credits.
 
@@ -682,7 +682,15 @@ After making changes:
 | CareLog_Claude Database Access | AofV_qusW1Vz9XZQtIksN | Direct database queries |
 | CareLog_Claude_FileManager_HTTP_v2 | Jq8tlq176ilHzJsDLyRuv | Google Drive file operations |
 
-### Using SQL_Runner for Database Queries (Preferred)
+### Direct Database Access via psql (Preferred)
+```bash
+/opt/homebrew/opt/libpq/bin/psql "postgres://postgres:bd894cefacb1c52998f3@85.209.95.19:5432/projecto-1" -c "SELECT * FROM users LIMIT 5"
+```
+- **psql path**: `/opt/homebrew/opt/libpq/bin/psql`
+- **Connection**: `postgres://postgres:bd894cefacb1c52998f3@85.209.95.19:5432/projecto-1`
+- Supports multi-statement queries, faster than n8n
+
+### n8n SQL_Runner (Backup)
 ```json
 {
   "type": "webhook",
@@ -693,7 +701,7 @@ After making changes:
   }
 }
 ```
-**Run one query per call** — multiple statements in one call will fail.
+Workflow ID: `rWG8DN8q_HT9q6EZ_wFel`. **Run one query per call** — multiple statements will fail.
 
 ---
 
@@ -720,7 +728,7 @@ git push && curl -s http://85.209.95.19:3000/api/deploy/1642a4c845b117889b4b6cbe
 - **GitHub**: https://github.com/jmariano19/vivebien-core
 - **Figma**: https://figma.com/design/UgbafTWqp5i0sMZgT9GMrE
 - **n8n**: Used for database access via SQL_Runner workflow (ID: `rWG8DN8q_HT9q6EZ_wFel`). Not required for core messaging.
-- **Database access**: Use n8n SQL_Runner via MCP `execute_workflow` tool. Run one query per call.
+- **Database access**: Use `psql` directly (preferred): `/opt/homebrew/opt/libpq/bin/psql "postgres://postgres:bd894cefacb1c52998f3@85.209.95.19:5432/projecto-1"`. Backup: n8n SQL_Runner via MCP (one query per call).
 - **Deleting test users**: When asked to delete a test phone number, use SQL_Runner to delete from all child tables first (messages, health_concerns, memories, conversation_state, experiment_assignments, credit_transactions), then delete from users. See Testing section for full procedure.
 - System prompt is in `conversation/service.ts` `getDefaultSystemPrompt()` — containment-first philosophy with 7 design principles
 - AI does NOT ask for user's name — the system sends it as a separate delayed message after summary delivery
