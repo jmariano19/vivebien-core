@@ -1,0 +1,16 @@
+name: Deploy to Easypanel
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy Core API
+        run: curl -s -o /dev/null -w "%{http_code}" "${{ secrets.EASYPANEL_DEPLOY_CORE_API }}"
+
+      - name: Deploy Core Worker
+        run: curl -s -o /dev/null -w "%{http_code}" "${{ secrets.EASYPANEL_DEPLOY_CORE_WORKER }}"

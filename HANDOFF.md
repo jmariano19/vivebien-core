@@ -591,21 +591,38 @@ Workflow ID: `rWG8DN8q_HT9q6EZ_wFel`
 
 **BOTH services must be deployed after ANY code change!** The API and Worker share the same codebase but run as separate services.
 
-### Quick Deploy (Single Command)
+### Auto-Deploy Pipeline (GitHub → Easypanel)
 
+Pushing to `main` automatically deploys both services:
+
+1. Code is pushed to `main` branch on GitHub
+2. GitHub Actions workflow (`.github/workflows/deploy.yml`) runs automatically
+3. The workflow calls both Easypanel deploy webhooks (stored as GitHub secrets)
+4. Easypanel rebuilds both Core API and Core Worker Docker containers
+
+**GitHub Secrets:**
+- `EASYPANEL_DEPLOY_CORE_API` — Core API deploy webhook
+- `EASYPANEL_DEPLOY_CORE_WORKER` — Core Worker deploy webhook
+
+### Deploy Process (for Claude)
+To deploy changes, simply commit and push to `main`:
 ```bash
-cd ~/Desktop/vivebien-project && git push && curl -s http://85.209.95.19:3000/api/deploy/1642a4c845b117889b4b6cbe0172ecc90b03500666da6e22 && curl -s http://85.209.95.19:3000/api/deploy/27730fe51447b7b37aad06851ccb0470e5b62421badd9548
+git add <files>
+git commit -m "Description of changes"
+git push origin main
 ```
+Both API + Worker deploy automatically — no manual steps needed.
 
-This pushes to GitHub and triggers both API + Worker deployments in one go.
+### GitHub CLI Access
+- `gh` CLI is installed via Homebrew at `/opt/homebrew/bin/gh`
+- Authenticated as **jmariano19** via `gh auth login`
+- If `gh` is not in PATH, use full path: `/opt/homebrew/bin/gh`
 
 ### Deployment Checklist
 
 After making changes:
 - [ ] Commit changes to git
-- [ ] Push to GitHub (HTTPS with token: `git remote set-url origin https://jmariano19:TOKEN@github.com/jmariano19/vivebien-core.git`)
-- [ ] Deploy API service in Easypanel
-- [ ] Deploy Worker service in Easypanel
+- [ ] Push to GitHub (`git push origin main` — auto-deploy handles the rest)
 - [ ] Wait ~30 seconds for builds to complete
 - [ ] **Clear browser cache** or use incognito tab to verify (static HTML files are cached aggressively)
 - [ ] Test the changes on production
