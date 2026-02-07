@@ -2,6 +2,7 @@ import { FastifyInstance, FastifyPluginAsync } from 'fastify';
 import { addInboundJob } from '../../infra/queue/client';
 import { checkIdempotencyKey, setIdempotencyKey } from '../../infra/db/client';
 import { InboundJobData, Attachment } from '../../shared/types';
+import { rateLimit } from '../middleware/auth';
 
 // Helper to normalize phone numbers
 function normalizePhone(raw: string): string {
@@ -48,9 +49,11 @@ interface ChatwootWebhook {
   }>;
 }
 
+const ingestRateLimit = rateLimit({ windowMs: 60_000, maxRequests: 120 });
+
 export const ingestRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
   // Main Chatwoot webhook endpoint
-  app.post('/ingest/chatwoot', async (request, reply) => {
+  app.post('/ingest/chatwoot', { preHandler: ingestRateLimit }, async (request, reply) => {
     const correlationId = request.id;
     const payload = request.body as ChatwootWebhook;
 
@@ -136,8 +139,13 @@ export const ingestRoutes: FastifyPluginAsync = async (app: FastifyInstance) => 
       timestamp: new Date().toISOString(),
     };
 
-    await addInboundJob(jobData);
-    await setIdempotencyKey(idempotencyKey, { status: 'queued' }, 24);
+    try {
+      await addInboundJob(jobData);
+      await setIdempotencyKey(idempotencyKey, { status: 'queued' }, 24);
+    } catch (err) {
+      app.log.error({ err, correlationId, phone }, 'Failed to queue inbound job');
+      return reply.status(500).send({ status: 'error', reason: 'failed to queue message' });
+    }
 
     app.log.info({
       correlationId,

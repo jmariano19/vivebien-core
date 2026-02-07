@@ -52,7 +52,7 @@ export const summaryRoutes: FastifyPluginAsync = async (app: FastifyInstance) =>
         [userId]
       );
     } catch (err) {
-      // Table may not exist yet
+      request.log.debug({ err, userId }, 'Could not fetch from memories table');
     }
 
     if (!summary) {
@@ -72,8 +72,8 @@ export const summaryRoutes: FastifyPluginAsync = async (app: FastifyInstance) =>
         icon: c.icon,
         updatedAt: c.updatedAt,
       }));
-    } catch {
-      // Table may not exist yet
+    } catch (err) {
+      request.log.debug({ err, userId }, 'Could not fetch concerns');
     }
 
     return {
@@ -146,8 +146,7 @@ export const summaryRoutes: FastifyPluginAsync = async (app: FastifyInstance) =>
         updatedAt: new Date().toISOString(),
       };
     } catch (err) {
-      const error = err as Error;
-      console.error('Error updating summary:', error.message);
+      request.log.error({ err, userId }, 'Error updating summary');
       return reply.status(500).send({ error: 'Failed to update summary' });
     }
   });
@@ -176,7 +175,7 @@ export const summaryRoutes: FastifyPluginAsync = async (app: FastifyInstance) =>
     );
 
     if (!user) {
-      throw new NotFoundError(`User not found with phone: ${phone}`);
+      throw new NotFoundError('User not found');
     }
 
     // Get health summary (handle missing table/columns gracefully)
@@ -193,7 +192,7 @@ export const summaryRoutes: FastifyPluginAsync = async (app: FastifyInstance) =>
         [user.id]
       );
     } catch (err) {
-      // Table may not exist yet - that's ok
+      request.log.debug({ err, userId: user.id }, 'Could not fetch memories');
     }
 
     // Get conversation stats (handle missing table gracefully)
@@ -209,7 +208,7 @@ export const summaryRoutes: FastifyPluginAsync = async (app: FastifyInstance) =>
         [user.id]
       );
     } catch (err) {
-      // Table may not exist yet - that's ok
+      request.log.debug({ err, userId: user.id }, 'Could not fetch conversation_state');
     }
 
     return {
@@ -280,7 +279,7 @@ export const summaryRoutes: FastifyPluginAsync = async (app: FastifyInstance) =>
         [userId]
       );
     } catch (err) {
-      // Table may not exist
+      request.log.debug({ err, userId }, 'Could not fetch memories');
     }
 
     return {
@@ -377,7 +376,7 @@ export const summaryRoutes: FastifyPluginAsync = async (app: FastifyInstance) =>
     );
 
     if (!user) {
-      throw new NotFoundError(`User not found with phone: ${phone}`);
+      throw new NotFoundError('User not found');
     }
 
     // Get messages
@@ -397,7 +396,7 @@ export const summaryRoutes: FastifyPluginAsync = async (app: FastifyInstance) =>
         [user.id, limit]
       );
     } catch (err) {
-      // Table may not exist
+      request.log.debug({ err, userId: user.id }, 'Could not fetch messages');
     }
 
     return {

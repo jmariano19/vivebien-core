@@ -34,3 +34,9 @@ temp/
 
 # GitHub token for Claude push access
 .github-token
+
+# Database archives
+archive/
+
+# npm cache
+.npm-cache/

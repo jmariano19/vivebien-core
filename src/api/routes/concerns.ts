@@ -63,22 +63,26 @@ export const concernRoutes: FastifyPluginAsync = async (app: FastifyInstance) =>
       return reply.status(400).send({ error: 'Invalid ID format' });
     }
 
-    const concern = await concernService.getConcernById(concernId);
-    if (!concern || concern.userId !== userId) {
-      return reply.status(404).send({ error: 'Concern not found' });
+    try {
+      const concern = await concernService.getConcernById(concernId);
+      if (!concern || concern.userId !== userId) {
+        return reply.status(404).send({ error: 'Concern not found' });
+      }
+
+      const user = await queryOne<{ language: string; name: string | null }>(
+        `SELECT COALESCE(language, 'es') as language, name FROM users WHERE id = $1`,
+        [userId]
+      );
+
+      return {
+        ...concern,
+        language: user?.language || 'es',
+        userName: user?.name,
+      };
+    } catch (err) {
+      request.log.error({ err, userId, concernId }, 'Failed to fetch concern');
+      return reply.status(500).send({ error: 'Internal server error' });
     }
-
-    // Get user language
-    const user = await queryOne<{ language: string; name: string | null }>(
-      `SELECT COALESCE(language, 'es') as language, name FROM users WHERE id = $1`,
-      [userId]
-    );
-
-    return {
-      ...concern,
-      language: user?.language || 'es',
-      userName: user?.name,
-    };
   });
 
   /**
@@ -98,18 +102,23 @@ export const concernRoutes: FastifyPluginAsync = async (app: FastifyInstance) =>
       return reply.status(404).send({ error: 'Concern not found' });
     }
 
-    if (summary) {
-      await concernService.updateConcernSummary(concernId, summary, 'user_edit');
-    }
+    try {
+      if (summary) {
+        await concernService.updateConcernSummary(concernId, summary, 'user_edit');
+      }
 
-    if (title) {
-      await db.query(
-        `UPDATE health_concerns SET title = $1, updated_at = NOW() WHERE id = $2`,
-        [title, concernId]
-      );
-    }
+      if (title) {
+        await db.query(
+          `UPDATE health_concerns SET title = $1, updated_at = NOW() WHERE id = $2`,
+          [title, concernId]
+        );
+      }
 
-    return { success: true, updatedAt: new Date().toISOString() };
+      return { success: true, updatedAt: new Date().toISOString() };
+    } catch (err) {
+      request.log.error({ err, userId, concernId }, 'Failed to update concern');
+      return reply.status(500).send({ error: 'Internal server error' });
+    }
   });
 
   /**
@@ -129,14 +138,19 @@ export const concernRoutes: FastifyPluginAsync = async (app: FastifyInstance) =>
       return reply.status(400).send({ error: 'Invalid status. Must be: active, improving, or resolved' });
     }
 
-    const concern = await concernService.getConcernById(concernId);
-    if (!concern || concern.userId !== userId) {
-      return reply.status(404).send({ error: 'Concern not found' });
+    try {
+      const concern = await concernService.getConcernById(concernId);
+      if (!concern || concern.userId !== userId) {
+        return reply.status(404).send({ error: 'Concern not found' });
+      }
+
+      await concernService.updateConcernStatus(concernId, status);
+
+      return { success: true, status, updatedAt: new Date().toISOString() };
+    } catch (err) {
+      request.log.error({ err, userId, concernId }, 'Failed to update concern status');
+      return reply.status(500).send({ error: 'Internal server error' });
     }
-
-    await concernService.updateConcernStatus(concernId, status);
-
-    return { success: true, status, updatedAt: new Date().toISOString() };
   });
 
   /**
@@ -150,14 +164,19 @@ export const concernRoutes: FastifyPluginAsync = async (app: FastifyInstance) =>
       return reply.status(400).send({ error: 'Invalid ID format' });
     }
 
-    const concern = await concernService.getConcernById(concernId);
-    if (!concern || concern.userId !== userId) {
-      return reply.status(404).send({ error: 'Concern not found' });
+    try {
+      const concern = await concernService.getConcernById(concernId);
+      if (!concern || concern.userId !== userId) {
+        return reply.status(404).send({ error: 'Concern not found' });
+      }
+
+      await concernService.deleteConcern(concernId);
+
+      return { success: true };
+    } catch (err) {
+      request.log.error({ err, userId, concernId }, 'Failed to delete concern');
+      return reply.status(500).send({ error: 'Internal server error' });
     }
-
-    await concernService.deleteConcern(concernId);
-
-    return { success: true };
   });
 
   /**
@@ -171,24 +190,29 @@ export const concernRoutes: FastifyPluginAsync = async (app: FastifyInstance) =>
       return reply.status(400).send({ error: 'Invalid ID format' });
     }
 
-    const concern = await concernService.getConcernById(concernId);
-    if (!concern || concern.userId !== userId) {
-      return reply.status(404).send({ error: 'Concern not found' });
+    try {
+      const concern = await concernService.getConcernById(concernId);
+      if (!concern || concern.userId !== userId) {
+        return reply.status(404).send({ error: 'Concern not found' });
+      }
+
+      const snapshots = await concernService.getConcernHistory(concernId);
+
+      return {
+        concernId: concern.id,
+        title: concern.title,
+        status: concern.status,
+        snapshots: snapshots.map(s => ({
+          id: s.id,
+          content: s.content,
+          changeType: s.changeType,
+          status: s.status,
+          createdAt: s.createdAt,
+        })),
+      };
+    } catch (err) {
+      request.log.error({ err, concernId }, 'Failed to fetch concern history');
+      return reply.status(500).send({ error: 'Internal server error' });
     }
-
-    const snapshots = await concernService.getConcernHistory(concernId);
-
-    return {
-      concernId: concern.id,
-      title: concern.title,
-      status: concern.status,
-      snapshots: snapshots.map(s => ({
-        id: s.id,
-        content: s.content,
-        changeType: s.changeType,
-        status: s.status,
-        createdAt: s.createdAt,
-      })),
-    };
   });
 };

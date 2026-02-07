@@ -7,7 +7,7 @@ const configSchema = z.object({
   // Server
   port: z.coerce.number().default(3000),
   apiSecretKey: z.string().min(16),
-  corsOrigins: z.string().transform((s) => s.split(',')).default('*'),
+  corsOrigins: z.string().transform((s) => s.split(',')).default('https://carelog.vivebien.io'),
 
   // Database
   databaseUrl: z.string().url(),
@@ -57,8 +57,9 @@ function loadConfig() {
   });
 
   if (!result.success) {
-    console.error('Configuration validation failed:');
-    console.error(result.error.format());
+    // Logger not available yet during config init — use stderr
+    process.stderr.write('Configuration validation failed:\n');
+    process.stderr.write(JSON.stringify(result.error.format(), null, 2) + '\n');
     process.exit(1);
   }
 
