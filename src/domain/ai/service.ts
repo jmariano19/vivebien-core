@@ -196,13 +196,17 @@ export class AIService {
       // Note title variations
       'health note', 'nota de salud', 'nota de saúde', 'note de santé',
       // Field labels (English)
-      'concern:', 'started:', 'helps:', 'worsens:', 'medications:',
+      'concern:', 'started:', 'location:', 'character:', 'severity:', 'pattern:',
+      'helps:', 'worsens:', 'medications:',
       // Field labels (Spanish)
-      'motivo:', 'inicio:', 'mejora con:', 'empeora con:', 'medicamentos:',
+      'motivo:', 'inicio:', 'ubicación:', 'carácter:', 'severidad:', 'patrón:',
+      'mejora con:', 'empeora con:', 'medicamentos:',
       // Field labels (Portuguese)
-      'queixa:', 'início:', 'melhora com:', 'piora com:',
+      'queixa:', 'início:', 'localização:', 'caráter:', 'gravidade:', 'padrão:',
+      'melhora com:', 'piora com:',
       // Field labels (French)
-      'motif:', 'début:', 'améliore:', 'aggrave:', 'médicaments:',
+      'motif:', 'début:', 'localisation:', 'caractère:', 'sévérité:', 'schéma:',
+      'améliore:', 'aggrave:', 'médicaments:',
       // Legacy/alternate labels
       'resumen', 'summary', 'resumo', 'résumé',
       'onset:', 'preguntas para', 'questions for', 'perguntas para', 'questions pour',
@@ -366,11 +370,11 @@ export class AIService {
     const languageName = languageNames[detectedLang] || 'English';
 
     // Simplified labels for cleaner summaries
-    const simpleLabels: Record<string, { concern: string; started: string; helps: string; worsens: string; meds: string }> = {
-      es: { concern: 'Motivo', started: 'Inicio', helps: 'Mejora con', worsens: 'Empeora con', meds: 'Medicamentos' },
-      en: { concern: 'Concern', started: 'Started', helps: 'Helps', worsens: 'Worsens', meds: 'Medications' },
-      pt: { concern: 'Queixa', started: 'Início', helps: 'Melhora com', worsens: 'Piora com', meds: 'Medicamentos' },
-      fr: { concern: 'Motif', started: 'Début', helps: 'Améliore', worsens: 'Aggrave', meds: 'Médicaments' },
+    const simpleLabels: Record<string, { concern: string; started: string; location: string; character: string; severity: string; pattern: string; helps: string; worsens: string; meds: string }> = {
+      es: { concern: 'Motivo', started: 'Inicio', location: 'Ubicación', character: 'Carácter', severity: 'Severidad', pattern: 'Patrón', helps: 'Mejora con', worsens: 'Empeora con', meds: 'Medicamentos' },
+      en: { concern: 'Concern', started: 'Started', location: 'Location', character: 'Character', severity: 'Severity', pattern: 'Pattern', helps: 'Helps', worsens: 'Worsens', meds: 'Medications' },
+      pt: { concern: 'Queixa', started: 'Início', location: 'Localização', character: 'Caráter', severity: 'Gravidade', pattern: 'Padrão', helps: 'Melhora com', worsens: 'Piora com', meds: 'Medicamentos' },
+      fr: { concern: 'Motif', started: 'Début', location: 'Localisation', character: 'Caractère', severity: 'Sévérité', pattern: 'Schéma', helps: 'Améliore', worsens: 'Aggrave', meds: 'Médicaments' },
     };
     const sl = simpleLabels[detectedLang] || simpleLabels.en!;
 
@@ -383,41 +387,49 @@ ${currentSummary}
 NEW INFORMATION:
 ${conversationText}
 
-Generate a SIMPLE, CLEAN health note. Use this format:
+Generate a CLEAN, doctor-ready health note. Use this format (include only fields with actual data):
 
 ${sl.concern}: [what's happening, using the person's own words]
 ${sl.started}: [when it began]
+${sl.location}: [where they feel it]
+${sl.character}: [how it feels — sharp, dull, throbbing, etc.]
+${sl.severity}: [how bad, on their scale or 1-10]
+${sl.pattern}: [timing, frequency, constant vs intermittent]
 ${sl.helps}: [what makes it better, if mentioned]
 ${sl.worsens}: [what makes it worse, if mentioned]
 ${sl.meds}: [any medications, if mentioned]
 
 Rules:
-- Keep it SHORT and simple (no more than 5 lines)
-- Use the person's exact words and language when possible — this is THEIR record
-- ONLY include fields where information was actually provided
+- Include only fields where information was actually provided (typically 4-7 fields)
 - Do NOT include fields where information is unknown — never write "not provided" or "N/A"
+- Use the person's exact words and language when possible — this is THEIR record
+- Keep each field to 1-2 lines max
 - No headers like "MOTIVO PRINCIPAL" — use simple labels only
 - No bullet points or complex formatting
 - No medical jargon unless the person used it first
 - Write in ${languageName}`
-      : `You are CareLog, a calm health documentation companion. Create a simple health note from this conversation.
+      : `You are CareLog, a calm health documentation companion. Create a doctor-ready health note from this conversation.
 
 CONVERSATION:
 ${conversationText}
 
-Generate a SIMPLE, CLEAN health note. Use this format:
+Generate a CLEAN, doctor-ready health note. Use this format (include only fields with actual data):
 
 ${sl.concern}: [what's happening, using the person's own words]
 ${sl.started}: [when it began]
+${sl.location}: [where they feel it]
+${sl.character}: [how it feels — sharp, dull, throbbing, etc.]
+${sl.severity}: [how bad, on their scale or 1-10]
+${sl.pattern}: [timing, frequency, constant vs intermittent]
 ${sl.helps}: [what makes it better, if mentioned]
 ${sl.worsens}: [what makes it worse, if mentioned]
 ${sl.meds}: [any medications, if mentioned]
 
 Rules:
-- Keep it SHORT and simple (no more than 5 lines)
-- Use the person's exact words and language when possible — this is THEIR record
-- ONLY include fields where information was actually provided
+- Include only fields where information was actually provided (typically 4-7 fields)
 - Do NOT include fields where information is unknown — never write "not provided" or "N/A"
+- Use the person's exact words and language when possible — this is THEIR record
+- Keep each field to 1-2 lines max
 - No headers like "MOTIVO PRINCIPAL" — use simple labels only
 - No bullet points or complex formatting
 - No medical jargon unless the person used it first

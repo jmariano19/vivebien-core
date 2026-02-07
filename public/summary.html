@@ -678,7 +678,7 @@
         today: 'Hoy',
         days: ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'],
         months: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
-        fields: { started: 'Inicio', helps: 'Mejora con', worsens: 'Empeora con', medications: 'Medicamentos', location: 'Ubicación', symptoms: 'Síntomas' },
+        fields: { started: 'Inicio', location: 'Ubicación', character: 'Carácter', severity: 'Severidad', pattern: 'Patrón', helps: 'Mejora con', worsens: 'Empeora con', medications: 'Medicamentos', symptoms: 'Síntomas' },
         status: { active: 'Vigente', improving: 'Mejorando', resolved: 'Resuelto' },
         defaultName: 'Tu Resumen',
         resolvedTitle: 'Preocupaciones Resueltas',
@@ -709,7 +709,7 @@
         today: 'Today',
         days: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
         months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-        fields: { started: 'Started', helps: 'Helps', worsens: 'Worsens', medications: 'Medications', location: 'Location', symptoms: 'Symptoms' },
+        fields: { started: 'Started', location: 'Location', character: 'Character', severity: 'Severity', pattern: 'Pattern', helps: 'Helps', worsens: 'Worsens', medications: 'Medications', symptoms: 'Symptoms' },
         status: { active: 'Ongoing', improving: 'Improving', resolved: 'Resolved' },
         defaultName: 'Your Summary',
         resolvedTitle: 'Resolved Concerns',
@@ -740,7 +740,7 @@
         today: 'Hoje',
         days: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
         months: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
-        fields: { started: 'Início', helps: 'Melhora com', worsens: 'Piora com', medications: 'Medicamentos', location: 'Localização', symptoms: 'Sintomas' },
+        fields: { started: 'Início', location: 'Localização', character: 'Caráter', severity: 'Gravidade', pattern: 'Padrão', helps: 'Melhora com', worsens: 'Piora com', medications: 'Medicamentos', symptoms: 'Sintomas' },
         status: { active: 'Em andamento', improving: 'Melhorando', resolved: 'Resolvido' },
         defaultName: 'Seu Resumo',
         resolvedTitle: 'Preocupações Resolvidas',
@@ -771,7 +771,7 @@
         today: 'Aujourd\'hui',
         days: ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'],
         months: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'],
-        fields: { started: 'Début', helps: 'Améliore', worsens: 'Aggrave', medications: 'Médicaments', location: 'Localisation', symptoms: 'Symptômes' },
+        fields: { started: 'Début', location: 'Localisation', character: 'Caractère', severity: 'Sévérité', pattern: 'Schéma', helps: 'Améliore', worsens: 'Aggrave', medications: 'Médicaments', symptoms: 'Symptômes' },
         status: { active: 'En cours', improving: 'En amélioration', resolved: 'Résolu' },
         defaultName: 'Votre Résumé',
         resolvedTitle: 'Préoccupations Résolues',
@@ -881,6 +881,10 @@
 
       [
         { label: lang.fields?.started || 'Started', value: fields.started },
+        { label: lang.fields?.location || 'Location', value: fields.location },
+        { label: lang.fields?.character || 'Character', value: fields.character },
+        { label: lang.fields?.severity || 'Severity', value: fields.severity },
+        { label: lang.fields?.pattern || 'Pattern', value: fields.pattern },
         { label: lang.fields?.helps || 'Helps', value: fields.whatHelps },
         { label: lang.fields?.worsens || 'Worsens', value: fields.whatWorsens },
         { label: lang.fields?.medications || 'Medications', value: fields.medications },
@@ -968,6 +972,10 @@
       html += '  <div class="field-list">';
       const fieldDefs = [
         { label: lang.fields?.started || 'Started', value: fields.started },
+        { label: lang.fields?.location || 'Location', value: fields.location },
+        { label: lang.fields?.character || 'Character', value: fields.character },
+        { label: lang.fields?.severity || 'Severity', value: fields.severity },
+        { label: lang.fields?.pattern || 'Pattern', value: fields.pattern },
         { label: lang.fields?.helps || 'Helps', value: fields.whatHelps },
         { label: lang.fields?.worsens || 'Worsens', value: fields.whatWorsens },
         { label: lang.fields?.medications || 'Medications', value: fields.medications },
@@ -1021,10 +1029,13 @@
         .replace(/---+/g, '')
         .replace(/^(?:Main concern|Concern|Motivo|Queixa|Motif)[:\s]*/gim, '')
         .replace(/^(?:Started|Inicio|Início|Début)[:\s]*/gim, '')
+        .replace(/^(?:Location|Ubicación|Localização|Localisation)[:\s]*/gim, '')
+        .replace(/^(?:Character|Carácter|Caráter|Caractère)[:\s]*/gim, '')
+        .replace(/^(?:Severity|Severidad|Gravidade|Sévérité)[:\s]*/gim, '')
+        .replace(/^(?:Pattern|Patrón|Padrão|Schéma)[:\s]*/gim, '')
         .replace(/^(?:What helps|Helps|Mejora con|Melhora com|Améliore)[:\s]*/gim, '')
         .replace(/^(?:What worsens|Worsens|Empeora con|Piora com|Aggrave)[:\s]*/gim, '')
         .replace(/^(?:Medications|Medicamentos|Médicaments|Meds)[:\s]*/gim, '')
-        .replace(/^(?:Location|Ubicación|Localização)[:\s]*/gim, '')
         .replace(/^(?:Symptoms|Síntomas|Sintomas)[:\s]*/gim, '')
         .replace(/^(?:Notes)[:\s]*/gim, '')
         .replace(/Patient reports (having )?/gi, '')
@@ -1166,7 +1177,7 @@
     function capitalizeFirst(str) { return str ? str.charAt(0).toUpperCase() + str.slice(1) : ''; }
 
     function parseAnyFormat(text) {
-      const fields = { mainConcern: '', started: '', location: '', symptoms: '', whatHelps: '', whatWorsens: '', medications: '', notes: '' };
+      const fields = { mainConcern: '', started: '', location: '', character: '', severity: '', pattern: '', symptoms: '', whatHelps: '', whatWorsens: '', medications: '', notes: '' };
       if (!text) return fields;
 
       let cleaned = text.replace(/^#+\s*/gm, '').replace(/\*\*/g, '').replace(/\*([^*]+)\*/g, '$1').replace(/📝|❓|•/g, '').replace(/---+/g, '\n');
@@ -1174,7 +1185,10 @@
       const simple = {
         mainConcern: /^(?:Main concern|Concern|Motivo|Queixa|Motif):\s*(.+)/im,
         started: /^(?:Started|Inicio|Início|Début):\s*(.+)/im,
-        location: /^Location:\s*(.+)/im,
+        location: /^(?:Location|Ubicación|Localização|Localisation):\s*(.+)/im,
+        character: /^(?:Character|Carácter|Caráter|Caractère):\s*(.+)/im,
+        severity: /^(?:Severity|Severidad|Gravidade|Sévérité):\s*(.+)/im,
+        pattern: /^(?:Pattern|Patrón|Padrão|Schéma):\s*(.+)/im,
         symptoms: /^Symptoms:\s*(.+)/im,
         whatHelps: /^(?:What helps|Helps|Mejora con|Melhora com|Améliore):\s*(.+)/im,
         whatWorsens: /^(?:What worsens|Worsens|Empeora con|Piora com|Aggrave):\s*(.+)/im,
@@ -1185,7 +1199,10 @@
       const ai = {
         mainConcern: [/(?:MOTIVO PRINCIPAL|MAIN CONCERN|QUEIXA PRINCIPAL|MOTIF PRINCIPAL)[:\s]*\n?([^\n]+)/i, /(?:Motivo de consulta|Chief complaint)[:\s]*([^\n]+)/i],
         started: [/(?:INICIO|ONSET|INÍCIO|DÉBUT)[^:]*[:\s]*\n?([^\n]+)/i, /(?:DURACIÓN|DURATION|DURAÇÃO)[:\s]*([^\n]+)/i, /(?:Started|Comenzó|Início)[:\s]*([^\n]+)/i],
-        location: [/(?:LOCALIZACIÓN|LOCATION|LOCALIZAÇÃO)[:\s]*\n?([^\n]+)/i],
+        location: [/(?:LOCALIZACIÓN|LOCATION|LOCALIZAÇÃO|LOCALISATION)[:\s]*\n?([^\n]+)/i],
+        character: [/(?:CHARACTER|CARÁCTER|CARÁTER|CARACTÈRE)[:\s]*\n?([^\n]+)/i],
+        severity: [/(?:SEVERITY|SEVERIDAD|GRAVIDADE|SÉVÉRITÉ)[:\s]*\n?([^\n]+)/i],
+        pattern: [/(?:PATTERN|PATRÓN|PADRÃO|SCHÉMA)[:\s]*\n?([^\n]+)/i],
         whatHelps: [/(?:QUÉ AYUDA|WHAT HELPS|O QUE AJUDA)[^:]*[:\s]*\n?([^\n]+)/i, /[-•]\s*Helps?:\s*([^\n]+)/i, /Factores que alivian[:\s]*([^\n]+)/i],
         whatWorsens: [/(?:EMPEORA|WORSENS|PIORA|AGGRAVE)[^:]*[:\s]*\n?([^\n]+)/i, /[-•]\s*Worsens?:\s*([^\n]+)/i, /Factores que agravan[:\s]*([^\n]+)/i],
         medications: [/(?:MEDICAMENTOS|MEDICATIONS|MÉDICAMENTS)[^:]*[:\s]*\n?([^\n]+)/i]

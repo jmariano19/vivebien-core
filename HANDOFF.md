@@ -226,17 +226,21 @@ CareLog now tracks multiple health concerns per user instead of a single summary
 - **questions.html** — NEW. Questions for your Doctor page. Shows recommended questions (5 per language) as defaults, plus custom questions from doctor API objetivos field. Users can add/delete questions.
 
 ### AI summaryContent Format
-The AI generates `summaryContent` for each concern using a simple 5-line format with localized labels (defined in `src/domain/ai/service.ts` lines 276-281):
+The AI generates `summaryContent` for each concern using up to 9 fields with localized labels. Only fields with actual data are included (typically 4-7 fields):
 
 ```
 Concern: [description]         (ES: Motivo: / PT: Queixa: / FR: Motif:)
 Started: [when]                (ES: Inicio: / PT: Início: / FR: Début:)
+Location: [where]              (ES: Ubicación: / PT: Localização: / FR: Localisation:)
+Character: [quality/sensation] (ES: Carácter: / PT: Caráter: / FR: Caractère:)
+Severity: [how bad]            (ES: Severidad: / PT: Gravidade: / FR: Sévérité:)
+Pattern: [timing/frequency]    (ES: Patrón: / PT: Padrão: / FR: Schéma:)
 Helps: [what helps]            (ES: Mejora con: / PT: Melhora com: / FR: Améliore:)
 Worsens: [what worsens]        (ES: Empeora con: / PT: Piora com: / FR: Aggrave:)
 Medications: [meds]            (ES: Medicamentos: / PT: Medicamentos: / FR: Médicaments:)
 ```
 
-**IMPORTANT**: All frontend parsers (doctor.html, suggest.html, questions.html) must match this exact format. The parsers use regex to detect each label variant across all 4 languages.
+**IMPORTANT**: All frontend parsers (doctor.html, suggest.html, questions.html, summary.html, history.html) must match this format. The parsers use regex to detect each label variant across all 4 languages. Fields are optional — old 5-field summaries are backward compatible.
 
 ### Page Routes (src/index.ts)
 ```

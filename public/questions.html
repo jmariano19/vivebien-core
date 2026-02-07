@@ -524,7 +524,7 @@
     // Worsens: / Empeora con: / Piora com: / Aggrave: → what worsens
     // Medications: / Medicamentos: / Médicaments: → medications
     function parseConcernSummary(summaryContent) {
-      const result = { motivo: '', worsens: '', helps: '', medications: '' };
+      const result = { motivo: '', location: '', character: '', severity: '', pattern: '', worsens: '', helps: '', medications: '' };
       if (!summaryContent) return result;
 
       const lines = summaryContent.split('\n');
@@ -535,6 +535,22 @@
         // Main concern
         if (/^(concern|motivo|queixa|motif)[:\s]/i.test(trimmed)) {
           result.motivo = trimmed.replace(/^(concern|motivo|queixa|motif)[:\s]*/i, '').trim();
+        }
+        // Location
+        else if (/^(location|ubicación|localização|localisation)[:\s]/i.test(trimmed)) {
+          result.location = trimmed.replace(/^(location|ubicación|localização|localisation)[:\s]*/i, '').trim();
+        }
+        // Character
+        else if (/^(character|carácter|caráter|caractère)[:\s]/i.test(trimmed)) {
+          result.character = trimmed.replace(/^(character|carácter|caráter|caractère)[:\s]*/i, '').trim();
+        }
+        // Severity
+        else if (/^(severity|severidad|gravidade|sévérité)[:\s]/i.test(trimmed)) {
+          result.severity = trimmed.replace(/^(severity|severidad|gravidade|sévérité)[:\s]*/i, '').trim();
+        }
+        // Pattern
+        else if (/^(pattern|patrón|padrão|schéma)[:\s]/i.test(trimmed)) {
+          result.pattern = trimmed.replace(/^(pattern|patrón|padrão|schéma)[:\s]*/i, '').trim();
         }
         // Worsens (useful as associated symptoms context)
         else if (/^(worsens|empeora con|piora com|aggrave)[:\s]/i.test(trimmed)) {

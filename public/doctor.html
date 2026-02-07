@@ -350,6 +350,7 @@
           duracion: 'Duración',
           localizacion: 'Localización',
           caracteristicas: 'Características',
+          severidad: 'Severidad',
           evolucion: 'Evolución',
           factoresAlivian: 'Alivia',
           factoresAgravan: 'Agrava'
@@ -383,6 +384,7 @@
           duracion: 'Duration',
           localizacion: 'Location',
           caracteristicas: 'Character',
+          severidad: 'Severity',
           evolucion: 'Course',
           factoresAlivian: 'Relieves',
           factoresAgravan: 'Worsens'
@@ -416,6 +418,7 @@
           duracion: 'Duração',
           localizacion: 'Localização',
           caracteristicas: 'Características',
+          severidad: 'Gravidade',
           evolucion: 'Evolução',
           factoresAlivian: 'Alivia',
           factoresAgravan: 'Agrava'
@@ -449,6 +452,7 @@
           duracion: 'Durée',
           localizacion: 'Localisation',
           caracteristicas: 'Caractéristiques',
+          severidad: 'Sévérité',
           evolucion: 'Évolution',
           factoresAlivian: 'Soulage',
           factoresAgravan: 'Aggrave'
@@ -493,6 +497,22 @@
         // Started / onset → hpi.inicio
         else if (/^(started|inicio|início|début)[:\s]/i.test(trimmed)) {
           result.hpi.inicio = trimmed.replace(/^(started|inicio|início|début)[:\s]*/i, '').trim();
+        }
+        // Location → hpi.localizacion
+        else if (/^(location|ubicación|localização|localisation)[:\s]/i.test(trimmed)) {
+          result.hpi.localizacion = trimmed.replace(/^(location|ubicación|localização|localisation)[:\s]*/i, '').trim();
+        }
+        // Character / quality → hpi.caracteristicas
+        else if (/^(character|carácter|caráter|caractère)[:\s]/i.test(trimmed)) {
+          result.hpi.caracteristicas = trimmed.replace(/^(character|carácter|caráter|caractère)[:\s]*/i, '').trim();
+        }
+        // Severity → hpi.severidad
+        else if (/^(severity|severidad|gravidade|sévérité)[:\s]/i.test(trimmed)) {
+          result.hpi.severidad = trimmed.replace(/^(severity|severidad|gravidade|sévérité)[:\s]*/i, '').trim();
+        }
+        // Pattern → hpi.evolucion
+        else if (/^(pattern|patrón|padrão|schéma)[:\s]/i.test(trimmed)) {
+          result.hpi.evolucion = trimmed.replace(/^(pattern|patrón|padrão|schéma)[:\s]*/i, '').trim();
         }
         // Helps / relieving factors → hpi.factoresAlivian
         else if (/^(helps|mejora con|melhora com|améliore)[:\s]/i.test(trimmed)) {
@@ -672,7 +692,7 @@
 
           if (parsed.hpi && Object.keys(parsed.hpi).length > 0) {
             text += `${t.hpi.toUpperCase()}\n`;
-            const hpiFields = ['inicio', 'duracion', 'localizacion', 'caracteristicas', 'evolucion', 'factoresAlivian', 'factoresAgravan'];
+            const hpiFields = ['inicio', 'duracion', 'localizacion', 'caracteristicas', 'severidad', 'evolucion', 'factoresAlivian', 'factoresAgravan'];
             hpiFields.forEach(field => {
               if (parsed.hpi[field]) {
                 const cleanedVal = cleanDoctorText(parsed.hpi[field]);
@@ -703,7 +723,7 @@
 
         if (doctorNote.hpi) {
           text += `${t.hpi.toUpperCase()}\n`;
-          const hpiFields = ['inicio', 'duracion', 'localizacion', 'caracteristicas', 'evolucion', 'factoresAlivian', 'factoresAgravan'];
+          const hpiFields = ['inicio', 'duracion', 'localizacion', 'caracteristicas', 'severidad', 'evolucion', 'factoresAlivian', 'factoresAgravan'];
           hpiFields.forEach(field => {
             if (doctorNote.hpi[field]) {
               text += `• ${t.hpiLabels[field]}: ${doctorNote.hpi[field]}\n`;

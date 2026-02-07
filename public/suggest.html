@@ -462,6 +462,9 @@
           mainConcern: { label: 'Motivo principal', icon: '✏️', placeholder: 'Ej: Dolor de cabeza, tos persistente...' },
           onset: { label: 'Cuándo comenzó', icon: '📅', placeholder: 'Ej: Hace 3 días, Esta mañana...' },
           location: { label: 'Ubicación', icon: '📍', placeholder: 'Ej: Lado izquierdo de la cabeza...' },
+          character: { label: 'Carácter', icon: '🔍', placeholder: 'Ej: Agudo, sordo, punzante, pulsátil...' },
+          severity: { label: 'Severidad', icon: '📊', placeholder: 'Ej: 7/10, moderado, intenso...' },
+          pattern: { label: 'Patrón', icon: '🔄', placeholder: 'Ej: Constante, va y viene, peor por la noche...' },
           symptoms: { label: 'Síntomas', icon: '🤒', placeholder: 'Describe todos los síntomas que sientes...' },
           whatHelps: { label: 'Qué te ayuda', icon: '✅', placeholder: 'Ej: Descanso, medicamento, compresas...' },
           whatWorsens: { label: 'Qué lo empeora', icon: '⚠️', placeholder: 'Ej: Luz brillante, esfuerzo físico...' },
@@ -484,6 +487,9 @@
           mainConcern: { label: 'Main Concern', icon: '✏️', placeholder: 'E.g.: Headache, persistent cough...' },
           onset: { label: 'When it started', icon: '📅', placeholder: 'E.g.: 3 days ago, This morning...' },
           location: { label: 'Location', icon: '📍', placeholder: 'E.g.: Left side of head...' },
+          character: { label: 'Character', icon: '🔍', placeholder: 'E.g.: Sharp, dull, throbbing, aching...' },
+          severity: { label: 'Severity', icon: '📊', placeholder: 'E.g.: 7/10, moderate, intense...' },
+          pattern: { label: 'Pattern', icon: '🔄', placeholder: 'E.g.: Constant, comes and goes, worse at night...' },
           symptoms: { label: 'Symptoms', icon: '🤒', placeholder: 'Describe all the symptoms you feel...' },
           whatHelps: { label: 'What helps', icon: '✅', placeholder: 'Describe what helps you...' },
           whatWorsens: { label: 'What makes it worse', icon: '⚠️', placeholder: 'E.g.: Sitting for long periods, bright light...' },
@@ -506,6 +512,9 @@
           mainConcern: { label: 'Queixa principal', icon: '✏️', placeholder: 'Ex: Dor de cabeça, tosse persistente...' },
           onset: { label: 'Quando começou', icon: '📅', placeholder: 'Ex: Há 3 dias, Esta manhã...' },
           location: { label: 'Localização', icon: '📍', placeholder: 'Ex: Lado esquerdo da cabeça...' },
+          character: { label: 'Caráter', icon: '🔍', placeholder: 'Ex: Agudo, surdo, pulsante, latejante...' },
+          severity: { label: 'Gravidade', icon: '📊', placeholder: 'Ex: 7/10, moderado, intenso...' },
+          pattern: { label: 'Padrão', icon: '🔄', placeholder: 'Ex: Constante, vai e vem, pior à noite...' },
           symptoms: { label: 'Sintomas', icon: '🤒', placeholder: 'Descreva todos os sintomas que sente...' },
           whatHelps: { label: 'O que ajuda', icon: '✅', placeholder: 'Ex: Descanso, medicamento, compressas...' },
           whatWorsens: { label: 'O que piora', icon: '⚠️', placeholder: 'Ex: Luz forte, esforço físico...' },
@@ -528,6 +537,9 @@
           mainConcern: { label: 'Motif principal', icon: '✏️', placeholder: 'Ex: Mal de tête, toux persistante...' },
           onset: { label: 'Quand ça a commencé', icon: '📅', placeholder: 'Ex: Il y a 3 jours, Ce matin...' },
           location: { label: 'Localisation', icon: '📍', placeholder: 'Ex: Côté gauche de la tête...' },
+          character: { label: 'Caractère', icon: '🔍', placeholder: 'Ex: Aigu, sourd, lancinant, pulsatile...' },
+          severity: { label: 'Sévérité', icon: '📊', placeholder: 'Ex: 7/10, modéré, intense...' },
+          pattern: { label: 'Schéma', icon: '🔄', placeholder: 'Ex: Constant, va et vient, pire la nuit...' },
           symptoms: { label: 'Symptômes', icon: '🤒', placeholder: 'Décrivez tous les symptômes...' },
           whatHelps: { label: 'Ce qui aide', icon: '✅', placeholder: 'Ex: Repos, médicament, compresse...' },
           whatWorsens: { label: 'Ce qui aggrave', icon: '⚠️', placeholder: 'Ex: Lumière vive, effort physique...' },
@@ -557,6 +569,9 @@
         mainConcern: '',
         onset: '',
         location: '',
+        character: '',
+        severity: '',
+        pattern: '',
         symptoms: '',
         whatHelps: '',
         whatWorsens: '',
@@ -578,7 +593,10 @@
       const updatePagePatterns = {
         mainConcern: /^(?:Main concern|Concern|Motivo|Queixa|Motif):\s*(.+)/im,
         onset: /^(?:Started|Onset|Inicio|Início|Début):\s*(.+)/im,
-        location: /^Location:\s*(.+)/im,
+        location: /^(?:Location|Ubicación|Localização|Localisation):\s*(.+)/im,
+        character: /^(?:Character|Carácter|Caráter|Caractère):\s*(.+)/im,
+        severity: /^(?:Severity|Severidad|Gravidade|Sévérité):\s*(.+)/im,
+        pattern: /^(?:Pattern|Patrón|Padrão|Schéma):\s*(.+)/im,
         symptoms: /^(?:Symptoms|Progress|Progreso|Evolución):\s*(.+)/im,
         whatHelps: /^(?:What helps|Helps|Treatment tried|Tratamiento|Mejora con|Melhora com|Améliore):\s*(.+)/im,
         whatWorsens: /^(?:What worsens|Worsens|Empeora con|Piora com|Aggrave):\s*(.+)/im,
@@ -608,6 +626,15 @@
         ],
         location: [
           /(?:LOCALIZACIÓN|LOCATION|LOCALIZAÇÃO|LOCALISATION)[:\s]*\n?([^\n]+)/i,
+        ],
+        character: [
+          /(?:CHARACTER|CARÁCTER|CARÁTER|CARACTÈRE)[:\s]*\n?([^\n]+)/i,
+        ],
+        severity: [
+          /(?:SEVERITY|SEVERIDAD|GRAVIDADE|SÉVÉRITÉ)[:\s]*\n?([^\n]+)/i,
+        ],
+        pattern: [
+          /(?:PATTERN|PATRÓN|PADRÃO|SCHÉMA)[:\s]*\n?([^\n]+)/i,
         ],
         symptoms: [
           /(?:PATRÓN|PATTERN|SÍNTOMAS|SYMPTOMS)[^:]*[:\s]*\n?([^\n]+)/i,
@@ -711,7 +738,7 @@
         medications = [];
       }
 
-      const fieldKeys = ['mainConcern', 'onset', 'location', 'symptoms', 'whatHelps', 'whatWorsens', 'medications', 'notes'];
+      const fieldKeys = ['mainConcern', 'onset', 'location', 'character', 'severity', 'pattern', 'symptoms', 'whatHelps', 'whatWorsens', 'medications', 'notes'];
 
       let fieldsHtml = fieldKeys.map(key => {
         const field = t.fields[key];
@@ -982,6 +1009,9 @@
         if (newData.mainConcern) summaryParts.push(`Main concern: ${newData.mainConcern}`);
         if (newData.onset) summaryParts.push(`Started: ${newData.onset}`);
         if (newData.location) summaryParts.push(`Location: ${newData.location}`);
+        if (newData.character) summaryParts.push(`Character: ${newData.character}`);
+        if (newData.severity) summaryParts.push(`Severity: ${newData.severity}`);
+        if (newData.pattern) summaryParts.push(`Pattern: ${newData.pattern}`);
         if (newData.symptoms) summaryParts.push(`Symptoms: ${newData.symptoms}`);
         if (newData.whatHelps) summaryParts.push(`What helps: ${newData.whatHelps}`);
         if (newData.whatWorsens) summaryParts.push(`What worsens: ${newData.whatWorsens}`);

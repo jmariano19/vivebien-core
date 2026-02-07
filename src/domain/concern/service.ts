@@ -339,6 +339,10 @@ export class ConcernService {
     const patterns: Record<string, RegExp> = {
       mainConcern: /^(?:Main concern|Concern|Motivo|Queixa|Motif):\s*(.+)/im,
       started: /^(?:Started|Onset|Inicio|Início|Début):\s*(.+)/im,
+      location: /^(?:Location|Ubicación|Localização|Localisation):\s*(.+)/im,
+      character: /^(?:Character|Carácter|Caráter|Caractère):\s*(.+)/im,
+      severity: /^(?:Severity|Severidad|Gravidade|Sévérité):\s*(.+)/im,
+      pattern: /^(?:Pattern|Patrón|Padrão|Schéma):\s*(.+)/im,
       whatHelps: /^(?:What helps|Helps|Mejora con|Melhora com|Améliore):\s*(.+)/im,
       whatWorsens: /^(?:What worsens|Worsens|Empeora con|Piora com|Aggrave):\s*(.+)/im,
       medications: /^(?:Medications|Medicamentos|Médicaments):\s*(.+)/im,
