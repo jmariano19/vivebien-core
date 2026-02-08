@@ -475,14 +475,19 @@ Rules:
 
     const prompt = `What is the MAIN health topic being discussed in this conversation? Return ONLY the topic name (2-5 words, in ${langName}).
 
+IMPORTANT RULES:
+- Use a SIMPLE, STABLE name for the condition — the kind of name a patient would use, not a clinical diagnosis
+- Do NOT change the topic name as more details emerge. "Headaches" stays "Headaches" even if the user later mentions visual symptoms or aura
+- Do NOT upgrade to clinical terms. If the user said "headaches", return "Headaches" — NOT "Migraines With Aura"
+- Focus on the BODY PART or BASIC SYMPTOM, not the specific sub-type
+
 Examples of good responses:
-- Back pain
-- Eye sty
-- Persistent headaches
-- Sore throat
-- Knee injury
+- Back Pain (NOT "Lumbar Radiculopathy")
+- Headaches (NOT "Migraines With Aura" or "Tension Headaches")
+- Stomach Pain (NOT "Gastroesophageal Reflux")
+- Knee Pain (NOT "Meniscal Tear")
 - Dolor de espalda
-- Orzuelo en el ojo
+- Dolores de cabeza
 
 CONVERSATION:
 ${conversationText}

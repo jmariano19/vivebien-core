@@ -122,17 +122,53 @@ export class ConcernService {
         return concern;
       }
 
-      // Word overlap check — if 50%+ words match, consider it the same concern
-      const existingWords = new Set(existingTitle.split(/\s+/));
-      const newWords = normalizedTitle.split(/\s+/);
+      // Health synonym match — treats related medical terms as the same concern
+      if (this.areHealthSynonyms(existingTitle, normalizedTitle)) {
+        return concern;
+      }
+
+      // Word overlap check — if any content word matches, consider it the same concern
+      const stopWords = new Set(['with', 'and', 'the', 'in', 'on', 'of', 'con', 'de', 'en', 'el', 'la', 'los', 'las', 'del', 'por', 'y', 'e', 'com', 'do', 'da', 'no', 'na', 'et', 'le', 'les', 'des', 'du']);
+      const existingWords = new Set(existingTitle.split(/\s+/).filter(w => !stopWords.has(w)));
+      const newWords = normalizedTitle.split(/\s+/).filter(w => !stopWords.has(w));
       const overlap = newWords.filter(w => existingWords.has(w)).length;
-      if (overlap > 0 && overlap >= Math.min(existingWords.size, newWords.length) * 0.5) {
+      if (overlap > 0) {
         return concern;
       }
     }
 
     // No match found — create new concern
     return this.createConcern(userId, title, icon);
+  }
+
+  private areHealthSynonyms(a: string, b: string): boolean {
+    // Groups of words that refer to the same body system / condition
+    const synonymGroups = [
+      ['headache', 'headaches', 'migraine', 'migraines', 'head pain', 'dolor de cabeza', 'dolores de cabeza', 'migraña', 'migrañas', 'jaqueca', 'cefalea', 'dor de cabeça', 'enxaqueca', 'mal de tête', 'migraine', 'céphalée'],
+      ['back pain', 'backache', 'back ache', 'spine', 'lumbar', 'dolor de espalda', 'lumbago', 'dolor lumbar', 'dor nas costas', 'lombalgia', 'mal de dos'],
+      ['stomach', 'stomachache', 'belly', 'abdomen', 'abdominal', 'nausea', 'estómago', 'dolor de estómago', 'barriga', 'estômago', 'dor de estômago', 'mal au ventre'],
+      ['knee', 'rodilla', 'joelho', 'genou'],
+      ['shoulder', 'hombro', 'ombro', 'épaule'],
+      ['neck', 'cuello', 'pescoço', 'cou', 'cervical'],
+      ['anxiety', 'anxious', 'ansiedad', 'ansioso', 'ansiedade', 'anxiété'],
+      ['insomnia', 'sleep', 'insomnio', 'sueño', 'dormir', 'insônia', 'sommeil'],
+      ['cough', 'tos', 'tosse', 'toux'],
+      ['chest', 'pecho', 'peito', 'poitrine'],
+      ['throat', 'sore throat', 'garganta', 'dolor de garganta', 'dor de garganta', 'mal de gorge'],
+      ['skin', 'rash', 'piel', 'sarpullido', 'erupción', 'pele', 'erupção', 'peau', 'éruption'],
+      ['eye', 'eyes', 'vision', 'ojo', 'ojos', 'olho', 'olhos', 'œil', 'yeux'],
+      ['ear', 'ears', 'oído', 'oreja', 'ouvido', 'oreille'],
+    ];
+
+    const aWords = a.split(/\s+/);
+    const bWords = b.split(/\s+/);
+
+    for (const group of synonymGroups) {
+      const aMatch = group.some(syn => a.includes(syn) || aWords.some(w => group.includes(w)));
+      const bMatch = group.some(syn => b.includes(syn) || bWords.some(w => group.includes(w)));
+      if (aMatch && bMatch) return true;
+    }
+    return false;
   }
 
   /**
