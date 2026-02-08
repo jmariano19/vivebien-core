@@ -119,11 +119,21 @@ export class ConcernService {
 
       // Substring match (either direction)
       if (existingTitle.includes(normalizedTitle) || normalizedTitle.includes(existingTitle)) {
+        // Rename if the new title is different (language change)
+        if (concern.title !== title) {
+          await this.renameConcern(concern.id, title);
+          concern.title = title;
+        }
         return concern;
       }
 
       // Health synonym match — treats related medical terms as the same concern
       if (this.areHealthSynonyms(existingTitle, normalizedTitle)) {
+        // Rename to user's current language title
+        if (concern.title !== title) {
+          await this.renameConcern(concern.id, title);
+          concern.title = title;
+        }
         return concern;
       }
 
@@ -169,6 +179,17 @@ export class ConcernService {
       if (aMatch && bMatch) return true;
     }
     return false;
+  }
+
+  /**
+   * Rename an existing concern (e.g., when user switches languages)
+   */
+  async renameConcern(concernId: string, newTitle: string): Promise<void> {
+    await this.db.query(
+      `UPDATE health_concerns SET title = $1, updated_at = NOW() WHERE id = $2`,
+      [newTitle, concernId]
+    );
+    logger.info({ concernId, newTitle }, 'Concern renamed (language change)');
   }
 
   /**

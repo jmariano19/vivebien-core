@@ -484,7 +484,7 @@ Rules:
 
     // Build existing concerns context
     const existingContext = existingConcernTitles && existingConcernTitles.length > 0
-      ? `\nEXISTING CONCERNS for this user: ${existingConcernTitles.map(t => `"${t}"`).join(', ')}\n- If the conversation is about the SAME condition as an existing concern (even if discussing new symptoms, details, or follow-ups), return that EXACT existing title\n- Only return a NEW title if the user is clearly discussing a DIFFERENT, UNRELATED health issue\n`
+      ? `\nEXISTING CONCERNS for this user: ${existingConcernTitles.map(t => `"${t}"`).join(', ')}\n- If the conversation is about the SAME condition as an existing concern, return the topic name in ${langName} (translate if existing title is in a different language)\n- Only return a NEW title if the user is clearly discussing a DIFFERENT, UNRELATED health issue\n`
       : '';
 
     const prompt = `What health topic(s) are being discussed in this conversation? Return the topic name(s) (2-5 words each, in ${langName}).
