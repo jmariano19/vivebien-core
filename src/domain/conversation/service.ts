@@ -810,6 +810,7 @@ Spanish version:
 *Medicamentos:* [meds]
 
 RULES:
+- ONLY use the 9 field labels listed above — never invent new fields like "Visual warning", "Triggers", "Associated symptoms", etc. If the info doesn't fit neatly into one field, fold it into the closest match (e.g., visual prodrome → Pattern, triggers → Worsens, associated symptoms → Concern description)
 - Only include fields where info was actually provided — typically 4-7 fields
 - Skip fields where info is unknown — never write "not provided" or "N/A"
 - Use the user's own words when possible
