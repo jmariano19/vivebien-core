@@ -39,16 +39,8 @@ export const testRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
     const aiResponse = await aiService.generateResponse(messages, context, user.id, 'test-' + Date.now());
     const cleanedResponse = aiService.postProcess(aiResponse.content);
 
-    // Save messages
-    await conversationService.saveMessages(user.id, TEST_CONVERSATION_ID, [
-      { role: 'user', content: message },
-      { role: 'assistant', content: cleanedResponse },
-    ]);
-
-    // Update conversation state
-    await conversationService.updateState(user.id, context);
-
-    // Extract and save user name (mirrors inbound.ts Step 9)
+    // Extract and save user name BEFORE saving messages (mirrors inbound.ts Step 9)
+    // Must happen first so lastAssistantMessage is the name-ask, not the current response
     if (!user.name) {
       const recentMessages = await conversationService.getRecentMessages(user.id, 5);
       const extractedName = extractUserName(message, recentMessages);
@@ -58,6 +50,15 @@ export const testRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
         user.name = finalName;
       }
     }
+
+    // Save messages
+    await conversationService.saveMessages(user.id, TEST_CONVERSATION_ID, [
+      { role: 'user', content: message },
+      { role: 'assistant', content: cleanedResponse },
+    ]);
+
+    // Update conversation state
+    await conversationService.updateState(user.id, context);
 
     // Update health summary after enough messages
     if (context.messageCount >= 2) {
