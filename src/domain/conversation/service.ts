@@ -811,6 +811,7 @@ Spanish version:
 
 RULES:
 - ONLY use the 9 field labels listed above — never invent new fields like "Visual warning", "Triggers", "Associated symptoms", etc. If the info doesn't fit neatly into one field, fold it into the closest match (e.g., visual prodrome → Pattern, triggers → Worsens, associated symptoms → Concern description)
+- ALWAYS use the field labels in the SAME LANGUAGE as the conversation. If the user is speaking Spanish, use Motivo/Inicio/Ubicación/Carácter/Severidad/Patrón/Mejora con/Empeora con/Medicamentos. NEVER mix English labels into a Spanish note (e.g., "Worsens:" in a Spanish note is WRONG — use "Empeora con:")
 - Only include fields where info was actually provided — typically 4-7 fields
 - Skip fields where info is unknown — never write "not provided" or "N/A"
 - Use the user's own words when possible
