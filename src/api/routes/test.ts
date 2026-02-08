@@ -64,6 +64,16 @@ export const testRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
       await conversationService.updateHealthSummary(user.id, message, cleanedResponse, aiService);
     }
 
+    // Send name-ask after summary if user has no name (mirrors inbound.ts Step 16)
+    const isSummary = aiService.looksLikeSummary(cleanedResponse);
+    let nameAsk: string | null = null;
+    if (isSummary && !user.name) {
+      nameAsk = aiService.getNameAskMessage(user.language || 'en');
+      await conversationService.saveMessages(user.id, TEST_CONVERSATION_ID, [
+        { role: 'assistant', content: nameAsk },
+      ]);
+    }
+
     // Read current state
     const updatedUser = await userService.loadOrCreate(phone);
     const concerns = await concernService.getActiveConcerns(user.id);
@@ -71,6 +81,7 @@ export const testRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
     return {
       success: true,
       aiResponse: cleanedResponse,
+      nameAsk,
       user: { id: updatedUser.id, name: updatedUser.name, language: updatedUser.language },
       messageCount: context.messageCount + 1,
       concerns: concerns.map(c => ({
