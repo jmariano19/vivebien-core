@@ -144,6 +144,40 @@ function extractUserName(userMessage: string, recentMessages: Message[]): string
 }
 
 /**
+ * Backup name extraction: parse the AI response for name acknowledgments.
+ * Catches cases where the primary extraction (from user message) fails
+ * but the AI clearly recognized and used the name in its response.
+ * e.g. "Gracias, Elias Mariano." → "Elias Mariano"
+ */
+function extractNameFromAIResponse(aiResponse: string): string | null {
+  // Patterns where AI acknowledges a name at the start of its response
+  const patterns = [
+    /^(?:gracias|muchas gracias),?\s+([A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+)?)\b[.!,\n]/i,
+    /^(?:thank you|thanks),?\s+([A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+)?)\b[.!,\n]/i,
+    /^(?:obrigado|obrigada),?\s+([A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+)?)\b[.!,\n]/i,
+    /^(?:merci),?\s+([A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+)?)\b[.!,\n]/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = aiResponse.match(pattern);
+    if (match && match[1]) {
+      const candidate = match[1].trim();
+      const words = candidate.split(/\s+/);
+
+      // Validate: 1-3 words, each 2-20 chars, only letters
+      if (words.length >= 1 && words.length <= 3 &&
+          words.every(w => /^[\p{L}]{2,20}$/u.test(w))) {
+        return words
+          .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+          .join(' ');
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
  * Detect the language of a message based on common patterns
  * Returns 'es', 'en', 'pt', 'fr' or null if uncertain
  */
@@ -354,21 +388,29 @@ export async function handleInboundMessage(
   }
 
   // Step 9: Extract and save user name if provided (works during onboarding or active phase)
-  // IMPORTANT: Must happen BEFORE saving new messages, so getRecentMessages returns
-  // the previous assistant message (e.g. "what's your name?") not the new one
+  // Two extraction strategies:
+  //   A) Primary: Check if AI asked for name + user responded with a name
+  //   B) Backup: Parse the AI's response for name acknowledgments (e.g. "Gracias, Elias")
   if (!user.name) {
     const recentMessages = await conversationService.getRecentMessages(user.id, 5);
     const extractedName = extractUserName(processedMessage, recentMessages);
 
-    if (extractedName) {
+    // Backup: if primary extraction didn't find a name, check the AI's response
+    const finalName = extractedName || extractNameFromAIResponse(cleanedResponse);
+
+    if (finalName) {
       await logExecution(
         correlationId,
         'save_user_name',
-        async () => userService.updateName(user.id, extractedName),
+        async () => userService.updateName(user.id, finalName),
         logger
       );
-      user.name = extractedName;
-      logger.info({ userId: user.id, name: extractedName }, 'User name extracted and saved');
+      user.name = finalName;
+      logger.info({
+        userId: user.id,
+        name: finalName,
+        source: extractedName ? 'user_message' : 'ai_response',
+      }, 'User name extracted and saved');
     }
   }
 
