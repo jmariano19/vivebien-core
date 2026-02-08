@@ -841,7 +841,10 @@ French version:
 
 RULES:
 - ONLY use the 9 field labels listed above — never invent new fields like "Visual warning", "Triggers", "Associated symptoms", etc. If the info doesn't fit neatly into one field, fold it into the closest match (e.g., visual prodrome → Pattern, triggers → Worsens, associated symptoms → Concern description)
-- CRITICAL: You MUST use the field labels for the EXACT language of the conversation. Do NOT mix languages. Portuguese and Spanish are DIFFERENT — do NOT use Spanish labels (Ubicación, Carácter, Patrón, Mejora con, Empeora con) in a Portuguese conversation. Use the Portuguese labels (Localização, Caráter, Padrão, Melhora com, Piora com). Same for French — use the French labels shown above. If the conversation is in English, use English labels. If Spanish, use Spanish. If Portuguese, use Portuguese. If French, use French.
+- CRITICAL: You MUST use the field labels for the EXACT language of the conversation. Do NOT mix languages.
+  - Portuguese ≠ Spanish: Use Queixa/Início/Localização/Caráter/Gravidade/Padrão/Melhora com/Piora com/Medicamentos
+  - French ≠ Portuguese: Use Motif/Début/Localisation/Caractère/Sévérité/Schéma/Améliore/Aggrave/Médicaments — NOT Queixa/Início/Caráter/Padrão/Gravidade (those are PORTUGUESE)
+  - If the conversation is in French, you MUST use the French labels above. If Portuguese, use Portuguese. If Spanish, use Spanish. If English, use English.
 - Only include fields where info was actually provided — typically 4-7 fields
 - Skip fields where info is unknown — never write "not provided" or "N/A"
 - Use the user's own words when possible
