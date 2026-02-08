@@ -9,6 +9,7 @@ import { adminRoutes } from './api/routes/admin';
 import { summaryRoutes } from './api/routes/summary';
 import { concernRoutes } from './api/routes/concerns';
 import { doctorRoutes } from './api/routes/doctor';
+import { testRoutes } from './api/routes/test';
 import { correlationMiddleware } from './api/middleware/correlation';
 import { logger } from './infra/logging/logger';
 import { db } from './infra/db/client';
@@ -77,6 +78,7 @@ async function bootstrap() {
   await app.register(summaryRoutes, { prefix: '/api/summary' });
   await app.register(concernRoutes, { prefix: '/api/concerns' });
   await app.register(doctorRoutes, { prefix: '/api/doctor' });
+  await app.register(testRoutes, { prefix: '/api/test' });
 
   // Serve doctor view page for /doctor/:userId URLs
   app.get('/doctor/:userId', async (request, reply) => {
