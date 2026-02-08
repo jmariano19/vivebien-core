@@ -11,16 +11,16 @@ export function detectLanguage(message: string): 'es' | 'en' | 'pt' | 'fr' | nul
     return words.filter(word => new RegExp(`\\b${word}\\b`, 'i').test(lower)).length;
   };
 
-  const ptWords = ['você', 'voce', 'oi', 'olá', 'ola', 'obrigado', 'obrigada', 'tudo', 'bem', 'estou', 'tenho', 'não', 'nao', 'meu', 'minha', 'como', 'está', 'bom', 'dia', 'boa', 'tarde', 'noite', 'por', 'favor', 'dor', 'ontem', 'hoje', 'semana'];
+  const ptWords = ['você', 'voce', 'oi', 'olá', 'ola', 'obrigado', 'obrigada', 'tudo', 'bem', 'estou', 'tenho', 'não', 'nao', 'meu', 'minha', 'como', 'está', 'bom', 'dia', 'boa', 'tarde', 'noite', 'por', 'favor', 'dor', 'ontem', 'hoje', 'semana', 'muito', 'quando', 'mais', 'mas', 'também', 'tambem', 'depois', 'ainda', 'agora', 'então', 'entao', 'pode', 'uma', 'ele', 'ela', 'dos', 'das', 'piora', 'melhora', 'cabeça', 'cabeca', 'forte', 'tempo', 'sempre', 'melhor', 'pior'];
   const ptScore = countMatches(ptWords) + (lower.match(/ção\b|ões\b/g)?.length || 0);
 
-  const esWords = ['hola', 'estoy', 'tengo', 'cómo', 'como', 'estás', 'buenos', 'días', 'buenas', 'tardes', 'gracias', 'qué', 'que', 'cuál', 'cual', 'cuándo', 'cuando', 'dónde', 'donde', 'dolor', 'ayer', 'hoy', 'semana'];
+  const esWords = ['hola', 'estoy', 'tengo', 'cómo', 'como', 'estás', 'buenos', 'días', 'buenas', 'tardes', 'gracias', 'qué', 'que', 'cuál', 'cual', 'cuándo', 'cuando', 'dónde', 'donde', 'dolor', 'ayer', 'hoy', 'semana', 'muy', 'pero', 'también', 'tambien', 'después', 'despues', 'ahora', 'todavía', 'todavia', 'puede', 'una', 'las', 'los', 'del', 'mucho', 'poco', 'cabeza', 'empeora', 'mejora', 'fuerte', 'siempre', 'mejor', 'peor', 'con', 'sin', 'desde'];
   const esScore = countMatches(esWords) + (lower.match(/ción\b/g)?.length || 0);
 
-  const enWords = ['hello', 'hi', 'hey', 'i', 'am', 'have', 'has', 'had', 'the', 'a', 'an', 'my', 'is', 'are', 'was', 'were', 'what', 'when', 'where', 'why', 'how', 'please', 'thank', 'thanks', 'yes', 'no', 'not', 'it', 'this', 'that', 'with', 'for', 'on', 'in', 'to', 'and', 'but', 'or', 'eye', 'pain', 'day', 'days', 'week', 'yesterday', 'today', 'started', 'feeling', 'feel'];
+  const enWords = ['hello', 'hi', 'hey', 'am', 'have', 'has', 'had', 'the', 'an', 'my', 'is', 'are', 'was', 'were', 'what', 'when', 'where', 'why', 'how', 'please', 'thank', 'thanks', 'yes', 'not', 'it', 'this', 'that', 'with', 'and', 'but', 'eye', 'pain', 'day', 'days', 'week', 'yesterday', 'today', 'started', 'feeling', 'feel', 'headache', 'worse', 'better', 'doctor', 'medicine', 'because', 'since', 'been', 'about', 'does', 'much', 'also', 'still', 'just', 'very', 'really', 'sometimes', 'always', 'never'];
   const enScore = countMatches(enWords) + (lower.match(/ing\b/g)?.length || 0);
 
-  const frWords = ['bonjour', 'salut', 'je', 'suis', 'ai', 'comment', 'merci', 'oui', 'non', 'le', 'la', 'les', 'mon', 'ma', 'mes', 'que', 'qui', 'où', 'douleur', 'hier', 'aujourd', 'semaine'];
+  const frWords = ['bonjour', 'salut', 'je', 'suis', 'ai', 'comment', 'merci', 'oui', 'non', 'le', 'la', 'les', 'mon', 'ma', 'mes', 'que', 'qui', 'où', 'douleur', 'hier', 'aujourd', 'semaine', 'avec', 'pour', 'dans', 'aussi', 'après', 'apres', 'encore', 'toujours', 'jamais', 'maintenant', 'peut', 'beaucoup', 'très', 'tres', 'depuis', 'tête', 'tete', 'pire', 'mieux', 'médecin', 'medecin'];
   const frScore = countMatches(frWords);
 
   const scores = [
