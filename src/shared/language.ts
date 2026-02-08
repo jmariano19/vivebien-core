@@ -167,10 +167,10 @@ export function extractUserName(userMessage: string, recentMessages: Message[]):
  */
 export function extractNameFromAIResponse(aiResponse: string): string | null {
   const patterns = [
-    /^(?:gracias|muchas gracias),?\s+([A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+)?)\b[.!,\n]/i,
-    /^(?:thank you|thanks),?\s+([A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+)?)\b[.!,\n]/i,
-    /^(?:obrigado|obrigada),?\s+([A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+)?)\b[.!,\n]/i,
-    /^(?:merci),?\s+([A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+)?)\b[.!,\n]/i,
+    /^(?:gracias|muchas gracias),\s+([A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+)?)\b[.!,\n]/i,
+    /^(?:thank you|thanks),\s+([A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+)?)\b[.!,\n]/i,
+    /^(?:obrigado|obrigada),\s+([A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+)?)\b[.!,\n]/i,
+    /^(?:merci),\s+([A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+)?)\b[.!,\n]/i,
   ];
 
   for (const pattern of patterns) {
