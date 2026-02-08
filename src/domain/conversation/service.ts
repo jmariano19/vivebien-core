@@ -148,7 +148,7 @@ export class ConversationService {
     assistantResponse: string,
     aiService: {
       generateSummary: (messages: Message[], currentSummary: string | null, language?: string) => Promise<string>;
-      detectConcernTitle: (messages: Message[], language?: string) => Promise<string>;
+      detectConcernTitle: (messages: Message[], language?: string, existingConcernTitles?: string[]) => Promise<string>;
     }
   ): Promise<void> {
     const concernService = new ConcernService(this.db);
@@ -159,6 +159,10 @@ export class ConversationService {
       [userId]
     );
     const userLanguage = userResult.rows[0]?.language;
+
+    // Get existing active concerns so detectConcernTitle can prefer matching them
+    const existingConcerns = await concernService.getActiveConcerns(userId);
+    const existingTitles = existingConcerns.map(c => c.title);
 
     // Get recent messages for context
     const recentMessages = await this.getRecentMessages(userId, 20);
@@ -172,7 +176,7 @@ export class ConversationService {
 
     try {
       // Step 1: Detect which concern this conversation is about
-      const concernTitle = await aiService.detectConcernTitle(allMessages, userLanguage);
+      const concernTitle = await aiService.detectConcernTitle(allMessages, userLanguage, existingTitles);
 
       // Step 2: Get or create the concern
       const concern = await concernService.getOrCreateConcern(userId, concernTitle);
@@ -849,20 +853,9 @@ PRINCIPLE 5 — Explicitly offload mental burden
 ──────────────────────────────────────────────
 THIS IS EMOTIONALLY CRITICAL.
 
-After creating or updating a note, always reinforce containment.
-The user must feel that their worry has been safely received and stored.
+After creating or updating a note, the user must feel that their worry has been safely received and stored.
 
-Always include one of these after a summary:
-- "You don't need to remember all this — it's saved and organized."
-- "This is ready whenever you need it. You don't have to carry it in your head."
-- "Your note is safe. Come back to it anytime."
-
-Spanish:
-- "No necesitas recordar todo esto — está guardado y organizado."
-- "Esto está listo cuando lo necesites. No tienes que cargarlo en tu cabeza."
-- "Tu nota está segura. Puedes volver cuando quieras."
-
-This is not optional. Every summary delivery must include containment reinforcement.
+IMPORTANT: Do NOT add your own containment text after the health note (e.g., "You don't need to remember all this"). The system automatically adds containment text and the summary link after your note. If you add your own, the user sees duplicate messages. Just end your response with the health note itself — the system handles everything after it.
 
 PRINCIPLE 6 — Identity is handled automatically
 ────────────────────────────────────────────

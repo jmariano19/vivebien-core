@@ -462,24 +462,36 @@ Rules:
    * Uses Claude Haiku for fast, lightweight extraction.
    * Returns a short title like "Back pain", "Eye sty", "Headaches"
    */
-  async detectConcernTitle(messages: Message[], language?: string): Promise<string> {
+  async detectConcernTitle(messages: Message[], language?: string, existingConcernTitles?: string[]): Promise<string> {
     await this.rateLimiter.acquire();
 
     const langName = language === 'es' ? 'Spanish' : language === 'pt' ? 'Portuguese' : language === 'fr' ? 'French' : 'English';
 
-    // Use the last few messages for context
+    // Include the FIRST user message as anchor (the initial complaint) + recent messages
+    const firstUserMessage = messages.find(m => m.role === 'user');
     const recentMessages = messages.slice(-6);
-    const conversationText = recentMessages
+    let conversationText = '';
+    if (firstUserMessage && !recentMessages.includes(firstUserMessage)) {
+      conversationText = `User (first message): ${firstUserMessage.content}\n\n...\n\n`;
+    }
+    conversationText += recentMessages
       .map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
       .join('\n');
 
-    const prompt = `What is the MAIN health topic being discussed in this conversation? Return ONLY the topic name (2-5 words, in ${langName}).
+    // Build existing concerns context
+    const existingContext = existingConcernTitles && existingConcernTitles.length > 0
+      ? `\nEXISTING CONCERNS for this user: ${existingConcernTitles.map(t => `"${t}"`).join(', ')}\n- If the conversation is about the SAME condition as an existing concern (even if discussing new symptoms, details, or follow-ups), return that EXACT existing title\n- Only return a NEW title if the user is clearly discussing a DIFFERENT, UNRELATED health issue\n`
+      : '';
 
+    const prompt = `What is the MAIN health topic being discussed in this conversation? Return ONLY the topic name (2-5 words, in ${langName}).
+${existingContext}
 IMPORTANT RULES:
 - Use a SIMPLE, STABLE name for the condition — the kind of name a patient would use, not a clinical diagnosis
 - Do NOT change the topic name as more details emerge. "Headaches" stays "Headaches" even if the user later mentions visual symptoms or aura
 - Do NOT upgrade to clinical terms. If the user said "headaches", return "Headaches" — NOT "Migraines With Aura"
 - Focus on the BODY PART or BASIC SYMPTOM, not the specific sub-type
+- When the user reports MULTIPLE RELATED symptoms (e.g., insomnia + palpitations + weight loss, or headache + nausea + light sensitivity), these are part of ONE concern — use a name that captures the primary complaint, not each individual symptom
+- NEVER create separate concerns for symptoms that are part of the same clinical picture
 
 Examples of good responses:
 - Back Pain (NOT "Lumbar Radiculopathy")
