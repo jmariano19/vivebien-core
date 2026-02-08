@@ -5,6 +5,7 @@ import { UserService } from '../../domain/user/service';
 import { ConversationService } from '../../domain/conversation/service';
 import { AIService } from '../../domain/ai/service';
 import { ConcernService } from '../../domain/concern/service';
+import { detectLanguage, extractUserName, extractNameFromAIResponse } from '../../shared/language';
 
 const TEST_CONVERSATION_ID = 99999;
 
@@ -23,6 +24,13 @@ export const testRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
     // Load or create user
     const user = await userService.loadOrCreate(phone);
 
+    // Detect and update language (mirrors inbound.ts Step 5)
+    const detectedLang = detectLanguage(message);
+    if (detectedLang && detectedLang !== user.language) {
+      await userService.updateLanguage(user.id, detectedLang);
+      user.language = detectedLang;
+    }
+
     // Load context
     const context = await conversationService.loadContext(user.id, TEST_CONVERSATION_ID);
 
@@ -39,6 +47,17 @@ export const testRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
 
     // Update conversation state
     await conversationService.updateState(user.id, context);
+
+    // Extract and save user name (mirrors inbound.ts Step 9)
+    if (!user.name) {
+      const recentMessages = await conversationService.getRecentMessages(user.id, 5);
+      const extractedName = extractUserName(message, recentMessages);
+      const finalName = extractedName || extractNameFromAIResponse(cleanedResponse);
+      if (finalName) {
+        await userService.updateName(user.id, finalName);
+        user.name = finalName;
+      }
+    }
 
     // Update health summary after enough messages
     if (context.messageCount >= 2) {
