@@ -251,7 +251,7 @@ export class AIService {
       pt: `📋 *Sua nota está aqui* 👇\n${link}`,
       fr: `📋 *Votre note est ici* 👇\n${link}`,
     };
-    return texts[language] || texts.es!;
+    return texts[language] || texts.en!;
   }
 
   /**

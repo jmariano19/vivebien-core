@@ -33,6 +33,12 @@ export function detectLanguage(message: string): 'es' | 'en' | 'pt' | 'fr' | nul
   const first = scores[0]!;
   const second = scores[1]!;
 
+  // If only one language matches at all (no competition), score of 1 is sufficient
+  // e.g., "Hello" → EN=1, all others=0 → clearly English
+  if (first.score >= 1 && second.score === 0) {
+    return first.lang;
+  }
+
   if (first.score >= 2 && first.score > second.score) {
     return first.lang;
   }

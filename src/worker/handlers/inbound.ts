@@ -119,6 +119,7 @@ export async function handleInboundMessage(
         logger
       );
       user.language = detectedLang;
+      context.language = detectedLang; // Keep context in sync for system prompt
       logger.info({ userId: user.id, language: detectedLang }, 'User language updated from voice/text');
     }
   }

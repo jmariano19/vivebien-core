@@ -98,7 +98,7 @@ export class UserService {
         created_at: Date;
       }>(
         `INSERT INTO users (id, phone, language, timezone, created_at)
-         VALUES (gen_random_uuid(), $1, 'es', 'America/Mexico_City', NOW())
+         VALUES (gen_random_uuid(), $1, 'en', 'America/Mexico_City', NOW())
          RETURNING id, phone, language, timezone, created_at`,
         [phone]
       );
