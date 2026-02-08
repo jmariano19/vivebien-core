@@ -78,6 +78,7 @@ vivebien-project/
 │   │   ├── summary.ts           # Summary API (GET & PUT /api/summary/:userId)
 │   │   ├── concerns.ts          # Concerns API (CRUD /api/concerns/:userId)
 │   │   ├── doctor.ts            # Doctor API (/api/doctor/:userId)
+│   │   ├── test.ts              # Automated pressure test endpoint (/api/test)
 │   │   └── health.ts            # Health check
 │   ├── domain/
 │   │   ├── ai/service.ts        # AI service, postProcess(), summary link, detectConcernTitle()
@@ -85,9 +86,13 @@ vivebien-project/
 │   │   ├── conversation/service.ts  # System prompts, updateHealthSummary() (multi-concern)
 │   │   ├── media/service.ts     # Voice transcription (Whisper) + Image analysis (Vision)
 │   │   └── user/service.ts      # User CRUD
+│   ├── shared/
+│   │   ├── language.ts          # detectLanguage(), extractUserName(), extractNameFromAIResponse()
+│   │   ├── types.ts             # Shared TypeScript interfaces
+│   │   └── errors.ts            # Error classes
 │   ├── worker/
 │   │   ├── index.ts             # Worker entry point
-│   │   └── handlers/inbound.ts  # Main message handler (processes attachments)
+│   │   └── handlers/inbound.ts  # Main message handler (imports from shared/language.ts)
 │   └── adapters/chatwoot/client.ts  # Chatwoot API client
 ├── public/
 │   ├── index.html               # Admin dashboard
@@ -325,6 +330,7 @@ The `SQL_Runner` workflow provides direct PostgreSQL access via MCP:
 
 | Variable | Description | Required |
 |----------|-------------|----------|
+| API_SECRET_KEY | Admin/test API authentication (min 16 chars) | ✅ Yes |
 | ANTHROPIC_API_KEY | Claude API key | ✅ Yes |
 | OPENAI_API_KEY | OpenAI API key (for Whisper) | ✅ Yes (for voice) |
 | DATABASE_URL | PostgreSQL connection string | ✅ Yes |
@@ -349,8 +355,14 @@ The `SQL_Runner` workflow provides direct PostgreSQL access via MCP:
 - **Key Functions**:
   - `handleInboundMessage()` - Main entry point
   - `processAttachments()` - Handles voice/image attachments
-  - `detectLanguage()` - Language detection from text
-  - `extractUserName()` - Name extraction from messages
+- **Imports from `src/shared/language.ts`**: `detectLanguage()`, `extractUserName()`, `extractNameFromAIResponse()`
+
+### Shared Language Utilities
+- **File**: `src/shared/language.ts`
+- **Functions** (used by both inbound handler and test endpoint):
+  - `detectLanguage(message)` — Detects es/en/pt/fr from word frequency scoring
+  - `extractUserName(message, recentMessages)` — Extracts name from user message (proactive + response-to-ask)
+  - `extractNameFromAIResponse(aiResponse)` — Backup: extracts name from AI acknowledgments ("Merci Marie,")
 
 ### Webhook Endpoint
 - **File**: `src/api/routes/ingest.ts`
@@ -398,7 +410,7 @@ When AI generates a health note, it's delivered as 3 separate WhatsApp messages 
 
 ---
 
-## Current State (Feb 6, 2026)
+## Current State (Feb 8, 2026)
 
 ### Working:
 - ✅ WhatsApp conversations via Chatwoot (direct, no n8n)
@@ -419,11 +431,44 @@ When AI generates a health note, it's delivered as 3 separate WhatsApp messages 
 - ✅ Concerns API (/api/concerns/:userId) with full CRUD + status update
 - ✅ Multi-language support (es, en, pt, fr) — all frontend pages and parsers support all 4 languages
 - ✅ Language auto-detection from user messages AND voice
-- ✅ Name extraction from conversations (including proactive name sharing)
+- ✅ Name extraction from conversations (proactive + backup from AI response)
 - ✅ WhatsApp bold formatting (*text*)
 - ✅ 24-hour check-in feature
 - ✅ Direct database access (no n8n required)
 - ✅ n8n DevOps Gateway available for database operations via MCP
+- ✅ Automated pressure test endpoint (/api/test) for testing AI pipeline without WhatsApp
+- ✅ Concern deduplication (existing titles passed to detectConcernTitle, multi-symptom grouping)
+
+### Recent Changes (Feb 7-8, 2026):
+
+#### Automated Pressure Test System (Feb 8)
+- New test API endpoint at `src/api/routes/test.ts` — runs AI pipeline without Chatwoot
+- `POST /api/test/message` and `DELETE /api/test/user` endpoints, protected by API_SECRET_KEY
+- Includes language detection, name extraction, summary generation — mirrors production flow
+- Enables Claude to automatically: clean user → send messages → analyze results → fix issues → redeploy
+
+#### Shared Language Utilities (Feb 8)
+- Moved `detectLanguage()`, `extractUserName()`, `extractNameFromAIResponse()` from `inbound.ts` to `src/shared/language.ts`
+- Both inbound handler and test endpoint import from the shared module
+- Added `extractNameFromAIResponse()` — backup name extraction from AI acknowledgments (e.g., "Merci Marie," → "Marie")
+
+#### French vs Portuguese Label Fix (Feb 8)
+- AI was confusing French and Portuguese note labels (using "Queixa" instead of "Motif" in French conversations)
+- Added explicit per-language label lists in the system prompt CRITICAL rule with clear disambiguation warnings
+
+#### Concern Deduplication (Feb 7)
+- `detectConcernTitle()` now receives existing concern titles as context — reuses exact title if same condition
+- Includes first user message as anchor (prevents drift as conversation shifts focus)
+- Multi-symptom grouping rule: related symptoms (insomnia + palpitations + weight loss) are ONE concern
+- Fixed: French conversation no longer creates 3 separate concerns for related symptoms
+
+#### Duplicate Containment Fix (Feb 7)
+- System prompt Principle 5 now explicitly tells AI NOT to add containment text after the health note
+- System (`buildSummaryMessage`) handles containment — AI adding its own caused duplicate messages
+
+#### Portuguese/French Note Templates (Feb 7)
+- Added explicit Portuguese and French note templates to the system prompt
+- Previously only English and Spanish were templated, causing AI to use Spanish labels in Portuguese/French conversations
 
 ### Recent Changes (Feb 6, 2026):
 
@@ -587,6 +632,62 @@ Workflow ID: `rWG8DN8q_HT9q6EZ_wFel`
 4. **Image**: Send photo of medication → Should analyze and describe
 5. **Summary split test**: After enough info shared, AI should send 3 separate messages: ack (immediate) → health note (10s) → name ask (5s)
 
+### Automated Pressure Test System (NEW - Feb 8, 2026)
+
+The test API endpoint allows running the full AI pipeline without WhatsApp/Chatwoot. Protected by `API_SECRET_KEY` auth.
+
+**Endpoints:**
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| POST | `/api/test/message` | Send a message through the AI pipeline |
+| DELETE | `/api/test/user` | Delete test user + all child records |
+
+**File**: `src/api/routes/test.ts`
+
+**How it works:**
+- `POST /api/test/message` accepts `{ phone, message }` and runs: load user → detect language → load context → build messages → AI call → save messages → extract name → update summary
+- Returns: `{ aiResponse, user: { id, name, language }, messageCount, concerns: [{ title, status, summaryContent }] }`
+- `DELETE /api/test/user` accepts `{ phone }` and deletes user + all child records in a transaction
+
+**Auth**: `Authorization: Bearer <API_SECRET_KEY>` or `X-API-Key: <API_SECRET_KEY>`
+
+**How Claude runs a pressure test:**
+1. Pick a test scenario (tough multilingual, multi-symptom)
+2. `DELETE /api/test/user` to clean state
+3. Send 4-5 messages via `POST /api/test/message`, reading AI responses and answering dynamically
+4. Validate results against checklist:
+   - Single concern card? (not split into multiple)
+   - Correct language labels? (no mixing across ES/EN/PT/FR)
+   - Name extracted? (if provided)
+   - Standard fields only? (no invented labels like "Síntomas asociados")
+   - Adequate field count? (4-7 expected)
+   - No duplicate containment text?
+5. If issues found → fix code → deploy → re-test
+
+**Example curl:**
+```bash
+# Clean test user
+curl -X DELETE "https://carelog.vivebien.io/api/test/user" \
+  -H "Authorization: Bearer $API_SECRET_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"phone":"+12017370113"}'
+
+# Send test message
+curl -X POST "https://carelog.vivebien.io/api/test/message" \
+  -H "Authorization: Bearer $API_SECRET_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"phone":"+12017370113","message":"Bonjour, j'\''ai mal à la tête depuis hier"}'
+```
+
+**What the test endpoint does NOT test:**
+- WhatsApp delivery (Chatwoot integration)
+- Voice/image attachments
+- Credit system
+- Safety detection flow
+- The actual user experience timing (delays, split messages)
+
+These still require manual WhatsApp testing.
+
 ---
 
 ## Deployment
@@ -733,7 +834,8 @@ git push && curl -s http://85.209.95.19:3000/api/deploy/1642a4c845b117889b4b6cbe
 - **Figma**: https://figma.com/design/UgbafTWqp5i0sMZgT9GMrE
 - **n8n**: Used for database access via SQL_Runner workflow (ID: `rWG8DN8q_HT9q6EZ_wFel`). Not required for core messaging.
 - **Database access**: Use `psql` directly (preferred): `/opt/homebrew/opt/libpq/bin/psql "postgres://postgres:bd894cefacb1c52998f3@85.209.95.19:5432/projecto-1"`. Backup: n8n SQL_Runner via MCP (one query per call).
-- **Deleting test users**: When asked to delete a test phone number, use SQL_Runner to delete from all child tables first (messages, health_concerns, memories, conversation_state, experiment_assignments, credit_transactions), then delete from users. See Testing section for full procedure.
+- **Deleting test users**: Use `DELETE /api/test/user` endpoint (preferred — handles all child tables automatically), or use SQL_Runner to delete from all child tables first (messages, health_concerns, memories, conversation_state, experiment_assignments, credit_transactions, billing_accounts), then delete from users. See Testing section for full procedure.
+- **Pressure testing**: Say "pressure test the system" and Claude will automatically run the test endpoint with various multilingual scenarios, analyze results, fix issues, and redeploy. See Automated Pressure Test System section.
 - System prompt is in `conversation/service.ts` `getDefaultSystemPrompt()` — containment-first philosophy with 7 design principles
 - AI does NOT ask for user's name — the system sends it as a separate delayed message after summary delivery
 - Summary delivery is split into 3 messages: ack (immediate) → note (10s) → name ask (5s)
