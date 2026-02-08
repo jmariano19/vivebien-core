@@ -62,16 +62,28 @@ export const testRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
     };
   });
 
-  // DELETE /api/test/user — Clean test user data (cascades via FK)
+  // DELETE /api/test/user — Clean test user data
   app.delete('/user', async (request) => {
     const { phone } = request.body as { phone: string };
 
-    const result = await db.query('DELETE FROM users WHERE phone = $1 RETURNING id', [phone]);
+    const userResult = await db.query('SELECT id FROM users WHERE phone = $1', [phone]);
+    const userId = userResult.rows[0]?.id;
+    if (!userId) return { success: true, status: 'no_user' };
 
-    if (result.rowCount === 0) {
-      return { success: true, status: 'no_user' };
+    const client = await db.connect();
+    try {
+      await client.query('BEGIN');
+      for (const table of ['concern_snapshots', 'messages', 'health_concerns', 'memories', 'conversation_state', 'experiment_assignments', 'credit_transactions', 'billing_accounts']) {
+        await client.query(`DELETE FROM ${table} WHERE user_id = $1`, [userId]);
+      }
+      await client.query('DELETE FROM users WHERE id = $1', [userId]);
+      await client.query('COMMIT');
+      return { success: true, status: 'deleted', userId };
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
     }
-
-    return { success: true, status: 'deleted', userId: result.rows[0].id };
   });
 };
