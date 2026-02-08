@@ -297,7 +297,7 @@ export class AIService {
    * Generate or update a health summary based on conversation history
    * This creates a live summary that can be displayed on a website
    */
-  async generateSummary(messages: Message[], currentSummary: string | null, language?: string): Promise<string> {
+  async generateSummary(messages: Message[], currentSummary: string | null, language?: string, focusTopic?: string): Promise<string> {
     await this.rateLimiter.acquire();
 
     // Detect language from recent messages or use provided language
@@ -378,6 +378,10 @@ export class AIService {
     };
     const sl = simpleLabels[detectedLang] || simpleLabels.en!;
 
+    const focusInstruction = focusTopic
+      ? `\n- IMPORTANT: This note is ONLY about "${focusTopic}". Include ONLY information related to this specific concern. Ignore any other health topics mentioned in the conversation.`
+      : '';
+
     const prompt = currentSummary
       ? `You are CareLog, a calm health documentation companion. Update this health note based on new information.
 
@@ -407,7 +411,7 @@ Rules:
 - No headers like "MOTIVO PRINCIPAL" — use simple labels only
 - No bullet points or complex formatting
 - No medical jargon unless the person used it first
-- Write in ${languageName}`
+- Write in ${languageName}${focusInstruction}`
       : `You are CareLog, a calm health documentation companion. Create a doctor-ready health note from this conversation.
 
 CONVERSATION:
@@ -433,7 +437,7 @@ Rules:
 - No headers like "MOTIVO PRINCIPAL" — use simple labels only
 - No bullet points or complex formatting
 - No medical jargon unless the person used it first
-- Write in ${languageName}`;
+- Write in ${languageName}${focusInstruction}`;
 
     try {
       // Use Sonnet for summaries (cost-effective for structured output)
@@ -483,7 +487,7 @@ Rules:
       ? `\nEXISTING CONCERNS for this user: ${existingConcernTitles.map(t => `"${t}"`).join(', ')}\n- If the conversation is about the SAME condition as an existing concern (even if discussing new symptoms, details, or follow-ups), return that EXACT existing title\n- Only return a NEW title if the user is clearly discussing a DIFFERENT, UNRELATED health issue\n`
       : '';
 
-    const prompt = `What is the MAIN health topic being discussed in this conversation? Return ONLY the topic name (2-5 words, in ${langName}).
+    const prompt = `What health topic(s) are being discussed in this conversation? Return the topic name(s) (2-5 words each, in ${langName}).
 ${existingContext}
 IMPORTANT RULES:
 - Use a SIMPLE, STABLE name for the condition — the kind of name a patient would use, not a clinical diagnosis
@@ -492,24 +496,25 @@ IMPORTANT RULES:
 - Focus on the BODY PART or BASIC SYMPTOM, not the specific sub-type
 - When the user reports MULTIPLE RELATED symptoms (e.g., insomnia + palpitations + weight loss, or headache + nausea + light sensitivity), these are part of ONE concern — use a name that captures the primary complaint, not each individual symptom
 - NEVER create separate concerns for symptoms that are part of the same clinical picture
+- BUT if the user mentions CLEARLY UNRELATED health issues (different body parts/systems, e.g., back pain AND a skin rash), return EACH topic on a SEPARATE LINE
+- Only split into multiple topics when conditions are truly independent — not when one might cause the other
 
-Examples of good responses:
-- Back Pain (NOT "Lumbar Radiculopathy")
-- Headaches (NOT "Migraines With Aura" or "Tension Headaches")
-- Stomach Pain (NOT "Gastroesophageal Reflux")
-- Knee Pain (NOT "Meniscal Tear")
-- Dolor de espalda
-- Dolores de cabeza
+Examples:
+- Single concern: "Back Pain"
+- Single concern: "Dolores de cabeza" (even if user also mentions nausea — related symptom)
+- Two concerns (on separate lines):
+Back Pain
+Skin Rash
 
 CONVERSATION:
 ${conversationText}
 
-Topic name:`;
+Topic name(s):`;
 
     try {
       const response = await this.client.messages.create({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 30,
+        max_tokens: 60,
         messages: [{ role: 'user', content: prompt }],
       });
 
@@ -519,23 +524,28 @@ Topic name:`;
         .join('')
         .trim();
 
-      // Clean up the response
-      let title = content
-        .replace(/^["']+|["']+$/g, '')  // Remove quotes
-        .replace(/^(the |el |la |le |o )/i, '')  // Remove articles
-        .trim();
+      // Clean up each line (may be multiple titles for unrelated concerns)
+      const lines = content.split('\n').map(line => line.trim()).filter(l => l.length > 0);
+      const cleanedLines = lines.map(line => {
+        let title = line
+          .replace(/^[-•*\d.)\s]+/, '')  // Remove list markers
+          .replace(/^["']+|["']+$/g, '')  // Remove quotes
+          .replace(/^(the |el |la |le |o )/i, '')  // Remove articles
+          .trim();
 
-      // Capitalize first letter of each word
-      title = title.split(' ')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-        .join(' ');
+        // Capitalize first letter of each word
+        title = title.split(' ')
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+          .join(' ');
 
-      // Validate: should be 2-60 chars
-      if (title.length < 2 || title.length > 60) {
+        return title;
+      }).filter(t => t.length >= 2 && t.length <= 60);
+
+      if (cleanedLines.length === 0) {
         return 'Health concern';
       }
 
-      return title;
+      return cleanedLines.join('\n');
     } catch (error) {
       logger.error({ error }, 'Failed to detect concern title');
       return 'Health concern';

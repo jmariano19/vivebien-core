@@ -147,7 +147,7 @@ export class ConversationService {
     userMessage: string,
     assistantResponse: string,
     aiService: {
-      generateSummary: (messages: Message[], currentSummary: string | null, language?: string) => Promise<string>;
+      generateSummary: (messages: Message[], currentSummary: string | null, language?: string, focusTopic?: string) => Promise<string>;
       detectConcernTitle: (messages: Message[], language?: string, existingConcernTitles?: string[]) => Promise<string>;
     }
   ): Promise<void> {
@@ -175,34 +175,47 @@ export class ConversationService {
     ];
 
     try {
-      // Step 1: Detect which concern this conversation is about
-      const concernTitle = await aiService.detectConcernTitle(allMessages, userLanguage, existingTitles);
+      // Step 1: Detect which concern(s) this conversation is about
+      const titleResult = await aiService.detectConcernTitle(allMessages, userLanguage, existingTitles);
 
-      // Step 2: Get or create the concern
-      const concern = await concernService.getOrCreateConcern(userId, concernTitle);
+      // Parse multiple titles (newline-separated) for unrelated concerns
+      const concernTitles = titleResult
+        .split('\n')
+        .map(t => t.replace(/^[-•*\d.)\s]+/, '').trim())
+        .filter(t => t.length >= 2 && t.length <= 60);
 
-      // Step 3: Generate updated summary for this specific concern
-      const newSummary = await aiService.generateSummary(
-        allMessages,
-        concern.summaryContent,
-        userLanguage
-      );
+      // Deduplicate: if a parsed title is empty or all are the same
+      const uniqueTitles = [...new Set(concernTitles)];
+      const titles = uniqueTitles.length > 0 ? uniqueTitles : [titleResult.trim()];
 
-      // Step 4: Update the concern (creates snapshot if meaningful change)
-      await concernService.updateConcernSummary(concern.id, newSummary, 'auto_update');
+      // Step 2-4: For each concern, get/create and generate summary
+      let lastSummary = '';
+      for (const concernTitle of titles) {
+        const concern = await concernService.getOrCreateConcern(userId, concernTitle);
+
+        // When multiple concerns, pass focusTopic so summary only includes relevant info
+        const focusTopic = titles.length > 1 ? concernTitle : undefined;
+        const newSummary = await aiService.generateSummary(
+          allMessages,
+          concern.summaryContent,
+          userLanguage,
+          focusTopic
+        );
+
+        await concernService.updateConcernSummary(concern.id, newSummary, 'auto_update');
+        lastSummary = newSummary;
+      }
 
       // Step 5: Aggregate ALL active concerns into legacy memories table
-      // This ensures the legacy summary reflects all concerns, not just the latest one
       try {
         const activeConcerns = await concernService.getActiveConcerns(userId);
         const aggregated = activeConcerns
           .filter(c => c.summaryContent)
           .map(c => `--- ${c.title} ---\n${c.summaryContent}`)
           .join('\n\n');
-        await this.upsertLegacySummary(userId, aggregated || newSummary);
+        await this.upsertLegacySummary(userId, aggregated || lastSummary);
       } catch {
-        // Fallback: just save the current concern's summary
-        await this.upsertLegacySummary(userId, newSummary);
+        await this.upsertLegacySummary(userId, lastSummary);
       }
     } catch (error) {
       // Fallback to legacy flow if concern tables don't exist yet
