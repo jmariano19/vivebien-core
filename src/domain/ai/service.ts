@@ -178,12 +178,25 @@ export class AIService {
   }
 
   /**
-   * Build the formatted summary message with containment + link
+   * Build the formatted summary message with containment + link.
+   * When concernTitle is provided, prepend a header showing which concern this note belongs to.
    */
-  buildSummaryMessage(summary: string, userId: string, language: string): string {
+  buildSummaryMessage(summary: string, userId: string, language: string, concernTitle?: string | null): string {
     const containment = this.getContainmentText(language);
     const link = this.getSummaryLinkText(language, userId);
-    return `${summary}\n\n${containment}\n\n${link}`;
+
+    let header = '';
+    if (concernTitle) {
+      const headerTemplates: Record<string, string> = {
+        es: `📋 *Tu Nota de Salud — ${concernTitle}*`,
+        en: `📋 *Your Health Note — ${concernTitle}*`,
+        pt: `📋 *Sua Nota de Saúde — ${concernTitle}*`,
+        fr: `📋 *Votre Note de Santé — ${concernTitle}*`,
+      };
+      header = (headerTemplates[language] || headerTemplates.en!) + '\n\n';
+    }
+
+    return `${header}${summary}\n\n${containment}\n\n${link}`;
   }
 
   /**

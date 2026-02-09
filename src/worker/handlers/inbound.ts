@@ -12,6 +12,9 @@ import { getCheckinQueue } from '../../infra/queue/client';
 import { logExecution } from '../../infra/logging/logger';
 import { processCheckinResponse } from './checkin';
 import { detectLanguage, extractUserName, extractNameFromAIResponse } from '../../shared/language';
+import { detectConcernCommand, getCommandConfirmationMessage, getCommandErrorMessage } from '../../shared/concern-commands';
+import { ConcernCommandExecutor } from '../../domain/concern/command-executor';
+import { ConcernService } from '../../domain/concern/service';
 
 const userService = new UserService(db);
 const creditService = new CreditService(db);
@@ -124,6 +127,60 @@ export async function handleInboundMessage(
     }
   }
 
+  // Step 4.7: Check for concern management commands (merge, delete, rename)
+  const concernCommand = detectConcernCommand(processedMessage, user.language || 'en');
+  if (concernCommand) {
+    try {
+      const executor = new ConcernCommandExecutor(db, logger);
+      let affectedConcerns: string[] = [];
+
+      if (concernCommand.type === 'merge') {
+        affectedConcerns = await executor.executeMerge(user.id, concernCommand.targets);
+      } else if (concernCommand.type === 'delete') {
+        affectedConcerns = await executor.executeDelete(user.id, concernCommand.targets[0]!);
+      } else if (concernCommand.type === 'rename') {
+        affectedConcerns = await executor.executeRename(user.id, concernCommand.targets[0]!, concernCommand.newName!);
+      }
+
+      const confirmationMsg = getCommandConfirmationMessage(concernCommand, affectedConcerns);
+      await chatwootClient.sendMessage(conversationId, confirmationMsg);
+
+      // Save the command and confirmation to message history
+      await conversationService.saveMessages(user.id, conversationId, [
+        { role: 'user', content: processedMessage },
+        { role: 'assistant', content: confirmationMsg },
+      ]);
+
+      await checkinSvc.updateLastBotMessageAt(user.id);
+
+      logger.info(
+        { userId: user.id, commandType: concernCommand.type, targets: concernCommand.targets },
+        'Concern command executed successfully'
+      );
+
+      return {
+        status: 'completed',
+        correlationId,
+        action: 'concern_command_executed',
+      };
+    } catch (err) {
+      logger.error(
+        { err, userId: user.id, commandType: concernCommand.type },
+        'Failed to execute concern command'
+      );
+
+      const errorMsg = getCommandErrorMessage(user.language || 'en');
+      await chatwootClient.sendMessage(conversationId, errorMsg);
+      await checkinSvc.updateLastBotMessageAt(user.id);
+
+      return {
+        status: 'completed',
+        correlationId,
+        action: 'concern_command_failed',
+      };
+    }
+  }
+
   // Step 5: Check for safety/urgency
   const safetyCheck = await logExecution(
     correlationId,
@@ -160,11 +217,34 @@ export async function handleInboundMessage(
   const isSummary = aiService.looksLikeSummary(cleanedResponse);
   const summaryParts = isSummary ? aiService.splitSummaryResponse(cleanedResponse) : null;
 
+  // Step 8.7: If this is a summary, detect the concern title BEFORE delivery
+  // so we can show the user which concern it's filed under
+  let detectedConcernTitle: string | null = null;
+  if (isSummary) {
+    try {
+      const concernService = new ConcernService(db);
+      const existingConcerns = await concernService.getActiveConcerns(user.id);
+      const existingTitles = existingConcerns.map(c => c.title);
+
+      const titleResult = await aiService.detectConcernTitle(
+        messages,
+        user.language,
+        existingTitles
+      );
+      // Take the first title if multiple were returned
+      detectedConcernTitle = titleResult.split('\n')[0]?.replace(/^[-•*\d.)\s]+/, '').trim() || null;
+
+      logger.info({ userId: user.id, concernTitle: detectedConcernTitle }, 'Concern title detected for summary display');
+    } catch (err) {
+      logger.warn({ err, userId: user.id }, 'Failed to detect concern title for display — continuing without it');
+    }
+  }
+
   // Build the full response for history (includes containment + link if summary)
   let responseForHistory: string;
   if (isSummary) {
     const summaryContent = summaryParts ? summaryParts.summary : cleanedResponse;
-    const summaryMsg = aiService.buildSummaryMessage(summaryContent, user.id, user.language || 'en');
+    const summaryMsg = aiService.buildSummaryMessage(summaryContent, user.id, user.language || 'en', detectedConcernTitle);
     responseForHistory = summaryParts
       ? summaryParts.acknowledgment + '\n\n' + summaryMsg
       : summaryMsg;
@@ -234,8 +314,8 @@ export async function handleInboundMessage(
     // 10 second delay — feels like CareLog is organizing the note
     await new Promise(resolve => setTimeout(resolve, 10000));
 
-    // Message 2: Health note + containment + link
-    const summaryMsg = aiService.buildSummaryMessage(summaryParts.summary, user.id, user.language || 'en');
+    // Message 2: Health note + containment + link (with concern title for visibility)
+    const summaryMsg = aiService.buildSummaryMessage(summaryParts.summary, user.id, user.language || 'en', detectedConcernTitle);
     await logExecution(
       correlationId,
       'send_summary',
@@ -261,11 +341,10 @@ export async function handleInboundMessage(
   );
 
   // Step 14: Update health summary (async, non-blocking for response)
-  // Only update when there's actual health content to save:
-  // - isSummary: AI generated a health note → always update
-  // - messageCount >= 2: user has shared health info in prior messages → update
-  // Skip on first exchange (greeting) to avoid creating bogus "Health concern" entries
-  if (isSummary || context.messageCount >= 2) {
+  // Only create/update concerns when a health note is generated (isSummary).
+  // This prevents fragmented concerns from being created mid-conversation
+  // before the AI has the full clinical picture.
+  if (isSummary) {
     logExecution(
       correlationId,
       'update_summary',
@@ -273,7 +352,8 @@ export async function handleInboundMessage(
         user.id,
         processedMessage,
         responseForHistory,
-        aiService
+        aiService,
+        detectedConcernTitle || undefined
       ),
       logger
     ).catch((err) => {
@@ -283,7 +363,7 @@ export async function handleInboundMessage(
       );
     });
   } else {
-    logger.info({ userId: user.id, messageCount: context.messageCount }, 'Skipping summary update — no health content yet');
+    logger.info({ userId: user.id, messageCount: context.messageCount }, 'Conversation ongoing — waiting for summary to create/update concerns');
   }
 
   // Step 15: Schedule 24h check-in if this is a summary handoff message

@@ -149,7 +149,8 @@ export class ConversationService {
     aiService: {
       generateSummary: (messages: Message[], currentSummary: string | null, language?: string, focusTopic?: string) => Promise<string>;
       detectConcernTitle: (messages: Message[], language?: string, existingConcernTitles?: string[]) => Promise<string>;
-    }
+    },
+    preDetectedTitle?: string
   ): Promise<void> {
     const concernService = new ConcernService(this.db);
 
@@ -176,7 +177,10 @@ export class ConversationService {
 
     try {
       // Step 1: Detect which concern(s) this conversation is about
-      const titleResult = await aiService.detectConcernTitle(allMessages, userLanguage, existingTitles);
+      // Use pre-detected title if available (already detected before message delivery)
+      const titleResult = preDetectedTitle
+        ? preDetectedTitle
+        : await aiService.detectConcernTitle(allMessages, userLanguage, existingTitles);
 
       // Parse multiple titles (newline-separated) for unrelated concerns
       const concernTitles = titleResult
