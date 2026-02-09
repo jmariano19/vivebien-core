@@ -220,6 +220,7 @@ export async function handleInboundMessage(
   // Step 8.7: If this is a summary, detect the concern title BEFORE delivery
   // so we can show the user which concern it's filed under
   let detectedConcernTitle: string | null = null;
+  let allDetectedTitles: string | null = null; // Full multi-line result for updateHealthSummary
   if (isSummary) {
     try {
       const concernService = new ConcernService(db);
@@ -231,10 +232,12 @@ export async function handleInboundMessage(
         user.language,
         existingTitles
       );
-      // Take the first title if multiple were returned
+      // Keep full result for updateHealthSummary (may contain multiple titles)
+      allDetectedTitles = titleResult;
+      // Take the first title for WhatsApp display
       detectedConcernTitle = titleResult.split('\n')[0]?.replace(/^[-•*\d.)\s]+/, '').trim() || null;
 
-      logger.info({ userId: user.id, concernTitle: detectedConcernTitle }, 'Concern title detected for summary display');
+      logger.info({ userId: user.id, concernTitle: detectedConcernTitle, allTitles: allDetectedTitles }, 'Concern title(s) detected for summary');
     } catch (err) {
       logger.warn({ err, userId: user.id }, 'Failed to detect concern title for display — continuing without it');
     }
@@ -353,7 +356,7 @@ export async function handleInboundMessage(
         processedMessage,
         responseForHistory,
         aiService,
-        detectedConcernTitle || undefined
+        allDetectedTitles || undefined
       ),
       logger
     ).catch((err) => {
