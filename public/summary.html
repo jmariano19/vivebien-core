@@ -1013,6 +1013,7 @@
         { label: lang.fields?.helps || 'Helps', value: fields.whatHelps },
         { label: lang.fields?.worsens || 'Worsens', value: fields.whatWorsens },
         { label: lang.fields?.medications || 'Medications', value: fields.medications },
+        { label: lang.fields?.familyHistory || 'Family history', value: fields.familyHistory },
       ].forEach(({ label, value }) => {
         const v = cleanFieldForDisplay(value);
         if (v && isValidFieldValue(v)) {
@@ -1112,6 +1113,7 @@
         { label: lang.fields?.helps || 'Helps', value: fields.whatHelps },
         { label: lang.fields?.worsens || 'Worsens', value: fields.whatWorsens },
         { label: lang.fields?.medications || 'Medications', value: fields.medications },
+        { label: lang.fields?.familyHistory || 'Family history', value: fields.familyHistory },
       ];
       fieldDefs.forEach(function(f) {
         const v = cleanFieldForDisplay(f.value);
@@ -1611,7 +1613,7 @@
     function capitalizeFirst(str) { return str ? str.charAt(0).toUpperCase() + str.slice(1) : ''; }
 
     function parseAnyFormat(text) {
-      const fields = { mainConcern: '', started: '', location: '', character: '', severity: '', pattern: '', symptoms: '', whatHelps: '', whatWorsens: '', medications: '', notes: '' };
+      const fields = { mainConcern: '', started: '', location: '', character: '', severity: '', pattern: '', symptoms: '', whatHelps: '', whatWorsens: '', medications: '', familyHistory: '', notes: '' };
       if (!text) return fields;
 
       let cleaned = text.replace(/^#+\s*/gm, '').replace(/\*\*/g, '').replace(/\*([^*]+)\*/g, '$1').replace(/📝|❓|•/g, '').replace(/---+/g, '\n');
@@ -1627,6 +1629,7 @@
         whatHelps: /^(?:What helps|Helps|Mejora con|Melhora com|Améliore):\s*(.+)/im,
         whatWorsens: /^(?:What worsens|Worsens|Empeora con|Piora com|Aggrave):\s*(.+)/im,
         medications: /^(?:Medications|Medicamentos|Médicaments|Meds):\s*(.+)/im,
+        familyHistory: /^(?:Family history|Antecedentes familiares|Histórico familiar|Antécédents familiaux):\s*(.+)/im,
         notes: /^Notes:\s*(.+)/im
       };
 

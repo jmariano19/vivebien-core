@@ -404,7 +404,8 @@ ${sl.severity}: [how bad THIS concern is, on their scale or 1-10]
 ${sl.pattern}: [timing, frequency of THIS concern]
 ${sl.helps}: [what helps THIS concern specifically]
 ${sl.worsens}: [what worsens THIS concern specifically]
-${sl.meds}: [medications relevant to THIS concern]`;
+${sl.meds}: [medications relevant to THIS concern]
+Family history: [only if relevant to THIS concern]`;
 
     const baseRules = `Rules:
 - Include only fields where information was actually provided (typically 4-7 fields)
@@ -438,7 +439,9 @@ ${baseRules}
 - CRITICAL ISOLATION RULE: This note is EXCLUSIVELY about "${focusTopic}". Every field must contain ONLY data about "${focusTopic}".
 - If the person mentioned other health issues (like a different body part, a different symptom), do NOT include that data in ANY field.
 - Example: If this note is about "Stomach Pain" and the person also mentioned a swollen knee, do NOT put knee information in Location, Helps, or any other field.
-- Medications should only be included if they were mentioned in direct relation to "${focusTopic}".
+- ${sl.meds} field: ONLY include medications the person said they take FOR "${focusTopic}" specifically. Do NOT list all medications. Background medications (birth control, metformin, etc.) should ONLY appear if they are relevant to THIS specific concern.
+- ${sl.helps} field: ONLY include things that help "${focusTopic}" — not things that help other concerns.
+- Family history: Include ONLY if directly relevant to "${focusTopic}" (e.g., family history of gallbladder issues on a stomach pain note).
 - When in doubt about whether a piece of information belongs to "${focusTopic}", LEAVE IT OUT.`;
     } else if (currentSummary) {
       prompt = `You are CareLog, a calm health documentation companion. Update this health note based on new information.
