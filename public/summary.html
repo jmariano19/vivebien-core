@@ -763,11 +763,13 @@
     </div>
   </div>
 
+  <script src="/js/carelog-utils.js"></script>
   <script>
     const pathParts = window.location.pathname.split('/').filter(p => p);
     const userId = pathParts[pathParts.length - 1] || null;
     const API_BASE = window.location.origin + '/api';
 
+    // TODO: Consider consolidating these into a single state object for better maintainability
     let summaryData = null;
     let summaryText = '';
     let pollInterval = null;
@@ -803,7 +805,7 @@
         today: 'Hoy',
         days: ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'],
         months: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
-        fields: { started: 'Inicio', location: 'Ubicación', character: 'Carácter', severity: 'Severidad', pattern: 'Patrón', helps: 'Mejora con', worsens: 'Empeora con', medications: 'Medicamentos', symptoms: 'Síntomas' },
+        fields: { started: 'Inicio', location: 'Ubicación', character: 'Carácter', severity: 'Severidad', pattern: 'Patrón', helps: 'Mejora con', worsens: 'Empeora con', medications: 'Medicamentos', symptoms: 'Síntomas', familyHistory: 'Antecedentes familiares' },
         status: { active: 'Vigente', improving: 'Mejorando', resolved: 'Resuelto' },
         defaultName: 'Tu Resumen',
         resolvedTitle: 'Preocupaciones Resueltas',
@@ -834,7 +836,7 @@
         today: 'Today',
         days: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
         months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-        fields: { started: 'Started', location: 'Location', character: 'Character', severity: 'Severity', pattern: 'Pattern', helps: 'Helps', worsens: 'Worsens', medications: 'Medications', symptoms: 'Symptoms' },
+        fields: { started: 'Started', location: 'Location', character: 'Character', severity: 'Severity', pattern: 'Pattern', helps: 'Helps', worsens: 'Worsens', medications: 'Medications', symptoms: 'Symptoms', familyHistory: 'Family history' },
         status: { active: 'Ongoing', improving: 'Improving', resolved: 'Resolved' },
         defaultName: 'Your Summary',
         resolvedTitle: 'Resolved Concerns',
@@ -865,7 +867,7 @@
         today: 'Hoje',
         days: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
         months: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
-        fields: { started: 'Início', location: 'Localização', character: 'Caráter', severity: 'Gravidade', pattern: 'Padrão', helps: 'Melhora com', worsens: 'Piora com', medications: 'Medicamentos', symptoms: 'Sintomas' },
+        fields: { started: 'Início', location: 'Localização', character: 'Caráter', severity: 'Gravidade', pattern: 'Padrão', helps: 'Melhora com', worsens: 'Piora com', medications: 'Medicamentos', symptoms: 'Sintomas', familyHistory: 'Histórico familiar' },
         status: { active: 'Em andamento', improving: 'Melhorando', resolved: 'Resolvido' },
         defaultName: 'Seu Resumo',
         resolvedTitle: 'Preocupações Resolvidas',
@@ -896,7 +898,7 @@
         today: 'Aujourd\'hui',
         days: ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'],
         months: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'],
-        fields: { started: 'Début', location: 'Localisation', character: 'Caractère', severity: 'Sévérité', pattern: 'Schéma', helps: 'Améliore', worsens: 'Aggrave', medications: 'Médicaments', symptoms: 'Symptômes' },
+        fields: { started: 'Début', location: 'Localisation', character: 'Caractère', severity: 'Sévérité', pattern: 'Schéma', helps: 'Améliore', worsens: 'Aggrave', medications: 'Médicaments', symptoms: 'Symptômes', familyHistory: 'Antécédents familiaux' },
         status: { active: 'En cours', improving: 'En amélioration', resolved: 'Résolu' },
         defaultName: 'Votre Résumé',
         resolvedTitle: 'Préoccupations Résolues',
@@ -1001,7 +1003,7 @@
       const lang = getLang();
 
       let html = '<div class="live-badge"><span class="live-dot"></span><span>' + lang.liveText + '</span></div>';
-      html += '<div class="card-title"><span class="icon">' + icon + '</span><span>' + capitalizeFirst(mainConcern) + '</span></div>';
+      html += '<div class="card-title"><span class="icon">' + icon + '</span><span>' + escapeHtml(capitalizeFirst(mainConcern)) + '</span></div>';
       html += '<div class="field-list">';
 
       [
@@ -1017,7 +1019,7 @@
       ].forEach(({ label, value }) => {
         const v = cleanFieldForDisplay(value);
         if (v && isValidFieldValue(v)) {
-          html += '<div class="field-item"><span class="field-label">' + label + '</span><span class="field-value">' + capitalizeFirst(v) + '</span></div>';
+          html += '<div class="field-item"><span class="field-label">' + escapeHtml(label) + '</span><span class="field-value">' + escapeHtml(capitalizeFirst(v)) + '</span></div>';
         }
       });
 
@@ -1095,7 +1097,7 @@
       // Icon + title
       html += '<div class="concern-card-header">';
       html += '  <div class="concern-card-icon">' + icon + '</div>';
-      html += '  <div class="concern-card-title" onclick="event.stopPropagation(); startTitleEdit(\'' + concern.id + '\', this)">' + capitalizeFirst(concern.title) + '</div>';
+      html += '  <div class="concern-card-title" onclick="event.stopPropagation(); startTitleEdit(\'' + concern.id + '\', this)">' + escapeHtml(capitalizeFirst(concern.title)) + '</div>';
       html += '</div>';
 
       // Status badge below title
@@ -1119,14 +1121,14 @@
         const v = cleanFieldForDisplay(f.value);
         if (v && isValidFieldValue(v)) {
           const fieldKey = getFieldKeyFromLabel(f.label);
-          const displayValue = capitalizeFirst(v);
-          html += '<div class="field-item"><span class="field-label">' + f.label + '</span><span class="field-value editable" onclick="event.stopPropagation(); openFieldEdit(\'' + concern.id + '\', \'' + fieldKey + '\', this.textContent)">' + displayValue + '</span></div>';
+          const displayValue = escapeHtml(capitalizeFirst(v));
+          html += '<div class="field-item"><span class="field-label">' + escapeHtml(f.label) + '</span><span class="field-value editable" onclick="event.stopPropagation(); openFieldEdit(\'' + concern.id + '\', \'' + fieldKey + '\', this.textContent)">' + displayValue + '</span></div>';
         }
       });
       // Fallback: if no fields parsed, show as paragraph
       const hasFields = fieldDefs.some(function(f) { const v = cleanFieldForDisplay(f.value); return v && isValidFieldValue(v); });
       if (!hasFields && rawContent) {
-        html += '<div class="concern-card-paragraph">' + buildParagraph(rawContent) + '</div>';
+        html += '<div class="concern-card-paragraph">' + escapeHtml(buildParagraph(rawContent)) + '</div>';
       }
       html += '  </div>';
       html += '  <a class="add-missing-btn" href="/suggest/' + userId + '?concernId=' + concern.id + '&returnTo=summary" onclick="event.stopPropagation()">✏️ Add what\'s missing</a>';

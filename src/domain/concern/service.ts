@@ -1,5 +1,6 @@
 import { Pool } from 'pg';
 import { logger } from '../../infra/logging/logger';
+import { findBestConcernMatch } from '../../shared/matching';
 
 export type ConcernStatus = 'active' | 'improving' | 'resolved';
 export type ChangeType = 'auto_update' | 'user_edit' | 'status_change';
@@ -102,23 +103,20 @@ export class ConcernService {
 
   /**
    * Fuzzy-match an existing concern or create a new one.
-   * Matching is case-insensitive substring match on active concerns.
+   * Uses shared matching utility for exact, substring, and word overlap matching,
+   * then applies health synonym and condition-symptom logic as additional layers.
    */
   async getOrCreateConcern(userId: string, title: string, icon?: string): Promise<HealthConcern> {
     // Try to find a matching active concern
     const activeConcerns = await this.getActiveConcerns(userId);
+    const existingTitles = activeConcerns.map(c => c.title);
     const normalizedTitle = title.toLowerCase().trim();
 
-    for (const concern of activeConcerns) {
-      const existingTitle = concern.title.toLowerCase().trim();
-
-      // Exact match
-      if (existingTitle === normalizedTitle) {
-        return concern;
-      }
-
-      // Substring match (either direction)
-      if (existingTitle.includes(normalizedTitle) || normalizedTitle.includes(existingTitle)) {
+    // Step 1: Use shared matching (exact, substring, word overlap)
+    const matchedTitle = findBestConcernMatch(title, existingTitles);
+    if (matchedTitle) {
+      const concern = activeConcerns.find(c => c.title === matchedTitle);
+      if (concern) {
         // Rename if the new title is different (language change)
         if (concern.title !== title) {
           await this.renameConcern(concern.id, title);
@@ -126,8 +124,11 @@ export class ConcernService {
         }
         return concern;
       }
+    }
 
-      // Health synonym match — treats related medical terms as the same concern
+    // Step 2: Health synonym match — treats related medical terms as the same concern
+    for (const concern of activeConcerns) {
+      const existingTitle = concern.title.toLowerCase().trim();
       if (this.areHealthSynonyms(existingTitle, normalizedTitle)) {
         // Rename to user's current language title
         if (concern.title !== title) {
@@ -136,20 +137,14 @@ export class ConcernService {
         }
         return concern;
       }
+    }
 
-      // Condition-symptom match — a symptom discussed in the context of a broader condition
-      // belongs to that condition (e.g., "Cough" belongs to "Flu")
+    // Step 3: Condition-symptom match — a symptom discussed in the context of a broader condition
+    // belongs to that condition (e.g., "Cough" belongs to "Flu")
+    for (const concern of activeConcerns) {
+      const existingTitle = concern.title.toLowerCase().trim();
       if (this.isSymptomOfCondition(existingTitle, normalizedTitle) ||
           this.isSymptomOfCondition(normalizedTitle, existingTitle)) {
-        return concern;
-      }
-
-      // Word overlap check — if any content word matches, consider it the same concern
-      const stopWords = new Set(['with', 'and', 'the', 'in', 'on', 'of', 'con', 'de', 'en', 'el', 'la', 'los', 'las', 'del', 'por', 'y', 'e', 'com', 'do', 'da', 'no', 'na', 'et', 'le', 'les', 'des', 'du']);
-      const existingWords = new Set(existingTitle.split(/\s+/).filter(w => !stopWords.has(w)));
-      const newWords = normalizedTitle.split(/\s+/).filter(w => !stopWords.has(w));
-      const overlap = newWords.filter(w => existingWords.has(w)).length;
-      if (overlap > 0) {
         return concern;
       }
     }

@@ -7,6 +7,7 @@
 import { Pool } from 'pg';
 import { Logger } from 'pino';
 import { ConcernService, HealthConcern } from './service';
+import { findBestConcernMatch } from '../../shared/matching';
 
 export class ConcernCommandExecutor {
   private concernService: ConcernService;
@@ -35,7 +36,7 @@ export class ConcernCommandExecutor {
     const matchedNames: string[] = [];
 
     for (const targetName of targetNames) {
-      const matched = this.findBestMatch(targetName, activeConcerns.map(c => c.title));
+      const matched = findBestConcernMatch(targetName, activeConcerns.map(c => c.title));
       if (!matched) {
         throw new Error(`Could not find concern matching: "${targetName}"`);
       }
@@ -97,7 +98,7 @@ export class ConcernCommandExecutor {
     const activeConcerns = await this.concernService.getActiveConcerns(userId);
 
     // Fuzzy-match the target to an existing concern
-    const matched = this.findBestMatch(targetName, activeConcerns.map(c => c.title));
+    const matched = findBestConcernMatch(targetName, activeConcerns.map(c => c.title));
     if (!matched) {
       throw new Error(`Could not find concern matching: "${targetName}"`);
     }
@@ -134,7 +135,7 @@ export class ConcernCommandExecutor {
     const activeConcerns = await this.concernService.getActiveConcerns(userId);
 
     // Fuzzy-match the target to an existing concern
-    const matched = this.findBestMatch(targetName, activeConcerns.map(c => c.title));
+    const matched = findBestConcernMatch(targetName, activeConcerns.map(c => c.title));
     if (!matched) {
       throw new Error(`Could not find concern matching: "${targetName}"`);
     }
@@ -158,72 +159,6 @@ export class ConcernCommandExecutor {
     );
 
     return [concern.title, newName];
-  }
-
-  /**
-   * Find the best match for a user's input against a list of existing concern titles.
-   * Matching strategy:
-   * 1. Exact match (case-insensitive)
-   * 2. Substring match (either direction)
-   * 3. Word overlap (any shared content word)
-   *
-   * Returns the matched title or null if no match found.
-   */
-  private findBestMatch(userInput: string, existingTitles: string[]): string | null {
-    const normalizedInput = userInput.toLowerCase().trim();
-
-    if (normalizedInput.length === 0) {
-      return null;
-    }
-
-    // Step 1: Exact match (case-insensitive)
-    for (const title of existingTitles) {
-      if (title.toLowerCase() === normalizedInput) {
-        return title;
-      }
-    }
-
-    // Step 2: Substring match (either direction)
-    for (const title of existingTitles) {
-      const lowerTitle = title.toLowerCase();
-      if (lowerTitle.includes(normalizedInput) || normalizedInput.includes(lowerTitle)) {
-        return title;
-      }
-    }
-
-    // Step 3: Word overlap (any shared content word)
-    const stopWords = new Set([
-      'with', 'and', 'the', 'in', 'on', 'of', 'con', 'de', 'en', 'el', 'la', 'los', 'las',
-      'del', 'por', 'y', 'e', 'com', 'do', 'da', 'no', 'na', 'et', 'le', 'les', 'des', 'du',
-      'a', 'an', 'or', 'at', 'to', 'for',
-    ]);
-
-    const inputWords = new Set(
-      normalizedInput
-        .split(/\s+/)
-        .filter(w => w.length > 0 && !stopWords.has(w))
-    );
-
-    if (inputWords.size === 0) {
-      return null;
-    }
-
-    for (const title of existingTitles) {
-      const titleWords = new Set(
-        title
-          .toLowerCase()
-          .split(/\s+/)
-          .filter(w => w.length > 0 && !stopWords.has(w))
-      );
-
-      // Check if any word overlaps
-      const overlap = [...inputWords].filter(w => titleWords.has(w)).length;
-      if (overlap > 0) {
-        return title;
-      }
-    }
-
-    return null;
   }
 
   /**

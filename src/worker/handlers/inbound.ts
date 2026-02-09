@@ -189,18 +189,27 @@ export async function handleInboundMessage(
     logger
   );
 
+  let isCrisisMessage = false;
   if (safetyCheck.isUrgent) {
     logger.warn({ userId: user.id, type: safetyCheck.type }, 'Urgent message detected');
-    // Handle urgent case (crisis protocol)
+    isCrisisMessage = true;
   }
 
   // Step 6: Build conversation messages for AI (with history)
-  const messages = await logExecution(
+  let messages = await logExecution(
     correlationId,
     'build_messages',
     async () => conversationService.buildMessages(context, processedMessage),
     logger
   );
+
+  // Step 6.5: Inject crisis guidance if needed
+  if (isCrisisMessage) {
+    messages.push({
+      role: 'user' as const,
+      content: '[SYSTEM NOTE: This person may be in crisis or distress. Respond with empathy, validate their feelings, and include relevant crisis resources. In Spanish: Línea Nacional 800-290-0024, Línea de la Vida 800-911-2000. In English: 988 Suicide & Crisis Lifeline (call/text 988). In Portuguese: CVV 188. In French: 3114.]'
+    });
+  }
 
   // Step 7: Call Claude
   const aiResponse = await logExecution(

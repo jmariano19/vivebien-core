@@ -15,10 +15,14 @@ const CARELOG = {
     mainConcern: /^Main concern:\s*(.+)/im,
     started: /^Started:\s*(.+)/im,
     location: /^Location:\s*(.+)/im,
+    character: /^Character:\s*(.+)/im,
+    severity: /^Severity:\s*(.+)/im,
+    pattern: /^Pattern:\s*(.+)/im,
     symptoms: /^Symptoms:\s*(.+)/im,
     whatHelps: /^What helps:\s*(.+)/im,
     whatWorsens: /^What worsens:\s*(.+)/im,
     medications: /^Medications:\s*(.+)/im,
+    familyHistory: /^Family history:\s*(.+)/im,
     notes: /^Notes:\s*(.+)/im
   },
 
@@ -26,9 +30,14 @@ const CARELOG = {
   SIMPLE_PATTERNS: {
     mainConcern: /^(?:Motivo|Concern|Queixa|Motif):\s*(.+)/im,
     started: /^(?:Inicio|Started|Início|Début):\s*(.+)/im,
+    location: /^(?:Ubicación|Location|Localização|Localisation):\s*(.+)/im,
+    character: /^(?:Carácter|Character|Caráter|Caractère):\s*(.+)/im,
+    severity: /^(?:Severidad|Severity|Gravidade|Sévérité):\s*(.+)/im,
+    pattern: /^(?:Patrón|Pattern|Padrão|Schéma):\s*(.+)/im,
     whatHelps: /^(?:Mejora con|Helps|Melhora com|Améliore):\s*(.+)/im,
     whatWorsens: /^(?:Empeora con|Worsens|Piora com|Aggrave):\s*(.+)/im,
-    medications: /^(?:Medicamentos|Medications|Médicaments):\s*(.+)/im
+    medications: /^(?:Medicamentos|Medications|Médicaments):\s*(.+)/im,
+    familyHistory: /^(?:Antecedentes familiares|Family history|Histórico familiar|Antécédents familiaux):\s*(.+)/im
   },
 
   // AI-generated format patterns (MOTIVO PRINCIPAL)
@@ -107,10 +116,14 @@ function parseHealthSummary(text) {
     mainConcern: '',
     started: '',
     location: '',
+    character: '',
+    severity: '',
+    pattern: '',
     symptoms: '',
     whatHelps: '',
     whatWorsens: '',
     medications: '',
+    familyHistory: '',
     notes: ''
   };
 

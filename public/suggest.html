@@ -468,6 +468,7 @@
 
   <div class="toast" id="toast"></div>
 
+  <script src="/js/carelog-utils.js"></script>
   <script>
     const pathParts = window.location.pathname.split('/');
     const userId = pathParts[pathParts.length - 1];
@@ -972,12 +973,7 @@
       });
     }
 
-    function escapeHtml(text) {
-      if (!text) return '';
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
-    }
+    // escapeHtml() is now provided by carelog-utils.js
 
     function goBack() {
       if (window.history.length > 1) {

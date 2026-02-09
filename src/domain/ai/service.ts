@@ -6,6 +6,7 @@ import { logAIUsage, logger } from '../../infra/logging/logger';
 import { ConversationService } from '../conversation/service';
 import { db } from '../../infra/db/client';
 import { RateLimiter } from '../../shared/rate-limiter';
+import { detectLanguage as detectMessageLanguage } from '../../shared/language';
 
 const conversationService = new ConversationService(db);
 
@@ -57,7 +58,7 @@ export class AIService {
       // Extract response content
       const content = response.content
         .filter((block) => block.type === 'text')
-        .map((block) => (block as { type: 'text'; text: string }).text)
+        .map((block) => ('text' in block ? block.text : ''))
         .join('\n');
 
       const usage: TokenUsage = {
@@ -82,7 +83,7 @@ export class AIService {
         latencyMs,
       };
     } catch (error) {
-      const err = error as Error;
+      const err = error instanceof Error ? error : new Error(String(error));
 
       // Handle rate limiting
       if (err.message.includes('429') || err.message.includes('rate_limit')) {
@@ -296,12 +297,12 @@ export class AIService {
 
       const content = response.content
         .filter((block) => block.type === 'text')
-        .map((block) => (block as { type: 'text'; text: string }).text)
+        .map((block) => ('text' in block ? block.text : ''))
         .join('\n');
 
       return this.postProcess(content);
     } catch (error) {
-      const err = error as Error;
+      const err = error instanceof Error ? error : new Error(String(error));
       throw new AIServiceError(err.message, err);
     }
   }
@@ -314,7 +315,10 @@ export class AIService {
     await this.rateLimiter.acquire();
 
     // Detect language from recent messages or use provided language
-    const detectedLang = language || this.detectLanguage(messages);
+    const detectedLang = language || (() => {
+      const userText = messages.filter(m => m.role === 'user').map(m => m.content).join(' ');
+      return detectMessageLanguage(userText) || 'en';
+    })();
 
     // Language-specific labels for conversation text
     const labels: Record<string, { user: string; assistant: string }> = {
@@ -480,12 +484,12 @@ ${baseRules}`;
 
       const content = response.content
         .filter((block) => block.type === 'text')
-        .map((block) => (block as { type: 'text'; text: string }).text)
+        .map((block) => ('text' in block ? block.text : ''))
         .join('\n');
 
       return content.trim();
     } catch (error) {
-      const err = error as Error;
+      const err = error instanceof Error ? error : new Error(String(error));
       // If summary generation fails, log and return current summary or empty
       logger.error({ err, currentSummary: !!currentSummary }, 'Failed to generate summary');
       return currentSummary || '';
@@ -561,7 +565,7 @@ Topic name(s):`;
 
       const content = response.content
         .filter(block => block.type === 'text')
-        .map(block => (block as { type: 'text'; text: string }).text)
+        .map(block => ('text' in block ? block.text : ''))
         .join('')
         .trim();
 
@@ -607,154 +611,84 @@ Topic name(s):`;
   ): Promise<Record<string, Message[]>> {
     await this.rateLimiter.acquire();
 
-    // Build conversation with numbered messages for classification
-    const numberedMessages = messages
-      .map((m, i) => {
-        const role = m.role === 'user' ? 'User' : 'Assistant';
-        return `${i}: [${role}] ${m.content}`;
-      })
+    // Build conversation text showing only user messages (these contain the health info)
+    const userMessages = messages
+      .map((m, i) => ({ msg: m, idx: i }))
+      .filter(({ msg }) => msg.role === 'user');
+
+    const conversationText = userMessages
+      .map(({ msg, idx }) => `[MSG ${idx}]: ${msg.content}`)
       .join('\n\n');
 
-    const topicsJson = topicTitles.map(t => `"${t}"`).join(', ');
     const langName = language === 'es' ? 'Spanish' : language === 'pt' ? 'Portuguese' : language === 'fr' ? 'French' : 'English';
 
-    const prompt = `You are segmenting a conversation by health topic.
+    // Content extraction approach: instead of classifying whole messages,
+    // extract ONLY the relevant facts/sentences for each topic.
+    // This handles the case where one message mentions multiple concerns.
+    const prompt = `You are extracting health facts from a conversation. The conversation is in ${langName}.
 
-CONVERSATION:
-${numberedMessages}
+USER MESSAGES:
+${conversationText}
 
-TOPICS TO CLASSIFY:
-${topicTitles.map((t, i) => `${i + 1}. ${t}`).join('\n')}
+HEALTH TOPICS:
+${topicTitles.map((t, i) => `${i + 1}. "${t}"`).join('\n')}
 
-For EACH USER MESSAGE (numbered 0, 2, 4, etc), assign it to ONE of the topics above, or to "shared" if it's a greeting/meta/not health-related.
+For EACH topic, extract ONLY the sentences, facts, and details from the user messages that are SPECIFICALLY about that topic.
 
-Respond with ONLY a JSON object mapping message index to topic name. Example:
-{"0": "Headaches", "2": "Headaches", "4": "Back Pain", "5": "shared"}
+CRITICAL RULES:
+- A single message may contain facts about MULTIPLE topics — split them correctly
+- "My eye is itchy and I have headaches" → eye symptoms go to the eye topic, headache goes to the headache topic
+- Timing info like "started 3 days ago" belongs to the topic it was said in context of
+- Medications belong to the topic they were mentioned for
+- Greetings, names, and general context can be included in all topics
+- Do NOT put eye/vision symptoms under a headache topic or vice versa
+- Do NOT put knee/leg symptoms under a stomach topic or vice versa
 
-STRICT RULES:
-- Classify ONLY user messages (even-numbered: 0, 2, 4, 6...)
-- For each user message, pick exactly ONE topic name or "shared"
-- Topic names must EXACTLY match the provided list
-- "shared" is for non-health conversation, greetings, or meta
-- Output ONLY valid JSON, no explanation`;
+Respond with ONLY a JSON object where keys are the exact topic names and values are arrays of extracted facts/sentences. Example:
+{"Headaches": ["I have been having headaches", "started 3 days ago", "pain is 5 out of 10"], "Eye Irritation": ["my left eye is itchy", "crusting around the eye in the morning"]}
+
+Output ONLY valid JSON, no explanation.`;
 
     try {
       const response = await this.client.messages.create({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 200,
+        max_tokens: 500,
         messages: [{ role: 'user', content: prompt }],
       });
 
       const content = response.content
         .filter(block => block.type === 'text')
-        .map(block => (block as { type: 'text'; text: string }).text)
+        .map(block => ('text' in block ? block.text : ''))
         .join('')
         .trim();
 
       // Parse JSON response
-      const classification = JSON.parse(content) as Record<string, string>;
+      const extracted = JSON.parse(content) as Record<string, string[]>;
 
-      // Build segmented messages for each topic
+      // Build segmented messages for each topic using extracted content
       const segmented: Record<string, Message[]> = {};
+
       for (const topic of topicTitles) {
-        segmented[topic] = [];
-      }
-
-      // Add shared messages to all topics
-      const sharedMessages = messages.filter((_, i) => {
-        const classif = classification[i.toString()];
-        return classif === 'shared' || classif === undefined;
-      });
-
-      // For each topic, collect its user messages + following assistant messages + all shared messages
-      for (const topic of topicTitles) {
-        const topicMessages: Message[] = [];
-
-        for (let i = 0; i < messages.length; i++) {
-          const msg = messages[i]!;
-          const classif = classification[i.toString()];
-
-          // Include if it's assigned to this topic
-          if (classif === topic) {
-            topicMessages.push(msg);
-            // Also include following assistant message if it exists
-            if (i + 1 < messages.length && messages[i + 1]!.role === 'assistant') {
-              topicMessages.push(messages[i + 1]!);
-            }
-          }
+        const facts = extracted[topic];
+        if (facts && facts.length > 0) {
+          // Create a synthetic user message with only the relevant extracted facts
+          const extractedContent = facts.join('. ').trim();
+          segmented[topic] = [
+            { role: 'user' as const, content: extractedContent }
+          ];
+        } else {
+          // No facts extracted for this topic — will fall back to allMessages in caller
+          segmented[topic] = [];
         }
-
-        // Add all shared messages
-        topicMessages.push(...sharedMessages);
-
-        // Sort by original message order
-        const originalIndices = new Map<Message, number>();
-        messages.forEach((msg, i) => originalIndices.set(msg, i));
-        topicMessages.sort((a, b) => (originalIndices.get(a) ?? 0) - (originalIndices.get(b) ?? 0));
-
-        // Remove duplicates while preserving order
-        const seen = new Set<string>();
-        const unique: Message[] = [];
-        for (const msg of topicMessages) {
-          const key = `${msg.role}:${msg.content}`;
-          if (!seen.has(key)) {
-            seen.add(key);
-            unique.push(msg);
-          }
-        }
-
-        segmented[topic] = unique;
       }
 
       return segmented;
     } catch (error) {
       // JSON parse or API error — return empty to signal fallback
-      logger.error({ error }, 'Failed to segment messages by topic');
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error({ err }, 'Failed to segment messages by topic');
       return {};
     }
   }
 
-  /**
-   * Language detection based on common words in messages
-   * Supports: Spanish, English, Portuguese, French
-   */
-  private detectLanguage(messages: Message[]): string {
-    const text = messages
-      .filter((m) => m.role === 'user')
-      .map((m) => m.content.toLowerCase())
-      .join(' ');
-
-    // Spanish indicators
-    const spanishWords = ['hola', 'tengo', 'estoy', 'dolor', 'desde', 'cuando', 'porque', 'médico', 'doctor', 'gracias', 'por favor', 'síntoma', 'siento', 'cabeza', 'cuerpo', 'hace', 'días', 'semana', 'buenos', 'buenas', 'qué', 'cómo'];
-    const spanishCount = spanishWords.filter((w) => text.includes(w)).length;
-
-    // English indicators
-    const englishWords = ['hello', 'hi', 'have', 'feel', 'pain', 'since', 'when', 'because', 'doctor', 'thanks', 'thank', 'please', 'symptom', 'head', 'body', 'days', 'week', 'been', 'feeling', 'good', 'morning', 'what', 'how'];
-    const englishCount = englishWords.filter((w) => text.includes(w)).length;
-
-    // Portuguese indicators
-    const portugueseWords = ['olá', 'oi', 'tenho', 'estou', 'dor', 'desde', 'quando', 'porque', 'médico', 'obrigado', 'obrigada', 'por favor', 'sintoma', 'sinto', 'cabeça', 'corpo', 'dias', 'semana', 'bom', 'boa', 'como', 'você'];
-    const portugueseCount = portugueseWords.filter((w) => text.includes(w)).length;
-
-    // French indicators
-    const frenchWords = ['bonjour', 'salut', 'j\'ai', 'je suis', 'douleur', 'depuis', 'quand', 'parce', 'médecin', 'docteur', 'merci', 's\'il vous plaît', 'symptôme', 'tête', 'corps', 'jours', 'semaine', 'comment', 'bien', 'mal'];
-    const frenchCount = frenchWords.filter((w) => text.includes(w)).length;
-
-    // Find the language with highest count
-    const scores = [
-      { lang: 'es', count: spanishCount },
-      { lang: 'en', count: englishCount },
-      { lang: 'pt', count: portugueseCount },
-      { lang: 'fr', count: frenchCount },
-    ];
-
-    const sorted = scores.sort((a, b) => b.count - a.count);
-
-    // If no clear winner (all zero or tie), default to English
-    if (sorted[0]!.count === 0 || (sorted[0]!.count === sorted[1]!.count)) {
-      return 'en';
-    }
-
-    return sorted[0]!.lang;
-  }
 }

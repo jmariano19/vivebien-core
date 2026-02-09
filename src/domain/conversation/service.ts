@@ -232,9 +232,10 @@ export class ConversationService {
       for (const concernTitle of titles) {
         const concern = await concernService.getOrCreateConcern(userId, concernTitle);
 
-        // Use segmented messages if available, otherwise fall back to all messages
-        const messagesForConcern = (titles.length > 1 && segmentedMessages[concernTitle])
-          ? segmentedMessages[concernTitle]
+        // Use segmented messages if available and non-empty, otherwise fall back to all messages
+        const segmented = segmentedMessages[concernTitle];
+        const messagesForConcern = (titles.length > 1 && segmented && segmented.length > 0)
+          ? segmented
           : allMessages;
 
         // When multiple concerns, pass focusTopic + otherTopics for strict isolation
