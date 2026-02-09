@@ -39,7 +39,12 @@ export async function processJob(job: Job<InboundJobData>): Promise<JobResult> {
     }
 
     const duration = Date.now() - startTime;
-    jobLogger.info({ duration, result: result.status }, 'Job processed successfully');
+
+    if (result.status === 'failed') {
+      jobLogger.warn({ duration, result: result.status, error: result.error }, 'Job completed with error (fallback response sent to user)');
+    } else {
+      jobLogger.info({ duration, result: result.status }, 'Job processed successfully');
+    }
 
     return result;
   } catch (error) {

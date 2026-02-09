@@ -36,6 +36,53 @@ export async function handleInboundMessage(
   logger: Logger
 ): Promise<JobResult> {
   const { correlationId, phone, message, conversationId, attachments } = data;
+  let responseSent = false;
+
+  try {
+    return await _handleInboundMessage(data, logger, () => { responseSent = true; });
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error({
+      correlationId,
+      conversationId,
+      phone,
+      error: err.message,
+      stack: err.stack,
+    }, 'Unhandled error in message processing — sending fallback response');
+
+    // Best-effort fallback: send a user-friendly error message so bot never goes silent
+    if (!responseSent) {
+      try {
+        const detectedLang = detectLanguage(message) || 'es';
+        const fallbackMessages: Record<string, string> = {
+          es: 'Lo siento, tuve un problema temporal procesando tu mensaje. ¿Podrías intentar enviarlo de nuevo?',
+          en: "I'm sorry, I had a temporary issue processing your message. Could you try sending it again?",
+          pt: 'Desculpe, tive um problema temporário ao processar sua mensagem. Poderia tentar enviar novamente?',
+          fr: "Je suis désolé, j'ai eu un problème temporaire. Pourriez-vous réessayer?",
+        };
+        const fallbackMsg = fallbackMessages[detectedLang] || fallbackMessages.es!;
+        await chatwootClient.sendMessage(conversationId, fallbackMsg);
+        logger.info({ correlationId, conversationId }, 'Fallback error message sent to user');
+      } catch (sendErr) {
+        logger.error({ correlationId, conversationId, error: sendErr }, 'Failed to send fallback message — user received no response');
+      }
+    }
+
+    // Return failed instead of re-throwing to prevent retries that send duplicate fallbacks
+    return {
+      status: 'failed' as const,
+      correlationId,
+      error: err.message,
+    };
+  }
+}
+
+async function _handleInboundMessage(
+  data: InboundJobData,
+  logger: Logger,
+  markResponseSent: () => void,
+): Promise<JobResult> {
+  const { correlationId, phone, message, conversationId, attachments } = data;
 
   // Step 1: Load or create user
   const user = await logExecution(
@@ -56,6 +103,7 @@ export async function handleInboundMessage(
   if (checkinResponse.isCheckinResponse && checkinResponse.acknowledgment) {
     // Send the acknowledgment and skip the full AI flow
     await chatwootClient.sendMessage(conversationId, checkinResponse.acknowledgment);
+    markResponseSent();
     await checkinSvc.updateLastBotMessageAt(user.id);
 
     logger.info({ userId: user.id }, 'Processed check-in response');
@@ -79,6 +127,7 @@ export async function handleInboundMessage(
     // Send no-credits message
     const noCreditsMessage = await conversationService.getTemplate('no_credits', user.language);
     await chatwootClient.sendMessage(conversationId, noCreditsMessage);
+    markResponseSent();
 
     return {
       status: 'completed',
@@ -144,6 +193,7 @@ export async function handleInboundMessage(
 
       const confirmationMsg = getCommandConfirmationMessage(concernCommand, affectedConcerns);
       await chatwootClient.sendMessage(conversationId, confirmationMsg);
+      markResponseSent();
 
       // Save the command and confirmation to message history
       await conversationService.saveMessages(user.id, conversationId, [
@@ -171,6 +221,7 @@ export async function handleInboundMessage(
 
       const errorMsg = getCommandErrorMessage(user.language || 'en');
       await chatwootClient.sendMessage(conversationId, errorMsg);
+      markResponseSent();
       await checkinSvc.updateLastBotMessageAt(user.id);
 
       return {
@@ -322,6 +373,7 @@ export async function handleInboundMessage(
       async () => chatwootClient.sendMessage(conversationId, summaryParts.acknowledgment),
       logger
     );
+    markResponseSent();
 
     // 10 second delay — feels like CareLog is organizing the note
     await new Promise(resolve => setTimeout(resolve, 10000));
@@ -342,6 +394,7 @@ export async function handleInboundMessage(
       async () => chatwootClient.sendMessage(conversationId, responseForHistory),
       logger
     );
+    markResponseSent();
   }
 
   // Step 13: Update conversation state
