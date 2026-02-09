@@ -149,6 +149,7 @@ export class ConversationService {
     aiService: {
       generateSummary: (messages: Message[], currentSummary: string | null, language?: string, focusTopic?: string) => Promise<string>;
       detectConcernTitle: (messages: Message[], language?: string, existingConcernTitles?: string[]) => Promise<string>;
+      segmentMessagesByTopic: (messages: Message[], topicTitles: string[], language?: string) => Promise<Record<string, Message[]>>;
     },
     preDetectedTitle?: string
   ): Promise<void> {
@@ -192,15 +193,31 @@ export class ConversationService {
       const uniqueTitles = [...new Set(concernTitles)];
       const titles = uniqueTitles.length > 0 ? uniqueTitles : [titleResult.trim()];
 
+      // Segment conversation by topic when multiple concerns detected
+      let segmentedMessages: Record<string, Message[]> = {};
+      if (titles.length > 1) {
+        try {
+          segmentedMessages = await aiService.segmentMessagesByTopic(allMessages, titles, userLanguage);
+        } catch (err) {
+          // Log and continue with unsegmented flow
+          // (empty segmentedMessages means fallback to allMessages)
+        }
+      }
+
       // Step 2-4: For each concern, get/create and generate summary
       let lastSummary = '';
       for (const concernTitle of titles) {
         const concern = await concernService.getOrCreateConcern(userId, concernTitle);
 
+        // Use segmented messages if available, otherwise fall back to all messages
+        const messagesForConcern = (titles.length > 1 && segmentedMessages[concernTitle])
+          ? segmentedMessages[concernTitle]
+          : allMessages;
+
         // When multiple concerns, pass focusTopic so summary only includes relevant info
         const focusTopic = titles.length > 1 ? concernTitle : undefined;
         const newSummary = await aiService.generateSummary(
-          allMessages,
+          messagesForConcern,
           concern.summaryContent,
           userLanguage,
           focusTopic

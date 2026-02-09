@@ -579,6 +579,54 @@
 
     .doctor-cta-btn:hover { background: var(--primary-dark); transform: translateY(-1px); }
     .doctor-cta-btn svg { width: 18px; height: 18px; }
+
+    /* ===== INLINE EDITING ===== */
+    .field-value.editable {
+      cursor: pointer;
+      padding: 2px 6px;
+      margin: -2px -6px;
+      border-radius: 4px;
+      border: 1px solid transparent;
+      transition: all 0.15s ease;
+    }
+    .field-value.editable:hover {
+      background: rgba(46, 145, 94, 0.06);
+      border-color: rgba(46, 145, 94, 0.25);
+    }
+
+    .concern-card-title {
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .concern-card-title:hover {
+      opacity: 0.7;
+    }
+
+    .title-edit-input {
+      font-family: 'Lora', Georgia, serif;
+      font-size: 18px;
+      font-weight: 500;
+      padding: 4px 8px;
+      border: 1px solid #2e915e;
+      border-radius: 6px;
+      width: 100%;
+      box-sizing: border-box;
+      outline: none;
+    }
+
+    .concern-card-status {
+      cursor: pointer;
+      transition: all 0.2s ease;
+      user-select: none;
+    }
+    .concern-card-status:hover {
+      opacity: 0.7;
+      transform: scale(1.05);
+    }
+
+    #mergeBar {
+      font-family: inherit;
+    }
   </style>
 </head>
 <body>
@@ -647,6 +695,18 @@
     </div>
   </div>
 
+  <!-- Edit Field Modal -->
+  <div class="modal-overlay" id="editFieldModal">
+    <div class="modal" style="max-width: 380px;">
+      <h2 id="editFieldTitle" style="font-size: 16px; margin-bottom: 12px;"></h2>
+      <input type="text" id="editFieldInput" style="width: 100%; padding: 10px 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; font-family: inherit; box-sizing: border-box;" />
+      <div class="modal-buttons" style="margin-top: 16px;">
+        <button class="modal-btn" onclick="closeEditFieldModal()">CANCEL</button>
+        <button class="modal-btn" style="background: #2e915e; color: white; border-color: #2e915e;" onclick="confirmEditField()">SAVE</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const pathParts = window.location.pathname.split('/').filter(p => p);
     const userId = pathParts[pathParts.length - 1] || null;
@@ -660,6 +720,15 @@
     let openMenuId = null;
     let pendingDeleteConcernId = null;
     let allConcerns = []; // store for delete operations
+
+    // Inline editing state
+    let editingConcernId = null;
+    let editingFieldKey = null;
+
+    // Merge mode state
+    let mergeMode = false;
+    let mergeSelected = new Set();
+    let mergeInitiator = null;
 
     // ===== LOCALIZATION =====
     const i18n = {
@@ -958,14 +1027,19 @@
       html += '  </div>';
       html += '</div>';
 
+      // Merge checkbox (if in merge mode)
+      const mergeCheckbox = mergeMode
+        ? '<div onclick="event.stopPropagation(); toggleMergeSelect(\'' + concern.id + '\')" style="position:absolute;top:12px;left:12px;width:24px;height:24px;border-radius:50%;border:2px solid ' + (mergeSelected.has(concern.id) ? '#2e915e' : '#ccc') + ';background:' + (mergeSelected.has(concern.id) ? '#2e915e' : 'white') + ';display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:5;"><span style="color:' + (mergeSelected.has(concern.id) ? 'white' : 'transparent') + ';font-size:14px;">✓</span></div>'
+        : '';
+
       // Icon + title
       html += '<div class="concern-card-header">';
       html += '  <div class="concern-card-icon">' + icon + '</div>';
-      html += '  <div class="concern-card-title">' + capitalizeFirst(concern.title) + '</div>';
+      html += '  <div class="concern-card-title" onclick="event.stopPropagation(); startTitleEdit(\'' + concern.id + '\', this)">' + capitalizeFirst(concern.title) + '</div>';
       html += '</div>';
 
       // Status badge below title
-      html += '<span class="concern-card-status ' + status + '">' + (lang.status[status] || status) + '</span>';
+      html += '<span class="concern-card-status ' + status + '" onclick="event.stopPropagation(); cycleStatus(\'' + concern.id + '\', \'' + status + '\')">' + (lang.status[status] || status) + '</span>';
 
       // Expanded body: structured fields (like single summary) + actions row
       html += '<div class="concern-card-body">';
@@ -983,7 +1057,9 @@
       fieldDefs.forEach(function(f) {
         const v = cleanFieldForDisplay(f.value);
         if (v && isValidFieldValue(v)) {
-          html += '<div class="field-item"><span class="field-label">' + f.label + '</span><span class="field-value">' + capitalizeFirst(v) + '</span></div>';
+          const fieldKey = getFieldKeyFromLabel(f.label);
+          const displayValue = capitalizeFirst(v);
+          html += '<div class="field-item"><span class="field-label">' + f.label + '</span><span class="field-value editable" onclick="event.stopPropagation(); openFieldEdit(\'' + concern.id + '\', \'' + fieldKey + '\', this.textContent)">' + displayValue + '</span></div>';
         }
       });
       // Fallback: if no fields parsed, show as paragraph
@@ -996,6 +1072,7 @@
       html += '    <div class="concern-card-actions-left">';
       html += '      <a onclick="event.stopPropagation(); viewConcernHistory(\'' + concern.id + '\')">' + lang.history + '</a>';
       html += '      <a onclick="event.stopPropagation(); editConcern(\'' + concern.id + '\')">' + lang.update + '</a>';
+      html += '      <a onclick="event.stopPropagation(); startMergeMode(\'' + concern.id + '\')">MERGE</a>';
       html += '    </div>';
       html += '    <button class="view-toggle-link" onclick="event.stopPropagation(); expandCard(\'' + cardId + '\')">' + (lang.viewLess || 'View Less') + ' <svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(180deg)"><path d="M1 1L5 5L9 1"/></svg></button>';
       html += '  </div>';
@@ -1006,11 +1083,19 @@
       html += '  <button class="view-toggle-link" onclick="event.stopPropagation(); expandCard(\'' + cardId + '\')">' + lang.viewMore + ' <svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1L5 5L9 1"/></svg></button>';
       html += '</div>';
 
-      card.innerHTML = html;
+      // Apply merge checkbox and optional border
+      if (mergeMode) {
+        card.style.position = 'relative';
+        if (mergeSelected.has(concern.id)) {
+          card.style.border = '2px solid #2e915e';
+        }
+      }
+
+      card.innerHTML = mergeCheckbox + html;
 
       // Click to expand/collapse
       card.addEventListener('click', (e) => {
-        if (!e.target.closest('button') && !e.target.closest('a') && !e.target.closest('.dots-dropdown')) {
+        if (!e.target.closest('button') && !e.target.closest('a') && !e.target.closest('.dots-dropdown') && !e.target.closest('.field-value') && e.target !== e.currentTarget.querySelector('.concern-card-title')) {
           toggleExpanded(cardId);
         }
       });
@@ -1150,6 +1235,300 @@
     document.getElementById('deleteModal').addEventListener('click', (e) => {
       if (e.target === e.currentTarget) closeDeleteModal();
     });
+
+    // ===== INLINE FIELD EDITING (Feature 1) =====
+    function getFieldKeyFromLabel(label) {
+      const mapping = {
+        'Inicio': 'started', 'Started': 'started',
+        'Ubicación': 'location', 'Location': 'location', 'Localização': 'location', 'Localisation': 'location',
+        'Carácter': 'character', 'Character': 'character', 'Caráter': 'character', 'Caractère': 'character',
+        'Severidad': 'severity', 'Severity': 'severity', 'Gravidade': 'severity', 'Sévérité': 'severity',
+        'Patrón': 'pattern', 'Pattern': 'pattern', 'Padrão': 'pattern', 'Schéma': 'pattern',
+        'Mejora con': 'whatHelps', 'Helps': 'whatHelps', 'Melhora com': 'whatHelps', 'Améliore': 'whatHelps',
+        'Empeora con': 'whatWorsens', 'Worsens': 'whatWorsens', 'Piora com': 'whatWorsens', 'Aggrave': 'whatWorsens',
+        'Medicamentos': 'medications', 'Medications': 'medications', 'Médicaments': 'medications'
+      };
+      return mapping[label] || label;
+    }
+
+    function openFieldEdit(concernId, fieldKey, currentValue) {
+      event.stopPropagation();
+      editingConcernId = concernId;
+      editingFieldKey = fieldKey;
+
+      const labels = {
+        mainConcern: 'Concern', started: 'Started', location: 'Location',
+        character: 'Character', severity: 'Severity', pattern: 'Pattern',
+        whatHelps: 'Helps', whatWorsens: 'Worsens', medications: 'Medications',
+        symptoms: 'Symptoms', notes: 'Notes'
+      };
+
+      document.getElementById('editFieldTitle').textContent = 'Edit: ' + (labels[fieldKey] || fieldKey);
+      document.getElementById('editFieldInput').value = currentValue || '';
+      document.getElementById('editFieldModal').classList.add('open');
+      setTimeout(() => document.getElementById('editFieldInput').focus(), 100);
+    }
+
+    function closeEditFieldModal() {
+      document.getElementById('editFieldModal').classList.remove('open');
+      editingConcernId = null;
+      editingFieldKey = null;
+    }
+
+    document.getElementById('editFieldModal').addEventListener('click', function(e) {
+      if (e.target === e.currentTarget) closeEditFieldModal();
+    });
+
+    document.getElementById('editFieldInput').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') confirmEditField();
+      if (e.key === 'Escape') closeEditFieldModal();
+    });
+
+    async function confirmEditField() {
+      if (!editingConcernId || !editingFieldKey) return;
+
+      const newValue = document.getElementById('editFieldInput').value.trim();
+      const concern = allConcerns.find(c => c.id === editingConcernId);
+      if (!concern) return;
+
+      const fields = parseAnyFormat(concern.summaryContent || '');
+      fields[editingFieldKey] = newValue;
+      const newSummary = reconstructSummary(fields);
+
+      const saveBtn = document.querySelector('#editFieldModal .modal-btn:last-child');
+      const origText = saveBtn.textContent;
+      saveBtn.textContent = 'SAVING...';
+      saveBtn.disabled = true;
+
+      try {
+        const resp = await fetch(API_BASE + '/concerns/' + userId + '/' + editingConcernId, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ summary: newSummary })
+        });
+
+        if (resp.ok) {
+          concern.summaryContent = newSummary;
+          renderConcerns();
+          closeEditFieldModal();
+          showToast('Field updated');
+        } else {
+          showToast('Failed to save');
+        }
+      } catch (err) {
+        showToast('Error saving');
+      } finally {
+        saveBtn.textContent = origText;
+        saveBtn.disabled = false;
+      }
+    }
+
+    function reconstructSummary(fields) {
+      const langLabels = {
+        en: { mainConcern: 'Concern', started: 'Started', location: 'Location', character: 'Character', severity: 'Severity', pattern: 'Pattern', whatHelps: 'Helps', whatWorsens: 'Worsens', medications: 'Medications' },
+        es: { mainConcern: 'Motivo', started: 'Inicio', location: 'Ubicación', character: 'Carácter', severity: 'Severidad', pattern: 'Patrón', whatHelps: 'Mejora con', whatWorsens: 'Empeora con', medications: 'Medicamentos' },
+        pt: { mainConcern: 'Queixa', started: 'Início', location: 'Localização', character: 'Caráter', severity: 'Gravidade', pattern: 'Padrão', whatHelps: 'Melhora com', whatWorsens: 'Piora com', medications: 'Medicamentos' },
+        fr: { mainConcern: 'Motif', started: 'Début', location: 'Localisation', character: 'Caractère', severity: 'Sévérité', pattern: 'Schéma', whatHelps: 'Améliore', whatWorsens: 'Aggrave', medications: 'Médicaments' }
+      };
+
+      const lang = (typeof userLang !== 'undefined' && userLang) ? userLang : 'en';
+      const labels = langLabels[lang] || langLabels.en;
+
+      const fieldOrder = ['mainConcern', 'started', 'location', 'character', 'severity', 'pattern', 'whatHelps', 'whatWorsens', 'medications'];
+
+      const lines = [];
+      for (const key of fieldOrder) {
+        const value = fields[key];
+        if (value && value.trim() && value.trim() !== '-' && value.trim() !== '/') {
+          lines.push(labels[key] + ': ' + value.trim());
+        }
+      }
+
+      if (fields.symptoms && fields.symptoms.trim()) {
+        lines.push('Symptoms: ' + fields.symptoms.trim());
+      }
+      if (fields.notes && fields.notes.trim()) {
+        lines.push('Notes: ' + fields.notes.trim());
+      }
+
+      return lines.join('\n');
+    }
+
+    function showToast(message) {
+      let toast = document.getElementById('toast');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'toast';
+        toast.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:10px 24px;border-radius:20px;font-size:14px;z-index:10000;opacity:0;transition:opacity 0.3s;pointer-events:none;';
+        document.body.appendChild(toast);
+      }
+      toast.textContent = message;
+      toast.style.opacity = '1';
+      setTimeout(() => { toast.style.opacity = '0'; }, 2000);
+    }
+
+    // ===== INLINE TITLE EDITING (Feature 2) =====
+    function startTitleEdit(concernId, titleEl) {
+      event.stopPropagation();
+      const currentTitle = titleEl.textContent.trim();
+      const input = document.createElement('input');
+      input.className = 'title-edit-input';
+      input.value = currentTitle;
+
+      const parent = titleEl.parentNode;
+      titleEl.style.display = 'none';
+      parent.insertBefore(input, titleEl.nextSibling);
+      input.focus();
+      input.select();
+
+      async function saveTitle() {
+        const newTitle = input.value.trim();
+        if (newTitle && newTitle !== currentTitle) {
+          try {
+            const resp = await fetch(API_BASE + '/concerns/' + userId + '/' + concernId, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ title: newTitle })
+            });
+            if (resp.ok) {
+              const concern = allConcerns.find(c => c.id === concernId);
+              if (concern) concern.title = newTitle;
+              titleEl.textContent = newTitle;
+              showToast('Title updated');
+            }
+          } catch (err) {
+            showToast('Error saving title');
+          }
+        }
+        input.remove();
+        titleEl.style.display = '';
+      }
+
+      input.addEventListener('blur', saveTitle);
+      input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+        if (e.key === 'Escape') { input.remove(); titleEl.style.display = ''; }
+      });
+    }
+
+    // ===== STATUS CYCLING (Feature 3) =====
+    async function cycleStatus(concernId, currentStatus) {
+      event.stopPropagation();
+      const cycle = ['active', 'improving', 'resolved'];
+      const idx = cycle.indexOf(currentStatus);
+      const nextStatus = cycle[(idx + 1) % 3];
+
+      try {
+        const resp = await fetch(API_BASE + '/concerns/' + userId + '/' + concernId + '/status', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: nextStatus })
+        });
+
+        if (resp.ok) {
+          const concern = allConcerns.find(c => c.id === concernId);
+          if (concern) concern.status = nextStatus;
+          renderConcerns();
+          showToast('Status: ' + nextStatus);
+        }
+      } catch (err) {
+        showToast('Error updating status');
+      }
+    }
+
+    // ===== MERGE CONCERNS UI (Feature 4) =====
+    function renderConcerns() {
+      if (allConcerns.length > 0) {
+        renderMultipleConcerns(allConcerns);
+      } else {
+        showEmpty();
+      }
+    }
+
+    function startMergeMode(initiatorId) {
+      mergeMode = true;
+      mergeSelected.clear();
+      mergeSelected.add(initiatorId);
+      mergeInitiator = initiatorId;
+
+      document.querySelectorAll('.dots-dropdown').forEach(d => d.classList.remove('open'));
+
+      renderConcerns();
+      showMergeBar();
+    }
+
+    function toggleMergeSelect(concernId) {
+      if (mergeSelected.has(concernId)) {
+        mergeSelected.delete(concernId);
+      } else {
+        mergeSelected.add(concernId);
+      }
+      renderConcerns();
+      updateMergeBar();
+    }
+
+    function showMergeBar() {
+      let bar = document.getElementById('mergeBar');
+      if (!bar) {
+        bar = document.createElement('div');
+        bar.id = 'mergeBar';
+        bar.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#2e915e;color:white;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;z-index:1000;box-shadow:0 -2px 12px rgba(0,0,0,0.15);';
+        document.body.appendChild(bar);
+      }
+      updateMergeBar();
+      bar.style.display = 'flex';
+    }
+
+    function updateMergeBar() {
+      const bar = document.getElementById('mergeBar');
+      if (!bar) return;
+      const count = mergeSelected.size;
+      bar.innerHTML = '<span style="font-size:15px;">' + count + ' concern' + (count !== 1 ? 's' : '') + ' selected</span><div style="display:flex;gap:12px;"><button onclick="cancelMerge()" style="background:transparent;border:1px solid white;color:white;padding:8px 20px;border-radius:20px;cursor:pointer;font-size:14px;">Cancel</button><button onclick="executeMerge()" ' + (count < 2 ? 'disabled style="background:rgba(255,255,255,0.3);border:none;color:white;padding:8px 20px;border-radius:20px;font-size:14px;cursor:not-allowed;"' : 'style="background:white;border:none;color:#2e915e;padding:8px 20px;border-radius:20px;cursor:pointer;font-weight:600;font-size:14px;"') + '>Merge Selected</button></div>';
+    }
+
+    function cancelMerge() {
+      mergeMode = false;
+      mergeSelected.clear();
+      mergeInitiator = null;
+      const bar = document.getElementById('mergeBar');
+      if (bar) bar.style.display = 'none';
+      renderConcerns();
+    }
+
+    async function executeMerge() {
+      if (mergeSelected.size < 2) return;
+
+      const ids = Array.from(mergeSelected);
+      const primaryId = ids[0];
+      const primary = allConcerns.find(c => c.id === primaryId);
+      const secondaries = ids.slice(1).map(id => allConcerns.find(c => c.id === id)).filter(Boolean);
+
+      let merged = primary.summaryContent || '';
+      for (const sec of secondaries) {
+        if (sec.summaryContent) {
+          if (merged) merged += '\n\n';
+          merged += sec.summaryContent;
+        }
+      }
+
+      try {
+        await fetch(API_BASE + '/concerns/' + userId + '/' + primaryId, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ summary: merged })
+        });
+
+        for (const sec of secondaries) {
+          await fetch(API_BASE + '/concerns/' + userId + '/' + sec.id, { method: 'DELETE' });
+        }
+
+        cancelMerge();
+        showToast('Concerns merged');
+        location.reload();
+      } catch (err) {
+        showToast('Error merging');
+      }
+    }
 
     // ===== HELPERS =====
     function getIconForConcern(concern) {

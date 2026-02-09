@@ -392,7 +392,7 @@ export class AIService {
     const sl = simpleLabels[detectedLang] || simpleLabels.en!;
 
     const focusInstruction = focusTopic
-      ? `\n- IMPORTANT: This note is ONLY about "${focusTopic}". Include ONLY information related to this specific concern. Ignore any other health topics mentioned in the conversation.`
+      ? `\n- CRITICAL: This note is ONLY about "${focusTopic}". Do NOT include Location, Severity, Pattern, or any other field data from a different health concern. If a piece of information (like a body location or severity rating) was shared about a DIFFERENT health topic, you MUST exclude it from this note entirely.`
       : '';
 
     const prompt = currentSummary
@@ -565,6 +565,127 @@ Topic name(s):`;
     } catch (error) {
       logger.error({ error }, 'Failed to detect concern title');
       return 'Health concern';
+    }
+  }
+
+  /**
+   * Segment conversation messages by health topic.
+   * For multi-concern conversations, assigns each user message to its corresponding topic,
+   * then includes all "shared" messages (greetings, meta) and assistant responses for context.
+   * Returns a map of topic -> segmented messages for that topic.
+   * On error, returns empty object to signal fallback to full messages.
+   */
+  async segmentMessagesByTopic(
+    messages: Message[],
+    topicTitles: string[],
+    language?: string
+  ): Promise<Record<string, Message[]>> {
+    await this.rateLimiter.acquire();
+
+    // Build conversation with numbered messages for classification
+    const numberedMessages = messages
+      .map((m, i) => {
+        const role = m.role === 'user' ? 'User' : 'Assistant';
+        return `${i}: [${role}] ${m.content}`;
+      })
+      .join('\n\n');
+
+    const topicsJson = topicTitles.map(t => `"${t}"`).join(', ');
+    const langName = language === 'es' ? 'Spanish' : language === 'pt' ? 'Portuguese' : language === 'fr' ? 'French' : 'English';
+
+    const prompt = `You are segmenting a conversation by health topic.
+
+CONVERSATION:
+${numberedMessages}
+
+TOPICS TO CLASSIFY:
+${topicTitles.map((t, i) => `${i + 1}. ${t}`).join('\n')}
+
+For EACH USER MESSAGE (numbered 0, 2, 4, etc), assign it to ONE of the topics above, or to "shared" if it's a greeting/meta/not health-related.
+
+Respond with ONLY a JSON object mapping message index to topic name. Example:
+{"0": "Headaches", "2": "Headaches", "4": "Back Pain", "5": "shared"}
+
+STRICT RULES:
+- Classify ONLY user messages (even-numbered: 0, 2, 4, 6...)
+- For each user message, pick exactly ONE topic name or "shared"
+- Topic names must EXACTLY match the provided list
+- "shared" is for non-health conversation, greetings, or meta
+- Output ONLY valid JSON, no explanation`;
+
+    try {
+      const response = await this.client.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 200,
+        messages: [{ role: 'user', content: prompt }],
+      });
+
+      const content = response.content
+        .filter(block => block.type === 'text')
+        .map(block => (block as { type: 'text'; text: string }).text)
+        .join('')
+        .trim();
+
+      // Parse JSON response
+      const classification = JSON.parse(content) as Record<string, string>;
+
+      // Build segmented messages for each topic
+      const segmented: Record<string, Message[]> = {};
+      for (const topic of topicTitles) {
+        segmented[topic] = [];
+      }
+
+      // Add shared messages to all topics
+      const sharedMessages = messages.filter((_, i) => {
+        const classif = classification[i.toString()];
+        return classif === 'shared' || classif === undefined;
+      });
+
+      // For each topic, collect its user messages + following assistant messages + all shared messages
+      for (const topic of topicTitles) {
+        const topicMessages: Message[] = [];
+
+        for (let i = 0; i < messages.length; i++) {
+          const msg = messages[i]!;
+          const classif = classification[i.toString()];
+
+          // Include if it's assigned to this topic
+          if (classif === topic) {
+            topicMessages.push(msg);
+            // Also include following assistant message if it exists
+            if (i + 1 < messages.length && messages[i + 1]!.role === 'assistant') {
+              topicMessages.push(messages[i + 1]!);
+            }
+          }
+        }
+
+        // Add all shared messages
+        topicMessages.push(...sharedMessages);
+
+        // Sort by original message order
+        const originalIndices = new Map<Message, number>();
+        messages.forEach((msg, i) => originalIndices.set(msg, i));
+        topicMessages.sort((a, b) => (originalIndices.get(a) ?? 0) - (originalIndices.get(b) ?? 0));
+
+        // Remove duplicates while preserving order
+        const seen = new Set<string>();
+        const unique: Message[] = [];
+        for (const msg of topicMessages) {
+          const key = `${msg.role}:${msg.content}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            unique.push(msg);
+          }
+        }
+
+        segmented[topic] = unique;
+      }
+
+      return segmented;
+    } catch (error) {
+      // JSON parse or API error — return empty to signal fallback
+      logger.error({ error }, 'Failed to segment messages by topic');
+      return {};
     }
   }
 
