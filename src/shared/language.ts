@@ -126,14 +126,14 @@ export function extractUserName(userMessage: string, recentMessages: Message[]):
   }
 
   const declinePatterns = [
-    /no\s*(,|\.|\s|$)/i,
-    /skip/i,
-    /omitir/i,
-    /prefiero no/i,
-    /no (quiero|deseo)/i,
-    /pular/i,
-    /ignorer/i,
-    /prefer not/i,
+    /\bno\s*(,|\.|\s|$)/i,
+    /\bskip\b/i,
+    /\bomitir\b/i,
+    /prefiero no\b/i,
+    /\bno (quiero|deseo)/i,
+    /\bpular\b/i,
+    /\bignorer\b/i,
+    /prefer not\b/i,
   ];
 
   if (declinePatterns.some(pattern => pattern.test(userMessage))) {
