@@ -84,6 +84,60 @@
       margin: 0 auto;
     }
 
+    /* Review prompt */
+    .review-prompt {
+      text-align: center;
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      font-weight: 300;
+      color: var(--text);
+      margin-bottom: 20px;
+      opacity: 0.7;
+    }
+
+    /* Card actions layout */
+    .card-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .history-link {
+      font-family: 'Outfit', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--primary);
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .history-link:hover {
+      opacity: 0.7;
+    }
+
+    /* Add missing button */
+    .add-missing-btn {
+      display: block;
+      width: 100%;
+      text-align: center;
+      padding: 12px 20px;
+      margin-top: 16px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .add-missing-btn:hover {
+      background: var(--primary-dark);
+    }
+
     .header .date {
       font-family: 'Outfit', sans-serif;
       font-size: 15px;
@@ -640,8 +694,10 @@
 
     <div class="header">
       <h1 id="userName">Your Summary</h1>
-      <p class="subtitle" id="subtitleText">Everything you've shared, organized for your care</p>
+      <p class="subtitle" id="subtitleText">This is a living record — you can add or clarify details anytime.</p>
     </div>
+
+    <div class="review-prompt">Does this capture what matters?</div>
 
     <div id="loading" class="loading">
 
@@ -1014,15 +1070,16 @@
 
       let html = '';
 
-      // Top row: date + dots menu
+      // Top row: date + history link + dots menu
       html += '<div class="concern-card-top">';
       html += '  <div class="concern-card-date">' + lastUpdated + '</div>';
-      html += '  <div class="dots-menu-wrapper">';
-      html += '    <button class="dots-menu-btn" onclick="event.stopPropagation(); toggleDotsMenu(\'' + concern.id + '\')">•••</button>';
-      html += '    <div class="dots-dropdown" id="menu-' + concern.id + '">';
-      html += '      <button class="menu-update" onclick="event.stopPropagation(); editConcern(\'' + concern.id + '\')">' + lang.menuUpdate + '</button>';
-      html += '      <button class="menu-history" onclick="event.stopPropagation(); viewConcernHistory(\'' + concern.id + '\')">' + lang.menuHistory + '</button>';
-      html += '      <button class="menu-delete" onclick="event.stopPropagation(); openDeleteModal(\'' + concern.id + '\')">' + lang.menuDelete + '</button>';
+      html += '  <div class="card-actions">';
+      html += '    <a class="history-link" href="/history/' + userId + '?concernId=' + concern.id + '&returnTo=summary" onclick="event.stopPropagation()">' + lang.history + '</a>';
+      html += '    <div class="dots-menu-wrapper">';
+      html += '      <button class="dots-menu-btn" onclick="event.stopPropagation(); toggleDotsMenu(\'' + concern.id + '\')">•••</button>';
+      html += '      <div class="dots-dropdown" id="menu-' + concern.id + '">';
+      html += '        <button class="menu-delete" onclick="event.stopPropagation(); openDeleteModal(\'' + concern.id + '\')">' + lang.menuDelete + '</button>';
+      html += '      </div>';
       html += '    </div>';
       html += '  </div>';
       html += '</div>';
@@ -1068,12 +1125,8 @@
         html += '<div class="concern-card-paragraph">' + buildParagraph(rawContent) + '</div>';
       }
       html += '  </div>';
+      html += '  <a class="add-missing-btn" href="/suggest/' + userId + '?concernId=' + concern.id + '&returnTo=summary" onclick="event.stopPropagation()">✏️ Add what\'s missing</a>';
       html += '  <div class="concern-card-actions">';
-      html += '    <div class="concern-card-actions-left">';
-      html += '      <a onclick="event.stopPropagation(); viewConcernHistory(\'' + concern.id + '\')">' + lang.history + '</a>';
-      html += '      <a onclick="event.stopPropagation(); editConcern(\'' + concern.id + '\')">' + lang.update + '</a>';
-      html += '      <a onclick="event.stopPropagation(); startMergeMode(\'' + concern.id + '\')">MERGE</a>';
-      html += '    </div>';
       html += '    <button class="view-toggle-link" onclick="event.stopPropagation(); expandCard(\'' + cardId + '\')">' + (lang.viewLess || 'View Less') + ' <svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(180deg)"><path d="M1 1L5 5L9 1"/></svg></button>';
       html += '  </div>';
       html += '</div>';

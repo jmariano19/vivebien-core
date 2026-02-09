@@ -403,6 +403,34 @@ export class ConcernService {
   }
 
   /**
+   * Get recent user edits (from the landing page) since a given timestamp.
+   * Returns concern title + what changed for each user_edit snapshot.
+   */
+  async getRecentUserEdits(userId: string, since: Date): Promise<Array<{ title: string; content: string; editedAt: Date }>> {
+    const result = await this.db.query<{
+      title: string;
+      content: string;
+      created_at: Date;
+    }>(
+      `SELECT hc.title, cs.content, cs.created_at
+       FROM concern_snapshots cs
+       JOIN health_concerns hc ON cs.concern_id = hc.id
+       WHERE cs.user_id = $1
+         AND cs.change_type = 'user_edit'
+         AND cs.created_at > $2
+       ORDER BY cs.created_at DESC
+       LIMIT 5`,
+      [userId, since]
+    );
+
+    return result.rows.map(row => ({
+      title: row.title,
+      content: row.content,
+      editedAt: row.created_at,
+    }));
+  }
+
+  /**
    * Detect if new content is meaningfully different from old content.
    * Compares key structured fields rather than raw text.
    */

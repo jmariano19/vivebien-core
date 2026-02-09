@@ -112,6 +112,21 @@ export class ConversationService {
       }
     }
 
+    // Check for recent user edits from the landing page
+    let editContext: string | null = null;
+    try {
+      // Look for edits since the user's last message to CareLog
+      const lastMessageAt = context.lastMessageAt || new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const recentEdits = await concernService.getRecentUserEdits(context.userId, lastMessageAt);
+
+      if (recentEdits.length > 0) {
+        const editLines = recentEdits.map(e => `- "${e.title}": updated on their landing page`);
+        editContext = `[CareLog - Recent user edits from landing page]:\nThe user recently edited the following concerns directly on their health summary page:\n${editLines.join('\n')}\nBriefly acknowledge their updates in a warm, natural way (e.g., "I see you updated your notes — great to see you keeping things current."). Do NOT list the edits mechanically. Keep it to one short sentence, then focus on their new message.`;
+      }
+    } catch {
+      // Silently ignore if concern_snapshots table doesn't exist
+    }
+
     // Build the message array with history
     const messages: Message[] = [];
 
@@ -120,6 +135,14 @@ export class ConversationService {
       messages.push({
         role: 'assistant',
         content: healthContext,
+      });
+    }
+
+    // Add edit acknowledgment context if there were recent edits
+    if (editContext) {
+      messages.push({
+        role: 'assistant',
+        content: editContext,
       });
     }
 

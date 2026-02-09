@@ -49,21 +49,25 @@
       z-index: 100;
     }
     .back-link {
+      font-family: 'Outfit', sans-serif;
+      font-size: 14px;
+      color: var(--text);
+      text-decoration: none;
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      font-size: 13px;
-      font-weight: 400;
-      color: var(--muted);
-      text-decoration: none;
+      gap: 4px;
       cursor: pointer;
       white-space: nowrap;
+      transition: opacity 0.2s;
     }
-    .back-link:hover { color: var(--text); }
+    .back-link:hover {
+      opacity: 0.7;
+    }
     .back-link svg {
       width: 7px;
       height: 12px;
       flex-shrink: 0;
+      stroke: currentColor;
     }
     .brand {
       display: inline-flex;
@@ -78,7 +82,7 @@
     /* Header */
     .header {
       text-align: center;
-      margin-bottom: 20px;
+      margin-bottom: 24px;
     }
     .header h1 {
       font-family: 'Lora', Georgia, serif;
@@ -86,6 +90,13 @@
       font-weight: 500;
       color: var(--text);
       line-height: 36px;
+      margin-bottom: 8px;
+    }
+    .header-subtitle {
+      font-size: 14px;
+      font-weight: 400;
+      color: var(--muted);
+      line-height: 20px;
     }
     .header-concern {
       display: flex;
@@ -198,26 +209,37 @@
       color: initial;
     }
 
+    /* Field container styling (warm, rounded) */
+    .field-container {
+      background: #F5F3EE;
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-top: 8px;
+      margin-bottom: 20px;
+    }
+
     .field-input {
       width: 100%;
-      padding: 14px 16px;
-      border: 2px solid transparent;
-      border-radius: 12px;
+      padding: 0;
+      border: none;
+      border-radius: 0;
       font-family: 'Outfit', sans-serif;
       font-size: 15px;
       line-height: 24px;
       color: var(--text);
-      background: var(--input-bg);
+      background: transparent;
       transition: all 0.2s;
       resize: none;
+      outline: none;
     }
     .field-input:focus {
       outline: none;
-      border-color: var(--primary);
-      background: white;
+      background: transparent;
+      color: var(--text);
     }
     .field-input::placeholder {
-      color: #a0a0a0;
+      color: #999;
+      font-weight: 300;
     }
     .field-input.single-line {
       min-height: auto;
@@ -248,6 +270,8 @@
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
+      min-height: 40px;
+      align-items: center;
     }
     .medication-chip {
       display: inline-flex;
@@ -284,6 +308,10 @@
     }
     .add-medication-row input {
       flex: 1;
+      background: transparent;
+      border: none;
+      padding: 0;
+      outline: none;
     }
     .add-med-btn {
       width: 48px;
@@ -308,8 +336,9 @@
       transform: scale(0.95);
     }
     .empty-meds {
-      color: var(--muted);
+      color: #999;
       font-size: 14px;
+      font-weight: 300;
       font-style: italic;
     }
 
@@ -319,7 +348,7 @@
       bottom: 0;
       left: 0;
       right: 0;
-      background: var(--bg);
+      background: var(--footer-bg, #DFD6CB);
       padding: 16px 24px;
       padding-bottom: calc(16px + env(safe-area-inset-bottom));
       display: flex;
@@ -330,22 +359,23 @@
 
     .btn {
       flex: 1;
-      max-width: 180px;
+      max-width: 200px;
       padding: 14px 24px;
-      border-radius: 10px;
+      border-radius: 24px;
       font-family: 'Outfit', sans-serif;
-      font-size: 13px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.3px;
+      font-size: 15px;
+      font-weight: 500;
       border: none;
       cursor: pointer;
       transition: all 0.2s;
       text-align: center;
+      text-transform: none;
+      letter-spacing: 0;
     }
     .btn-primary {
-      background: var(--btn-color);
+      background: var(--btn-color, #216F64);
       color: white;
+      font-weight: 600;
     }
     .btn-primary:hover {
       transform: translateY(-1px);
@@ -357,8 +387,9 @@
       transform: none;
     }
     .btn-secondary {
-      background: #E0D8CD;
-      color: #6B5D4F;
+      background: #9CA3AF;
+      color: white;
+      font-weight: 500;
     }
     .btn-secondary:hover {
       transform: translateY(-1px);
@@ -449,6 +480,7 @@
     const translations = {
       es: {
         title: 'Actualizar Resumen',
+        subtitle: 'Estás añadiendo contexto — nada se pierde.',
         back: 'Volver al resumen',
         backHistory: 'Volver al historial',
         cancel: 'Cancelar',
@@ -459,14 +491,14 @@
         status: { active: 'En curso', improving: 'Mejorando', resolved: 'Resuelto' },
         statusLabel: 'Estado',
         fields: {
-          mainConcern: { label: 'Motivo principal', icon: '✏️', placeholder: 'Ej: Dolor de cabeza, tos persistente...' },
+          mainConcern: { label: 'Motivo principal', icon: '🩺', placeholder: 'Ej: Dolor de cabeza, tos persistente...' },
           onset: { label: 'Cuándo comenzó', icon: '📅', placeholder: 'Ej: Hace 3 días, Esta mañana...' },
           location: { label: 'Ubicación', icon: '📍', placeholder: 'Ej: Lado izquierdo de la cabeza...' },
           character: { label: 'Carácter', icon: '🔍', placeholder: 'Ej: Agudo, sordo, punzante, pulsátil...' },
           severity: { label: 'Severidad', icon: '📊', placeholder: 'Ej: 7/10, moderado, intenso...' },
           pattern: { label: 'Patrón', icon: '🔄', placeholder: 'Ej: Constante, va y viene, peor por la noche...' },
-          symptoms: { label: 'Síntomas', icon: '🤒', placeholder: 'Describe todos los síntomas que sientes...' },
-          whatHelps: { label: 'Qué te ayuda', icon: '✅', placeholder: 'Ej: Descanso, medicamento, compresas...' },
+          symptoms: { label: 'Síntomas', icon: '😣', placeholder: 'Describe todos los síntomas que sientes...' },
+          whatHelps: { label: 'Qué te ayuda', icon: '✅', placeholder: 'Describe qué te ayuda...' },
           whatWorsens: { label: 'Qué lo empeora', icon: '⚠️', placeholder: 'Ej: Luz brillante, esfuerzo físico...' },
           medications: { label: 'Medicamentos', icon: '💊', placeholder: 'Agregar medicamento...', empty: 'Sin medicamentos agregados' },
           notes: { label: 'Notas adicionales', icon: '📝', placeholder: 'Cualquier otra información importante...' }
@@ -474,6 +506,7 @@
       },
       en: {
         title: 'Update Summary',
+        subtitle: 'You\'re adding context — nothing is lost.',
         back: 'Back to summary',
         backHistory: 'Back to history',
         cancel: 'Cancel',
@@ -484,21 +517,22 @@
         status: { active: 'Ongoing', improving: 'Improving', resolved: 'Resolved' },
         statusLabel: 'Status',
         fields: {
-          mainConcern: { label: 'Main Concern', icon: '✏️', placeholder: 'E.g.: Headache, persistent cough...' },
+          mainConcern: { label: 'Main Concern', icon: '🩺', placeholder: 'E.g.: Headache, persistent cough...' },
           onset: { label: 'When it started', icon: '📅', placeholder: 'E.g.: 3 days ago, This morning...' },
           location: { label: 'Location', icon: '📍', placeholder: 'E.g.: Left side of head...' },
           character: { label: 'Character', icon: '🔍', placeholder: 'E.g.: Sharp, dull, throbbing, aching...' },
           severity: { label: 'Severity', icon: '📊', placeholder: 'E.g.: 7/10, moderate, intense...' },
           pattern: { label: 'Pattern', icon: '🔄', placeholder: 'E.g.: Constant, comes and goes, worse at night...' },
-          symptoms: { label: 'Symptoms', icon: '🤒', placeholder: 'Describe all the symptoms you feel...' },
+          symptoms: { label: 'Symptoms', icon: '😣', placeholder: 'Describe all the symptoms you feel...' },
           whatHelps: { label: 'What helps', icon: '✅', placeholder: 'Describe what helps you...' },
           whatWorsens: { label: 'What makes it worse', icon: '⚠️', placeholder: 'E.g.: Sitting for long periods, bright light...' },
           medications: { label: 'Medications', icon: '💊', placeholder: 'Add a medication...', empty: 'No medications added' },
-          notes: { label: 'Additional notes', icon: '📝', placeholder: 'Any other important information...' }
+          notes: { label: 'Additional notes', icon: '📝', placeholder: 'Short notes are fine...' }
         }
       },
       pt: {
         title: 'Atualizar Resumo',
+        subtitle: 'Você está adicionando contexto — nada se perde.',
         back: 'Voltar ao resumo',
         backHistory: 'Voltar ao historial',
         cancel: 'Cancelar',
@@ -509,21 +543,22 @@
         status: { active: 'Em andamento', improving: 'Melhorando', resolved: 'Resolvido' },
         statusLabel: 'Status',
         fields: {
-          mainConcern: { label: 'Queixa principal', icon: '✏️', placeholder: 'Ex: Dor de cabeça, tosse persistente...' },
+          mainConcern: { label: 'Queixa principal', icon: '🩺', placeholder: 'Ex: Dor de cabeça, tosse persistente...' },
           onset: { label: 'Quando começou', icon: '📅', placeholder: 'Ex: Há 3 dias, Esta manhã...' },
           location: { label: 'Localização', icon: '📍', placeholder: 'Ex: Lado esquerdo da cabeça...' },
           character: { label: 'Caráter', icon: '🔍', placeholder: 'Ex: Agudo, surdo, pulsante, latejante...' },
           severity: { label: 'Gravidade', icon: '📊', placeholder: 'Ex: 7/10, moderado, intenso...' },
           pattern: { label: 'Padrão', icon: '🔄', placeholder: 'Ex: Constante, vai e vem, pior à noite...' },
-          symptoms: { label: 'Sintomas', icon: '🤒', placeholder: 'Descreva todos os sintomas que sente...' },
-          whatHelps: { label: 'O que ajuda', icon: '✅', placeholder: 'Ex: Descanso, medicamento, compressas...' },
+          symptoms: { label: 'Sintomas', icon: '😣', placeholder: 'Descreva todos os sintomas que sente...' },
+          whatHelps: { label: 'O que ajuda', icon: '✅', placeholder: 'Descreva o que te ajuda...' },
           whatWorsens: { label: 'O que piora', icon: '⚠️', placeholder: 'Ex: Luz forte, esforço físico...' },
           medications: { label: 'Medicamentos', icon: '💊', placeholder: 'Adicionar medicamento...', empty: 'Nenhum medicamento adicionado' },
-          notes: { label: 'Notas adicionais', icon: '📝', placeholder: 'Qualquer outra informação importante...' }
+          notes: { label: 'Notas adicionais', icon: '📝', placeholder: 'Notas breves são aceitáveis...' }
         }
       },
       fr: {
         title: 'Mettre à jour le Résumé',
+        subtitle: 'Vous ajoutez du contexte — rien n\'est perdu.',
         back: 'Retour au résumé',
         backHistory: 'Retour à l\'historique',
         cancel: 'Annuler',
@@ -534,17 +569,17 @@
         status: { active: 'En cours', improving: 'En amélioration', resolved: 'Résolu' },
         statusLabel: 'Statut',
         fields: {
-          mainConcern: { label: 'Motif principal', icon: '✏️', placeholder: 'Ex: Mal de tête, toux persistante...' },
+          mainConcern: { label: 'Motif principal', icon: '🩺', placeholder: 'Ex: Mal de tête, toux persistante...' },
           onset: { label: 'Quand ça a commencé', icon: '📅', placeholder: 'Ex: Il y a 3 jours, Ce matin...' },
           location: { label: 'Localisation', icon: '📍', placeholder: 'Ex: Côté gauche de la tête...' },
           character: { label: 'Caractère', icon: '🔍', placeholder: 'Ex: Aigu, sourd, lancinant, pulsatile...' },
           severity: { label: 'Sévérité', icon: '📊', placeholder: 'Ex: 7/10, modéré, intense...' },
           pattern: { label: 'Schéma', icon: '🔄', placeholder: 'Ex: Constant, va et vient, pire la nuit...' },
-          symptoms: { label: 'Symptômes', icon: '🤒', placeholder: 'Décrivez tous les symptômes...' },
-          whatHelps: { label: 'Ce qui aide', icon: '✅', placeholder: 'Ex: Repos, médicament, compresse...' },
+          symptoms: { label: 'Symptômes', icon: '😣', placeholder: 'Décrivez tous les symptômes...' },
+          whatHelps: { label: 'Ce qui aide', icon: '✅', placeholder: 'Décrivez ce qui vous aide...' },
           whatWorsens: { label: 'Ce qui aggrave', icon: '⚠️', placeholder: 'Ex: Lumière vive, effort physique...' },
           medications: { label: 'Médicaments', icon: '💊', placeholder: 'Ajouter un médicament...', empty: 'Aucun médicament ajouté' },
-          notes: { label: 'Notes additionnelles', icon: '📝', placeholder: 'Toute autre information importante...' }
+          notes: { label: 'Notes additionnelles', icon: '📝', placeholder: 'De courtes notes vont bien...' }
         }
       }
     };
@@ -754,18 +789,20 @@
                 ${field.label}
                 <span class="change-dot" id="dot-${key}"></span>
               </label>
-              <div class="medication-container">
-                <div class="medication-chips" id="medication-chips">
-                  ${medications.length === 0 ? `<span class="empty-meds">${field.empty}</span>` : ''}
-                </div>
-                <div class="add-medication-row">
-                  <input
-                    type="text"
-                    class="field-input single-line"
-                    id="new-medication-input"
-                    placeholder="${field.placeholder}"
-                  />
-                  <button type="button" class="add-med-btn" id="add-med-btn">+</button>
+              <div class="field-container">
+                <div class="medication-container">
+                  <div class="medication-chips" id="medication-chips">
+                    ${medications.length === 0 ? `<span class="empty-meds">${field.empty}</span>` : ''}
+                  </div>
+                  <div class="add-medication-row">
+                    <input
+                      type="text"
+                      class="field-input single-line"
+                      id="new-medication-input"
+                      placeholder="${field.placeholder}"
+                    />
+                    <button type="button" class="add-med-btn" id="add-med-btn">+</button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -779,22 +816,24 @@
               ${field.label}
               <span class="change-dot" id="dot-${key}"></span>
             </label>
-            ${isMultiLine ? `
-              <textarea
-                class="field-input multi-line"
-                id="field-${key}"
-                placeholder="${field.placeholder}"
-                rows="3"
-              >${escapeHtml(value)}</textarea>
-            ` : `
-              <input
-                type="text"
-                class="field-input single-line"
-                id="field-${key}"
-                placeholder="${field.placeholder}"
-                value="${escapeHtml(value)}"
-              />
-            `}
+            <div class="field-container">
+              ${isMultiLine ? `
+                <textarea
+                  class="field-input multi-line"
+                  id="field-${key}"
+                  placeholder="${field.placeholder}"
+                  rows="3"
+                >${escapeHtml(value)}</textarea>
+              ` : `
+                <input
+                  type="text"
+                  class="field-input single-line"
+                  id="field-${key}"
+                  placeholder="${field.placeholder}"
+                  value="${escapeHtml(value)}"
+                />
+              `}
+            </div>
           </div>
         `;
       }).join('');
@@ -825,6 +864,7 @@
       content.innerHTML = `
         <div class="header">
           <h1>${t.title}</h1>
+          ${t.subtitle ? `<p class="header-subtitle">${t.subtitle}</p>` : ''}
         </div>
         <div class="card">
           ${statusFieldHtml}
