@@ -1032,8 +1032,10 @@
       document.getElementById('resolvedContainer').innerHTML = '';
       document.getElementById('resolvedSection').style.display = 'none';
 
-      const activeConcerns = concerns.filter(c => c.status !== 'resolved');
-      const resolvedConcerns = concerns.filter(c => c.status === 'resolved');
+      // Filter out any concerns without a valid title (defensive)
+      const validConcerns = concerns.filter(c => c.title && c.title.trim().length > 0);
+      const activeConcerns = validConcerns.filter(c => c.status !== 'resolved');
+      const resolvedConcerns = validConcerns.filter(c => c.status === 'resolved');
 
       // Sort by updatedAt descending — most recent first
       activeConcerns.sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
