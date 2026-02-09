@@ -7,6 +7,7 @@ import {
 } from '../../shared/types';
 import { getActivePrompt, getConfigTemplate, getFeatureFlag } from '../../infra/db/client';
 import { ConcernService } from '../concern/service';
+import { logger } from '../../infra/logging/logger';
 
 export class ConversationService {
   constructor(private db: Pool) {}
@@ -221,9 +222,9 @@ export class ConversationService {
       if (titles.length > 1) {
         try {
           segmentedMessages = await aiService.segmentMessagesByTopic(allMessages, titles, userLanguage);
+          logger.info({ userId, titles, segmentedKeys: Object.keys(segmentedMessages), segmentedLengths: Object.fromEntries(Object.entries(segmentedMessages).map(([k, v]) => [k, v.length])) }, 'Message segmentation result');
         } catch (err) {
-          // Log and continue with unsegmented flow
-          // (empty segmentedMessages means fallback to allMessages)
+          logger.error({ err, userId, titles }, 'Message segmentation failed — falling back to allMessages');
         }
       }
 
@@ -234,18 +235,24 @@ export class ConversationService {
 
         // Use segmented messages if available and non-empty, otherwise fall back to all messages
         const segmented = segmentedMessages[concernTitle];
-        const messagesForConcern = (titles.length > 1 && segmented && segmented.length > 0)
-          ? segmented
-          : allMessages;
+        const hasSegmented = titles.length > 1 && segmented && segmented.length > 0;
+        logger.info({ userId, concernTitle, hasSegmented, segmentedContent: segmented?.[0]?.content?.substring(0, 100), usingFreshSummary: hasSegmented }, 'Processing concern with segmentation');
+        const messagesForConcern = hasSegmented ? segmented : allMessages;
 
         // When multiple concerns, pass focusTopic + otherTopics for strict isolation
         const focusTopic = titles.length > 1 ? concernTitle : undefined;
         const otherTopics = titles.length > 1
           ? titles.filter(t => t !== concernTitle)
           : undefined;
+
+        // CRITICAL: When we have clean segmented messages, generate from scratch
+        // instead of updating old (possibly contaminated) summary.
+        // The segmented content already contains only topic-specific facts.
+        const currentSummary = hasSegmented ? null : concern.summaryContent;
+
         const newSummary = await aiService.generateSummary(
           messagesForConcern,
-          concern.summaryContent,
+          currentSummary,
           userLanguage,
           focusTopic,
           otherTopics

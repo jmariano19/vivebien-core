@@ -662,14 +662,40 @@ Output ONLY valid JSON, no explanation.`;
         .join('')
         .trim();
 
+      // Strip markdown fences if Haiku wraps the JSON
+      let jsonContent = content;
+      const fenceMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (fenceMatch) {
+        jsonContent = fenceMatch[1]!.trim();
+      }
+
       // Parse JSON response
-      const extracted = JSON.parse(content) as Record<string, string[]>;
+      const extracted = JSON.parse(jsonContent) as Record<string, string[]>;
 
       // Build segmented messages for each topic using extracted content
+      // Use case-insensitive key matching to handle slight mismatches from Haiku
       const segmented: Record<string, Message[]> = {};
+      const extractedKeysLower = new Map<string, string[]>();
+      for (const [key, val] of Object.entries(extracted)) {
+        extractedKeysLower.set(key.toLowerCase().trim(), val);
+      }
 
       for (const topic of topicTitles) {
-        const facts = extracted[topic];
+        // Try exact match first, then case-insensitive, then substring match
+        let facts = extracted[topic];
+        if (!facts || facts.length === 0) {
+          facts = extractedKeysLower.get(topic.toLowerCase().trim());
+        }
+        if (!facts || facts.length === 0) {
+          // Substring match: "Headache" matches "Headaches" or vice versa
+          for (const [key, val] of extractedKeysLower) {
+            if (key.includes(topic.toLowerCase()) || topic.toLowerCase().includes(key)) {
+              facts = val;
+              break;
+            }
+          }
+        }
+
         if (facts && facts.length > 0) {
           // Create a synthetic user message with only the relevant extracted facts
           const extractedContent = facts.join('. ').trim();
