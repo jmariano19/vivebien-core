@@ -517,25 +517,32 @@ ${baseRules}`;
 
     const prompt = `What health topic(s) are being discussed in this conversation? Return the topic name(s) (2-5 words each, in ${langName}).
 ${existingContext}
-IMPORTANT RULES:
-- Use a SIMPLE, STABLE name for the condition — the kind of name a patient would use, not a clinical diagnosis
-- Do NOT change the topic name as more details emerge. "Headaches" stays "Headaches" even if the user later mentions visual symptoms or aura
-- Do NOT upgrade to clinical terms. If the user said "headaches", return "Headaches" — NOT "Migraines With Aura"
+RULES:
+- Use SIMPLE, STABLE names — the kind a patient would use (e.g., "Stomach Pain", "Knee Injury", "Headaches")
+- Do NOT use clinical terms. "Headaches" stays "Headaches" — NOT "Migraines With Aura"
+- Do NOT return generic names like "Health concern" or "Multiple symptoms" — always be SPECIFIC
 - Focus on the BODY PART or BASIC SYMPTOM, not the specific sub-type
-- When the user reports MULTIPLE RELATED symptoms (e.g., insomnia + palpitations + weight loss, or headache + nausea + light sensitivity), these are part of ONE concern — use a name that captures the primary complaint, not each individual symptom
-- NEVER create separate concerns for symptoms that are part of the same clinical picture
-- CRITICAL: Individual symptoms (cough, fever, headache, nausea, fatigue, body aches) that are discussed IN THE CONTEXT of a broader condition (flu, cold, COVID, infection) are NOT separate concerns. Always use the BROADER condition name, not the individual symptom. Example: if user says "I have the flu" and later mentions "I have a cough" — the topic is STILL "Flu", NOT "Cough"
-- When an existing concern already captures a disease/condition, ANY symptoms discussed in the same conversation belong to that existing concern — return the EXISTING title
-- BUT if the user mentions CLEARLY UNRELATED health issues (different body parts/systems, e.g., back pain AND a skin rash), return EACH topic on a SEPARATE LINE
-- Only split into multiple topics when conditions are truly independent — not when one might cause the other
+
+WHEN TO SPLIT into multiple concerns (one per line):
+- Different body parts: stomach pain + knee injury = 2 concerns
+- Different systems: digestive issue + dizziness + joint injury = 3 concerns
+- Conditions that need separate doctor conversations
+
+WHEN TO KEEP as ONE concern:
+- Symptoms of the SAME illness: flu with cough, fever, body aches = "Flu"
+- Clearly linked: headache + dizziness that always come together = could be 1 concern
+- Sub-symptoms of a named condition: "I have a cold" + runny nose + sore throat = "Cold"
 
 Examples:
-- Single concern: "Flu" (even if user mentions cough, fever, body aches — these are symptoms of flu)
-- Single concern: "Back Pain"
-- Single concern: "Dolores de cabeza" (even if user also mentions nausea — related symptom)
-- Two concerns (on separate lines):
+- "stomach hurting and knee is swollen and I get dizzy" → THREE concerns:
+Stomach Pain
+Knee Injury
+Dizziness
+- "I have the flu with cough and fever" → ONE concern: Flu
+- "back pain and also a rash on my arm" → TWO concerns:
 Back Pain
 Skin Rash
+- "headaches and dizziness that come together" → ONE concern: Headaches And Dizziness
 
 CONVERSATION:
 ${conversationText}
@@ -545,7 +552,7 @@ Topic name(s):`;
     try {
       const response = await this.client.messages.create({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 60,
+        max_tokens: 100,
         messages: [{ role: 'user', content: prompt }],
       });
 
