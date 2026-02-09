@@ -61,7 +61,9 @@ export async function handleInboundMessage(
           fr: "Je suis désolé, j'ai eu un problème temporaire. Pourriez-vous réessayer?",
         };
         const fallbackMsg = fallbackMessages[detectedLang] || fallbackMessages.es!;
-        await chatwootClient.sendMessage(conversationId, fallbackMsg);
+        // Include debug info temporarily to diagnose the crash
+        const debugMsg = `${fallbackMsg}\n\n_[debug: ${err.message?.substring(0, 200)}]_`;
+        await chatwootClient.sendMessage(conversationId, debugMsg);
         logger.info({ correlationId, conversationId }, 'Fallback error message sent to user');
       } catch (sendErr) {
         logger.error({ correlationId, conversationId, error: sendErr }, 'Failed to send fallback message — user received no response');
