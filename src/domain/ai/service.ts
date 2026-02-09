@@ -310,7 +310,7 @@ export class AIService {
    * Generate or update a health summary based on conversation history
    * This creates a live summary that can be displayed on a website
    */
-  async generateSummary(messages: Message[], currentSummary: string | null, language?: string, focusTopic?: string): Promise<string> {
+  async generateSummary(messages: Message[], currentSummary: string | null, language?: string, focusTopic?: string, otherTopics?: string[]): Promise<string> {
     await this.rateLimiter.acquire();
 
     // Detect language from recent messages or use provided language
@@ -391,12 +391,57 @@ export class AIService {
     };
     const sl = simpleLabels[detectedLang] || simpleLabels.en!;
 
-    const focusInstruction = focusTopic
-      ? `\n- CRITICAL: This note is ONLY about "${focusTopic}". Do NOT include Location, Severity, Pattern, or any other field data from a different health concern. If a piece of information (like a body location or severity rating) was shared about a DIFFERENT health topic, you MUST exclude it from this note entirely.`
+    // Build the exclusion list for focused summaries
+    const exclusionNote = (focusTopic && otherTopics && otherTopics.length > 0)
+      ? `\n\nEXCLUDE THESE OTHER CONCERNS (do NOT mention them at all):\n${otherTopics.map(t => `- ${t}`).join('\n')}`
       : '';
 
-    const prompt = currentSummary
-      ? `You are CareLog, a calm health documentation companion. Update this health note based on new information.
+    const formatTemplate = `${sl.concern}: [what's happening — ONLY about this specific concern]
+${sl.started}: [when THIS concern began]
+${sl.location}: [where THIS concern is felt]
+${sl.character}: [how THIS concern feels — sharp, dull, throbbing, etc.]
+${sl.severity}: [how bad THIS concern is, on their scale or 1-10]
+${sl.pattern}: [timing, frequency of THIS concern]
+${sl.helps}: [what helps THIS concern specifically]
+${sl.worsens}: [what worsens THIS concern specifically]
+${sl.meds}: [medications relevant to THIS concern]`;
+
+    const baseRules = `Rules:
+- Include only fields where information was actually provided (typically 4-7 fields)
+- Do NOT include fields where information is unknown — never write "not provided" or "N/A"
+- Use the person's exact words and language when possible — this is THEIR record
+- Keep each field to 1-2 lines max
+- Use simple field labels only (e.g. "${sl.concern}:", "${sl.started}:") — no bold, no markdown, no asterisks
+- No bullet points or complex formatting — just "Label: value" on each line
+- No medical jargon unless the person used it first
+- No patient name or header sections — start directly with the ${sl.concern} field
+- Write in ${languageName}`;
+
+    let prompt: string;
+
+    if (focusTopic) {
+      // FOCUSED prompt — single concern extraction with strong isolation
+      const sourceData = currentSummary
+        ? `CURRENT NOTE FOR "${focusTopic}":\n${currentSummary}\n\nNEW CONVERSATION:\n${conversationText}`
+        : `CONVERSATION:\n${conversationText}`;
+
+      prompt = `You are extracting a health note for ONE SPECIFIC concern: "${focusTopic}"
+${exclusionNote}
+
+${sourceData}
+
+Extract ONLY information about "${focusTopic}" into this format:
+
+${formatTemplate}
+
+${baseRules}
+- CRITICAL ISOLATION RULE: This note is EXCLUSIVELY about "${focusTopic}". Every field must contain ONLY data about "${focusTopic}".
+- If the person mentioned other health issues (like a different body part, a different symptom), do NOT include that data in ANY field.
+- Example: If this note is about "Stomach Pain" and the person also mentioned a swollen knee, do NOT put knee information in Location, Helps, or any other field.
+- Medications should only be included if they were mentioned in direct relation to "${focusTopic}".
+- When in doubt about whether a piece of information belongs to "${focusTopic}", LEAVE IT OUT.`;
+    } else if (currentSummary) {
+      prompt = `You are CareLog, a calm health documentation companion. Update this health note based on new information.
 
 CURRENT NOTE:
 ${currentSummary}
@@ -406,51 +451,21 @@ ${conversationText}
 
 Generate a CLEAN, doctor-ready health note. Use this format (include only fields with actual data):
 
-${sl.concern}: [what's happening, using the person's own words]
-${sl.started}: [when it began]
-${sl.location}: [where they feel it]
-${sl.character}: [how it feels — sharp, dull, throbbing, etc.]
-${sl.severity}: [how bad, on their scale or 1-10]
-${sl.pattern}: [timing, frequency, constant vs intermittent]
-${sl.helps}: [what makes it better, if mentioned]
-${sl.worsens}: [what makes it worse, if mentioned]
-${sl.meds}: [any medications, if mentioned]
+${formatTemplate}
 
-Rules:
-- Include only fields where information was actually provided (typically 4-7 fields)
-- Do NOT include fields where information is unknown — never write "not provided" or "N/A"
-- Use the person's exact words and language when possible — this is THEIR record
-- Keep each field to 1-2 lines max
-- No headers like "MOTIVO PRINCIPAL" — use simple labels only
-- No bullet points or complex formatting
-- No medical jargon unless the person used it first
-- Write in ${languageName}${focusInstruction}`
-      : `You are CareLog, a calm health documentation companion. Create a doctor-ready health note from this conversation.
+${baseRules}`;
+    } else {
+      prompt = `You are CareLog, a calm health documentation companion. Create a doctor-ready health note from this conversation.
 
 CONVERSATION:
 ${conversationText}
 
 Generate a CLEAN, doctor-ready health note. Use this format (include only fields with actual data):
 
-${sl.concern}: [what's happening, using the person's own words]
-${sl.started}: [when it began]
-${sl.location}: [where they feel it]
-${sl.character}: [how it feels — sharp, dull, throbbing, etc.]
-${sl.severity}: [how bad, on their scale or 1-10]
-${sl.pattern}: [timing, frequency, constant vs intermittent]
-${sl.helps}: [what makes it better, if mentioned]
-${sl.worsens}: [what makes it worse, if mentioned]
-${sl.meds}: [any medications, if mentioned]
+${formatTemplate}
 
-Rules:
-- Include only fields where information was actually provided (typically 4-7 fields)
-- Do NOT include fields where information is unknown — never write "not provided" or "N/A"
-- Use the person's exact words and language when possible — this is THEIR record
-- Keep each field to 1-2 lines max
-- No headers like "MOTIVO PRINCIPAL" — use simple labels only
-- No bullet points or complex formatting
-- No medical jargon unless the person used it first
-- Write in ${languageName}${focusInstruction}`;
+${baseRules}`;
+    }
 
     try {
       // Use Sonnet for summaries (cost-effective for structured output)

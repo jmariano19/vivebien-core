@@ -97,19 +97,43 @@ export function extractUserName(userMessage: string, recentMessages: Message[]):
     'bem', 'doente', 'cansado', 'melhor', 'pior',
     'malade', 'fatigué', 'fatiguée', 'mieux', 'pire',
     'très', 'tres',
+    // Conjunctions and pronouns that should stop name extraction
+    'and', 'but', 'or', 'nor', 'yet',
+    'i', 'me', 'my', 'mine', 'i\'ve', 'i\'m', 'i\'d', 'i\'ll',
+    'y', 'pero', 'o', 'ni', 'sino',
+    'yo', 'me', 'mi', 'mío', 'mía', 'he', 'she', 'it',
+    'et', 'mais', 'ou', 'ni', 'je', 'me', 'mon', 'ma',
+    'e', 'mas', 'ou', 'nem', 'eu', 'meu', 'minha',
+    // Common sentence continuation words
+    'so', 'because', 'since', 'when', 'while', 'if', 'as', 'that', 'which',
+    'porque', 'pues', 'cuando', 'mientras', 'si', 'que', 'cual',
+    'parce que', 'quand', 'pendant', 'si', 'dont', 'que',
+    'porque', 'quando', 'enquanto', 'se', 'que', 'qual',
   ];
 
   for (const pattern of proactiveNamePatterns) {
     const match = userMessage.match(pattern);
     if (match && match[2]) {
       const extractedName = match[2].trim();
-      const firstWord = extractedName.split(/\s+/)[0]?.toLowerCase();
+      let words = extractedName.split(/\s+/);
 
-      if (firstWord && notNameWords.includes(firstWord)) {
+      // Filter out boundary words from the end (and, but, or, i, i've, etc.)
+      const notNameWordsLower = notNameWords.map(w => w.toLowerCase());
+      while (words.length > 0 && notNameWordsLower.includes(words[words.length - 1]!.toLowerCase())) {
+        words.pop();
+      }
+
+      // Filter out boundary words from the start (in case they appear first)
+      while (words.length > 0 && notNameWordsLower.includes(words[0]!.toLowerCase())) {
+        words.shift();
+      }
+
+      const firstWord = words[0]?.toLowerCase();
+
+      if (!firstWord || notNameWordsLower.includes(firstWord)) {
         continue;
       }
 
-      const words = extractedName.split(/\s+/);
       if (words.length >= 1 && words.length <= 4) {
         const isValidName = words.every(word => /^[\p{L}]{2,20}$/u.test(word));
         if (isValidName) {
@@ -146,7 +170,19 @@ export function extractUserName(userMessage: string, recentMessages: Message[]):
     .replace(/[.,!?¿¡]+$/g, '')
     .trim();
 
-  const words = cleaned.split(/\s+/);
+  let words = cleaned.split(/\s+/);
+
+  // Filter out boundary words from the end
+  const notNameWordsLower = notNameWords.map(w => w.toLowerCase());
+  while (words.length > 0 && notNameWordsLower.includes(words[words.length - 1]!.toLowerCase())) {
+    words.pop();
+  }
+
+  // Filter out boundary words from the start
+  while (words.length > 0 && notNameWordsLower.includes(words[0]!.toLowerCase())) {
+    words.shift();
+  }
+
   if (words.length < 1 || words.length > 4) {
     return null;
   }

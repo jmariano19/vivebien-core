@@ -170,7 +170,7 @@ export class ConversationService {
     userMessage: string,
     assistantResponse: string,
     aiService: {
-      generateSummary: (messages: Message[], currentSummary: string | null, language?: string, focusTopic?: string) => Promise<string>;
+      generateSummary: (messages: Message[], currentSummary: string | null, language?: string, focusTopic?: string, otherTopics?: string[]) => Promise<string>;
       detectConcernTitle: (messages: Message[], language?: string, existingConcernTitles?: string[]) => Promise<string>;
       segmentMessagesByTopic: (messages: Message[], topicTitles: string[], language?: string) => Promise<Record<string, Message[]>>;
     },
@@ -237,13 +237,17 @@ export class ConversationService {
           ? segmentedMessages[concernTitle]
           : allMessages;
 
-        // When multiple concerns, pass focusTopic so summary only includes relevant info
+        // When multiple concerns, pass focusTopic + otherTopics for strict isolation
         const focusTopic = titles.length > 1 ? concernTitle : undefined;
+        const otherTopics = titles.length > 1
+          ? titles.filter(t => t !== concernTitle)
+          : undefined;
         const newSummary = await aiService.generateSummary(
           messagesForConcern,
           concern.summaryContent,
           userLanguage,
-          focusTopic
+          focusTopic,
+          otherTopics
         );
 
         await concernService.updateConcernSummary(concern.id, newSummary, 'auto_update');
