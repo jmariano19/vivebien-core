@@ -145,9 +145,26 @@ interface AIUsageLog {
 }
 
 export async function logAIUsage(usage: AIUsageLog): Promise<void> {
-  // Calculate cost (approximate, based on Claude pricing)
-  const costPerInputToken = 0.003 / 1000;  // $3 per million input tokens
-  const costPerOutputToken = 0.015 / 1000; // $15 per million output tokens
+  // Calculate cost using actual per-model pricing (USD per million tokens)
+  const modelPricing: Record<string, { input: number; output: number }> = {
+    // Opus 4.5
+    'claude-opus-4-5-20251101':   { input: 15.0,  output: 75.0 },
+    // Sonnet 4.5
+    'claude-sonnet-4-5-20250929': { input: 3.0,   output: 15.0 },
+    // Sonnet 4
+    'claude-sonnet-4-20250514':   { input: 3.0,   output: 15.0 },
+    // Haiku 4.5
+    'claude-haiku-4-5-20251001':  { input: 0.80,  output: 4.0 },
+  };
+
+  // Match model string (API may return resolved model names)
+  const pricing = modelPricing[usage.model]
+    || (usage.model.includes('opus')   ? modelPricing['claude-opus-4-5-20251101']
+    :   usage.model.includes('haiku')  ? modelPricing['claude-haiku-4-5-20251001']
+    :   { input: 3.0, output: 15.0 }); // default to Sonnet pricing
+
+  const costPerInputToken = pricing!.input / 1_000_000;
+  const costPerOutputToken = pricing!.output / 1_000_000;
   const costCents = (
     (usage.inputTokens * costPerInputToken) +
     (usage.outputTokens * costPerOutputToken)
