@@ -496,10 +496,13 @@ IMPORTANT RULES:
 - Focus on the BODY PART or BASIC SYMPTOM, not the specific sub-type
 - When the user reports MULTIPLE RELATED symptoms (e.g., insomnia + palpitations + weight loss, or headache + nausea + light sensitivity), these are part of ONE concern — use a name that captures the primary complaint, not each individual symptom
 - NEVER create separate concerns for symptoms that are part of the same clinical picture
+- CRITICAL: Individual symptoms (cough, fever, headache, nausea, fatigue, body aches) that are discussed IN THE CONTEXT of a broader condition (flu, cold, COVID, infection) are NOT separate concerns. Always use the BROADER condition name, not the individual symptom. Example: if user says "I have the flu" and later mentions "I have a cough" — the topic is STILL "Flu", NOT "Cough"
+- When an existing concern already captures a disease/condition, ANY symptoms discussed in the same conversation belong to that existing concern — return the EXISTING title
 - BUT if the user mentions CLEARLY UNRELATED health issues (different body parts/systems, e.g., back pain AND a skin rash), return EACH topic on a SEPARATE LINE
 - Only split into multiple topics when conditions are truly independent — not when one might cause the other
 
 Examples:
+- Single concern: "Flu" (even if user mentions cough, fever, body aches — these are symptoms of flu)
 - Single concern: "Back Pain"
 - Single concern: "Dolores de cabeza" (even if user also mentions nausea — related symptom)
 - Two concerns (on separate lines):

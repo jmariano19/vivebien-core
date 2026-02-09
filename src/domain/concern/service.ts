@@ -137,6 +137,13 @@ export class ConcernService {
         return concern;
       }
 
+      // Condition-symptom match — a symptom discussed in the context of a broader condition
+      // belongs to that condition (e.g., "Cough" belongs to "Flu")
+      if (this.isSymptomOfCondition(existingTitle, normalizedTitle) ||
+          this.isSymptomOfCondition(normalizedTitle, existingTitle)) {
+        return concern;
+      }
+
       // Word overlap check — if any content word matches, consider it the same concern
       const stopWords = new Set(['with', 'and', 'the', 'in', 'on', 'of', 'con', 'de', 'en', 'el', 'la', 'los', 'las', 'del', 'por', 'y', 'e', 'com', 'do', 'da', 'no', 'na', 'et', 'le', 'les', 'des', 'du']);
       const existingWords = new Set(existingTitle.split(/\s+/).filter(w => !stopWords.has(w)));
@@ -151,6 +158,41 @@ export class ConcernService {
     return this.createConcern(userId, title, icon);
   }
 
+  /**
+   * Check if one title is a symptom commonly associated with a broader condition.
+   * E.g., "cough" is a symptom of "flu", "nausea" is a symptom of "food poisoning"
+   */
+  private isSymptomOfCondition(condition: string, symptom: string): boolean {
+    const conditionSymptomMap: Record<string, string[]> = {
+      // Flu / Cold / COVID
+      'flu': ['cough', 'fever', 'headache', 'body aches', 'fatigue', 'sore throat', 'congestion', 'runny nose', 'chills'],
+      'gripe': ['tos', 'fiebre', 'dolor de cabeza', 'dolor corporal', 'fatiga', 'dolor de garganta', 'congestión', 'escalofríos'],
+      'cold': ['cough', 'congestion', 'runny nose', 'sore throat', 'sneezing', 'fever'],
+      'resfriado': ['tos', 'congestión', 'dolor de garganta', 'estornudos', 'fiebre'],
+      'covid': ['cough', 'fever', 'fatigue', 'headache', 'sore throat', 'congestion', 'body aches', 'loss of taste', 'loss of smell'],
+      // GI conditions
+      'food poisoning': ['nausea', 'vomiting', 'diarrhea', 'stomach pain', 'fever', 'cramps'],
+      'intoxicación': ['náusea', 'vómito', 'diarrea', 'dolor de estómago', 'fiebre', 'calambres'],
+      'stomach flu': ['nausea', 'vomiting', 'diarrhea', 'fever', 'cramps'],
+      // Allergies
+      'allergies': ['sneezing', 'congestion', 'itchy eyes', 'runny nose', 'cough', 'rash'],
+      'alergias': ['estornudos', 'congestión', 'ojos irritados', 'tos', 'sarpullido'],
+    };
+
+    const conditionLower = condition.toLowerCase();
+    const symptomLower = symptom.toLowerCase();
+
+    for (const [conditionKey, symptoms] of Object.entries(conditionSymptomMap)) {
+      if (conditionLower.includes(conditionKey)) {
+        if (symptoms.some(s => symptomLower.includes(s) || s.includes(symptomLower))) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
   private areHealthSynonyms(a: string, b: string): boolean {
     // Groups of words that refer to the same body system / condition
     const synonymGroups = [
@@ -163,6 +205,8 @@ export class ConcernService {
       ['anxiety', 'anxious', 'ansiedad', 'ansioso', 'ansiedade', 'anxiété'],
       ['insomnia', 'sleep', 'insomnio', 'sueño', 'dormir', 'insônia', 'sommeil'],
       ['cough', 'tos', 'tosse', 'toux'],
+      ['flu', 'influenza', 'cold', 'gripe', 'resfriado', 'resfrío', 'grippe', 'rhume'],
+      ['fever', 'fiebre', 'febre', 'fièvre'],
       ['chest', 'pecho', 'peito', 'poitrine'],
       ['throat', 'sore throat', 'garganta', 'dolor de garganta', 'dor de garganta', 'mal de gorge'],
       ['skin', 'rash', 'piel', 'sarpullido', 'erupción', 'pele', 'erupção', 'peau', 'éruption'],
