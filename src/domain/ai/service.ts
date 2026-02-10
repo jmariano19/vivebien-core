@@ -45,9 +45,9 @@ export class AIService {
         content: m.content,
       }));
 
-      // Call Claude Opus 4.5 - best conversational model for nuanced health conversations
+      // Call Claude Sonnet 4.5 — excellent quality for structured health conversations at ~5x lower cost than Opus
       const response = await this.client.messages.create({
-        model: 'claude-opus-4-5-20251101',
+        model: 'claude-sonnet-4-5-20250929',
         max_tokens: 1024,
         system: systemPrompt,
         messages: anthropicMessages,
