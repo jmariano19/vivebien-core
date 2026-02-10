@@ -217,31 +217,63 @@ export class ConversationService {
       const uniqueTitles = [...new Set(concernTitles)];
       const titles = uniqueTitles.length > 0 ? uniqueTitles : [titleResult.trim()];
 
-      // Segment conversation by topic when multiple concerns detected
+      // Step 1b: Filter titles — skip existing concerns that already have summaries.
+      // This prevents cross-contamination when conversation history spans multiple topics
+      // (e.g., headache data leaking into an eye stye summary that was already correct,
+      // or eye stye data leaking into a new headache summary via bad segmentation).
+      const existingWithSummary = existingConcerns.filter(c => c.summaryContent);
+      const isExistingWithSummary = (title: string): boolean => {
+        const lower = title.toLowerCase();
+        return existingWithSummary.some(c => {
+          const el = c.title.toLowerCase();
+          return el === lower || el.includes(lower) || lower.includes(el);
+        });
+      };
+
+      const newTitles = titles.filter(t => !isExistingWithSummary(t));
+      // If all titles map to existing concerns (e.g., user is updating a known concern),
+      // keep the first title so at least one concern gets updated.
+      const titlesToProcess = newTitles.length > 0 ? newTitles : [titles[0]!];
+      // Track if topic isolation is needed (when original detection found multiple concerns)
+      const needsTopicIsolation = titles.length > 1;
+
+      if (titlesToProcess.length !== titles.length) {
+        logger.info({
+          userId,
+          allTitles: titles,
+          processing: titlesToProcess,
+          skipped: titles.filter(t => !titlesToProcess.includes(t)),
+        }, 'Filtered existing concerns to prevent cross-contamination');
+      }
+
+      // Segment conversation by topic only when processing multiple NEW concerns
       let segmentedMessages: Record<string, Message[]> = {};
-      if (titles.length > 1) {
+      if (titlesToProcess.length > 1) {
         try {
-          segmentedMessages = await aiService.segmentMessagesByTopic(allMessages, titles, userLanguage);
-          logger.info({ userId, titles, segmentedKeys: Object.keys(segmentedMessages), segmentedLengths: Object.fromEntries(Object.entries(segmentedMessages).map(([k, v]) => [k, v.length])) }, 'Message segmentation result');
+          segmentedMessages = await aiService.segmentMessagesByTopic(allMessages, titlesToProcess, userLanguage);
+          logger.info({ userId, titles: titlesToProcess, segmentedKeys: Object.keys(segmentedMessages), segmentedLengths: Object.fromEntries(Object.entries(segmentedMessages).map(([k, v]) => [k, v.length])) }, 'Message segmentation result');
         } catch (err) {
-          logger.error({ err, userId, titles }, 'Message segmentation failed — falling back to allMessages');
+          logger.error({ err, userId, titles: titlesToProcess }, 'Message segmentation failed — falling back to allMessages');
         }
       }
 
       // Step 2-4: For each concern, get/create and generate summary
       let lastSummary = '';
-      for (const concernTitle of titles) {
+      for (const concernTitle of titlesToProcess) {
         const concern = await concernService.getOrCreateConcern(userId, concernTitle);
 
         // Use segmented messages if available and non-empty, otherwise fall back to all messages
         const segmented = segmentedMessages[concernTitle];
-        const hasSegmented = titles.length > 1 && segmented && segmented.length > 0;
+        const hasSegmented = titlesToProcess.length > 1 && segmented && segmented.length > 0;
         logger.info({ userId, concernTitle, hasSegmented, segmentedContent: segmented?.[0]?.content?.substring(0, 100), usingFreshSummary: hasSegmented }, 'Processing concern with segmentation');
         const messagesForConcern = hasSegmented ? segmented : allMessages;
 
-        // When multiple concerns, pass focusTopic + otherTopics for strict isolation
-        const focusTopic = titles.length > 1 ? concernTitle : undefined;
-        const otherTopics = titles.length > 1
+        // Use topic isolation when multiple concerns were detected in the conversation,
+        // even if some were filtered out. This ensures Sonnet's generateSummary only
+        // includes data relevant to this specific concern (e.g., exclude eye stye data
+        // when generating a headache summary).
+        const focusTopic = needsTopicIsolation ? concernTitle : undefined;
+        const otherTopics = needsTopicIsolation
           ? titles.filter(t => t !== concernTitle)
           : undefined;
 
