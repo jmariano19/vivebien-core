@@ -283,7 +283,6 @@ async function _handleInboundMessage(
   // Step 8.7: If this is a summary, detect the concern title BEFORE delivery
   // so we can show the user which concern it's filed under
   let detectedConcernTitle: string | null = null;
-  let allDetectedTitles: string | null = null; // Full multi-line result for updateHealthSummary
   if (isSummary) {
     try {
       const concernService = new ConcernService(db);
@@ -295,12 +294,9 @@ async function _handleInboundMessage(
         user.language,
         existingTitles
       );
-      // Keep full result for updateHealthSummary (may contain multiple titles)
-      allDetectedTitles = titleResult;
-      // For the header, prefer the NEW concern title (not an existing one)
-      // This way, if the user is discussing a headache and has an existing "Eye Swelling" concern,
-      // the header shows "Headache" instead of "Eye Swelling"
-      // Uses findBestConcernMatch for consistent fuzzy matching (exact, substring, word overlap)
+      // Pick the primary concern title for the header.
+      // Prefer a NEW concern title over an existing one so the header reflects
+      // what the user is currently discussing (not a previous concern).
       const parsedTitles = titleResult.split('\n')
         .map(t => t.replace(/^[-•*\d.)\s]+/, '').trim())
         .filter(t => t.length > 0);
@@ -309,7 +305,7 @@ async function _handleInboundMessage(
       );
       detectedConcernTitle = newConcernTitle || parsedTitles[0] || null;
 
-      logger.info({ userId: user.id, concernTitle: detectedConcernTitle, allTitles: allDetectedTitles }, 'Concern title(s) detected for summary');
+      logger.info({ userId: user.id, concernTitle: detectedConcernTitle }, 'Concern title detected for summary');
     } catch (err) {
       logger.warn({ err, userId: user.id }, 'Failed to detect concern title for display — continuing without it');
     }
@@ -430,7 +426,7 @@ async function _handleInboundMessage(
         processedMessage,
         responseForHistory,
         aiService,
-        allDetectedTitles || undefined
+        detectedConcernTitle || undefined
       ),
       logger
     ).catch((err) => {

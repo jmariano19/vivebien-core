@@ -7,7 +7,6 @@ import {
 } from '../../shared/types';
 import { getActivePrompt, getConfigTemplate, getFeatureFlag } from '../../infra/db/client';
 import { ConcernService } from '../concern/service';
-import { findBestConcernMatch } from '../../shared/matching';
 import { logger } from '../../infra/logging/logger';
 
 export class ConversationService {
@@ -212,6 +211,20 @@ export class ConversationService {
     return result.rows[0]?.content || null;
   }
 
+  /**
+   * Update health summary for ONE concern per invocation.
+   *
+   * Simplified architecture (v2):
+   * - Process exactly ONE concern per health note (the primary one from the conversation)
+   * - No multi-concern segmentation (was the #1 source of cross-contamination)
+   * - No multi-concern loop (was creating duplicate/mixed notes)
+   * - Uses topic isolation to keep Sonnet focused on the right concern
+   * - Per-user advisory lock prevents race conditions from rapid messages
+   *
+   * If the user discusses multiple health issues in one chat, the AI generates
+   * a note for the primary concern. Other concerns get their own notes in
+   * subsequent conversations.
+   */
   async updateHealthSummary(
     userId: string,
     userMessage: string,
@@ -219,7 +232,6 @@ export class ConversationService {
     aiService: {
       generateSummary: (messages: Message[], currentSummary: string | null, language?: string, focusTopic?: string, otherTopics?: string[]) => Promise<string>;
       detectConcernTitle: (messages: Message[], language?: string, existingConcernTitles?: string[]) => Promise<string>;
-      segmentMessagesByTopic: (messages: Message[], topicTitles: string[], language?: string) => Promise<Record<string, Message[]>>;
     },
     preDetectedTitle?: string
   ): Promise<void> {
@@ -229,13 +241,11 @@ export class ConversationService {
     const lockClient = await this.db.connect();
     try {
       await lockClient.query(`SELECT pg_advisory_lock(hashtext($1))`, [userId]);
-      logger.info({ userId }, 'Advisory lock acquired for summary update');
 
       await this._updateHealthSummaryInner(userId, userMessage, assistantResponse, aiService, preDetectedTitle);
     } finally {
       await lockClient.query(`SELECT pg_advisory_unlock(hashtext($1))`, [userId]).catch(() => {});
       lockClient.release();
-      logger.info({ userId }, 'Advisory lock released for summary update');
     }
   }
 
@@ -246,7 +256,6 @@ export class ConversationService {
     aiService: {
       generateSummary: (messages: Message[], currentSummary: string | null, language?: string, focusTopic?: string, otherTopics?: string[]) => Promise<string>;
       detectConcernTitle: (messages: Message[], language?: string, existingConcernTitles?: string[]) => Promise<string>;
-      segmentMessagesByTopic: (messages: Message[], topicTitles: string[], language?: string) => Promise<Record<string, Message[]>>;
     },
     preDetectedTitle?: string
   ): Promise<void> {
@@ -259,14 +268,13 @@ export class ConversationService {
     );
     const userLanguage = userResult.rows[0]?.language;
 
-    // Get existing active concerns so detectConcernTitle can prefer matching them
+    // Get existing active concerns
     const existingConcerns = await concernService.getActiveConcerns(userId);
     const existingTitles = existingConcerns.map(c => c.title);
 
     // Get messages from the current session only (prevents cross-session contamination)
     const recentMessages = await this.getSessionMessages(userId, 20);
 
-    // Add the new exchange
     const allMessages = [
       ...recentMessages,
       { role: 'user' as const, content: userMessage },
@@ -274,106 +282,57 @@ export class ConversationService {
     ];
 
     try {
-      // Step 1: Detect which concern(s) this conversation is about
-      // Use pre-detected title if available (already detected before message delivery)
-      const titleResult = preDetectedTitle
-        ? preDetectedTitle
-        : await aiService.detectConcernTitle(allMessages, userLanguage, existingTitles);
-
-      // Parse multiple titles (newline-separated) for unrelated concerns
-      const concernTitles = titleResult
-        .split('\n')
-        .map(t => t.replace(/^[-•*\d.)\s]+/, '').trim())
-        .filter(t => t.length >= 2 && t.length <= 60);
-
-      // Deduplicate: if a parsed title is empty or all are the same
-      const uniqueTitles = [...new Set(concernTitles)];
-      const titles = uniqueTitles.length > 0 ? uniqueTitles : [titleResult.trim()];
-
-      // Step 1b: Filter titles — skip existing concerns that already have summaries.
-      // Uses findBestConcernMatch for consistent fuzzy matching across the system
-      // (exact, substring, and word overlap — same logic used in getOrCreateConcern).
-      const existingWithSummary = existingConcerns.filter(c => c.summaryContent);
-      const existingWithSummaryTitles = existingWithSummary.map(c => c.title);
-      const isExistingWithSummary = (title: string): boolean => {
-        return !!findBestConcernMatch(title, existingWithSummaryTitles);
-      };
-
-      const newTitles = titles.filter(t => !isExistingWithSummary(t));
-      // If all titles map to existing concerns (e.g., user is updating a known concern),
-      // keep the first title so at least one concern gets updated.
-      const titlesToProcess = newTitles.length > 0 ? newTitles : [titles[0]!];
-      // Track if topic isolation is needed (when original detection found multiple concerns)
-      const needsTopicIsolation = titles.length > 1;
-
-      if (titlesToProcess.length !== titles.length) {
-        logger.info({
-          userId,
-          allTitles: titles,
-          processing: titlesToProcess,
-          skipped: titles.filter(t => !titlesToProcess.includes(t)),
-        }, 'Filtered existing concerns to prevent cross-contamination');
+      // Step 1: Get the concern title — use pre-detected (from inbound handler) or detect now
+      let concernTitle = preDetectedTitle;
+      if (!concernTitle) {
+        const titleResult = await aiService.detectConcernTitle(allMessages, userLanguage, existingTitles);
+        // Take only the first/primary title
+        const lines = titleResult.split('\n')
+          .map(t => t.replace(/^[-•*\d.)\s]+/, '').trim())
+          .filter(t => t.length >= 2 && t.length <= 60);
+        concernTitle = lines[0] || titleResult.trim();
       }
 
-      // Segment conversation by topic only when processing multiple NEW concerns
-      let segmentedMessages: Record<string, Message[]> = {};
-      if (titlesToProcess.length > 1) {
-        try {
-          segmentedMessages = await aiService.segmentMessagesByTopic(allMessages, titlesToProcess, userLanguage);
-          logger.info({ userId, titles: titlesToProcess, segmentedKeys: Object.keys(segmentedMessages), segmentedLengths: Object.fromEntries(Object.entries(segmentedMessages).map(([k, v]) => [k, v.length])) }, 'Message segmentation result');
-        } catch (err) {
-          logger.error({ err, userId, titles: titlesToProcess }, 'Message segmentation failed — falling back to allMessages');
-        }
+      if (!concernTitle || concernTitle.length < 2) {
+        logger.warn({ userId }, 'No valid concern title detected — skipping summary update');
+        return;
       }
 
-      // Step 2-4: For each concern, get/create and generate summary
-      let lastSummary = '';
-      for (const concernTitle of titlesToProcess) {
-        const concern = await concernService.getOrCreateConcern(userId, concernTitle);
+      // Step 2: Get or create the concern (fuzzy matching handles synonyms/translations)
+      const concern = await concernService.getOrCreateConcern(userId, concernTitle);
 
-        // Use segmented messages if available and non-empty, otherwise fall back to all messages
-        const segmented = segmentedMessages[concernTitle];
-        const hasSegmented = titlesToProcess.length > 1 && segmented && segmented.length > 0;
-        logger.info({ userId, concernTitle, hasSegmented, segmentedContent: segmented?.[0]?.content?.substring(0, 100), usingFreshSummary: hasSegmented }, 'Processing concern with segmentation');
-        const messagesForConcern = hasSegmented ? segmented : allMessages;
+      // Step 3: Generate summary with topic isolation
+      // If user has other active concerns, tell Sonnet to focus only on this one
+      const otherTopics = existingTitles.filter(t =>
+        t.toLowerCase() !== concernTitle!.toLowerCase() &&
+        t.toLowerCase() !== concern.title.toLowerCase()
+      );
+      const focusTopic = otherTopics.length > 0 ? concernTitle : undefined;
 
-        // Use topic isolation when multiple concerns were detected in the conversation,
-        // even if some were filtered out. This ensures Sonnet's generateSummary only
-        // includes data relevant to this specific concern (e.g., exclude eye stye data
-        // when generating a headache summary).
-        const focusTopic = needsTopicIsolation ? concernTitle : undefined;
-        const otherTopics = needsTopicIsolation
-          ? titles.filter(t => t !== concernTitle)
-          : undefined;
+      const newSummary = await aiService.generateSummary(
+        allMessages,
+        concern.summaryContent,
+        userLanguage,
+        focusTopic,
+        otherTopics.length > 0 ? otherTopics : undefined
+      );
 
-        // CRITICAL: When we have clean segmented messages, generate from scratch
-        // instead of updating old (possibly contaminated) summary.
-        // The segmented content already contains only topic-specific facts.
-        const currentSummary = hasSegmented ? null : concern.summaryContent;
+      // Step 4: Save
+      await concernService.updateConcernSummary(concern.id, newSummary, 'auto_update');
 
-        const newSummary = await aiService.generateSummary(
-          messagesForConcern,
-          currentSummary,
-          userLanguage,
-          focusTopic,
-          otherTopics
-        );
-
-        await concernService.updateConcernSummary(concern.id, newSummary, 'auto_update');
-        lastSummary = newSummary;
-      }
-
-      // Step 5: Aggregate ALL active concerns into legacy memories table
+      // Step 5: Aggregate all active concerns into legacy memories table
       try {
         const activeConcerns = await concernService.getActiveConcerns(userId);
         const aggregated = activeConcerns
           .filter(c => c.summaryContent)
           .map(c => `--- ${c.title} ---\n${c.summaryContent}`)
           .join('\n\n');
-        await this.upsertLegacySummary(userId, aggregated || lastSummary);
+        await this.upsertLegacySummary(userId, aggregated || newSummary);
       } catch {
-        await this.upsertLegacySummary(userId, lastSummary);
+        await this.upsertLegacySummary(userId, newSummary);
       }
+
+      logger.info({ userId, concernTitle: concern.title, concernId: concern.id }, 'Health summary updated');
     } catch (error) {
       // Fallback to legacy flow if concern tables don't exist yet
       const currentSummary = await this.getHealthSummary(userId);
