@@ -476,11 +476,22 @@ ${baseRules}`;
 
     try {
       // Use Sonnet for summaries (cost-effective for structured output)
+      const startTime = Date.now();
       const response = await this.client.messages.create({
         model: 'claude-sonnet-4-5-20250929',
         max_tokens: 1024,
         messages: [{ role: 'user', content: prompt }],
       });
+
+      // Log usage for cost tracking
+      logAIUsage({
+        userId: 'system-summary',
+        correlationId: `summary-${Date.now()}`,
+        model: response.model,
+        inputTokens: response.usage.input_tokens,
+        outputTokens: response.usage.output_tokens,
+        latencyMs: Date.now() - startTime,
+      }).catch(() => {}); // fire-and-forget, don't block summary
 
       const content = response.content
         .filter((block) => block.type === 'text')
@@ -557,11 +568,22 @@ ${conversationText}
 Topic name(s):`;
 
     try {
+      const startTime = Date.now();
       const response = await this.client.messages.create({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 100,
         messages: [{ role: 'user', content: prompt }],
       });
+
+      // Log usage for cost tracking
+      logAIUsage({
+        userId: 'system-concern-detect',
+        correlationId: `concern-${Date.now()}`,
+        model: response.model,
+        inputTokens: response.usage.input_tokens,
+        outputTokens: response.usage.output_tokens,
+        latencyMs: Date.now() - startTime,
+      }).catch(() => {});
 
       const content = response.content
         .filter(block => block.type === 'text')
@@ -650,11 +672,22 @@ Respond with ONLY a JSON object where keys are the exact topic names and values 
 Output ONLY valid JSON, no explanation.`;
 
     try {
+      const startTime = Date.now();
       const response = await this.client.messages.create({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 500,
         messages: [{ role: 'user', content: prompt }],
       });
+
+      // Log usage for cost tracking
+      logAIUsage({
+        userId: 'system-segmentation',
+        correlationId: `segment-${Date.now()}`,
+        model: response.model,
+        inputTokens: response.usage.input_tokens,
+        outputTokens: response.usage.output_tokens,
+        latencyMs: Date.now() - startTime,
+      }).catch(() => {});
 
       const content = response.content
         .filter(block => block.type === 'text')

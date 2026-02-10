@@ -165,15 +165,14 @@ export async function logAIUsage(usage: AIUsageLog): Promise<void> {
 
   const costPerInputToken = pricing!.input / 1_000_000;
   const costPerOutputToken = pricing!.output / 1_000_000;
-  const costCents = (
+  const costUsd =
     (usage.inputTokens * costPerInputToken) +
-    (usage.outputTokens * costPerOutputToken)
-  ) * 100;
+    (usage.outputTokens * costPerOutputToken);
 
   try {
     await db.query(
       `INSERT INTO ai_usage
-       (id, user_id, correlation_id, model, input_tokens, output_tokens, cost_cents, latency_ms)
+       (id, user_id, correlation_id, model, input_tokens, output_tokens, cost_usd, latency_ms)
        VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7)`,
       [
         usage.userId,
@@ -181,7 +180,7 @@ export async function logAIUsage(usage: AIUsageLog): Promise<void> {
         usage.model,
         usage.inputTokens,
         usage.outputTokens,
-        costCents,
+        costUsd,
         usage.latencyMs,
       ]
     );
