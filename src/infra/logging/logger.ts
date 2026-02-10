@@ -172,10 +172,10 @@ export async function logAIUsage(usage: AIUsageLog): Promise<void> {
   try {
     await db.query(
       `INSERT INTO ai_usage
-       (id, user_id, correlation_id, model, input_tokens, output_tokens, cost_usd, latency_ms)
-       VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7)`,
+       (user_id, correlation_id, model, input_tokens, output_tokens, cost_usd, latency_ms)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
       [
-        usage.userId,
+        usage.userId || null,
         usage.correlationId,
         usage.model,
         usage.inputTokens,

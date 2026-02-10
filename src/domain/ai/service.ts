@@ -485,7 +485,7 @@ ${baseRules}`;
 
       // Log usage for cost tracking
       logAIUsage({
-        userId: 'system-summary',
+        userId: '',
         correlationId: `summary-${Date.now()}`,
         model: response.model,
         inputTokens: response.usage.input_tokens,
@@ -577,7 +577,7 @@ Topic name(s):`;
 
       // Log usage for cost tracking
       logAIUsage({
-        userId: 'system-concern-detect',
+        userId: '',
         correlationId: `concern-${Date.now()}`,
         model: response.model,
         inputTokens: response.usage.input_tokens,
@@ -681,7 +681,7 @@ Output ONLY valid JSON, no explanation.`;
 
       // Log usage for cost tracking
       logAIUsage({
-        userId: 'system-segmentation',
+        userId: '',
         correlationId: `segment-${Date.now()}`,
         model: response.model,
         inputTokens: response.usage.input_tokens,
