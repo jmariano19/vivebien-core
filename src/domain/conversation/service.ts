@@ -926,7 +926,8 @@ French version:
 *Médicaments:* [meds]
 
 RULES:
-- ONLY use the 9 field labels listed above — never invent new fields like "Visual warning", "Triggers", "Associated symptoms", etc. If the info doesn't fit neatly into one field, fold it into the closest match (e.g., visual prodrome → Pattern, triggers → Worsens, associated symptoms → Concern description)
+- ONLY use the 9 field labels listed above — never invent new fields. Forbidden examples: "Associated:", "Associated symptoms:", "Triggers:", "Visual warning:", "Related concern:", "Impact:", "Notes:". If the info doesn't fit neatly into one field, fold it into the closest match (e.g., visual prodrome → Pattern, triggers → Worsens, associated symptoms → Concern description, light sensitivity → Worsens)
+- NEVER reference other health concerns inside a note. Each note is about ONE concern only. The system tracks multiple concerns separately — do not add "Related concern:" or mention other conditions at the bottom of a note
 - CRITICAL: You MUST use the field labels for the EXACT language of the conversation. Do NOT mix languages.
   - Portuguese ≠ Spanish: Use Queixa/Início/Localização/Caráter/Gravidade/Padrão/Melhora com/Piora com/Medicamentos
   - French ≠ Portuguese: Use Motif/Début/Localisation/Caractère/Sévérité/Schéma/Améliore/Aggrave/Médicaments — NOT Queixa/Início/Caráter/Padrão/Gravidade (those are PORTUGUESE)

@@ -296,8 +296,16 @@ async function _handleInboundMessage(
       );
       // Keep full result for updateHealthSummary (may contain multiple titles)
       allDetectedTitles = titleResult;
-      // Take the first title for WhatsApp display
-      detectedConcernTitle = titleResult.split('\n')[0]?.replace(/^[-•*\d.)\s]+/, '').trim() || null;
+      // For the header, prefer the NEW concern title (not an existing one)
+      // This way, if the user is discussing a headache and has an existing "Eye Swelling" concern,
+      // the header shows "Headache" instead of "Eye Swelling"
+      const parsedTitles = titleResult.split('\n')
+        .map(t => t.replace(/^[-•*\d.)\s]+/, '').trim())
+        .filter(t => t.length > 0);
+      const newConcernTitle = parsedTitles.find(
+        t => !existingTitles.some(e => e.toLowerCase() === t.toLowerCase())
+      );
+      detectedConcernTitle = newConcernTitle || parsedTitles[0] || null;
 
       logger.info({ userId: user.id, concernTitle: detectedConcernTitle, allTitles: allDetectedTitles }, 'Concern title(s) detected for summary');
     } catch (err) {
