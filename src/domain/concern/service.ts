@@ -78,9 +78,19 @@ export class ConcernService {
   }
 
   /**
-   * Get a single concern by ID
+   * Get a single concern by ID.
+   * Optional userId parameter enforces ownership validation when provided.
    */
-  async getConcernById(concernId: string): Promise<HealthConcern | null> {
+  async getConcernById(concernId: string, userId?: string): Promise<HealthConcern | null> {
+    const query = userId
+      ? `SELECT id, user_id, title, status, summary_content, icon, created_at, updated_at
+         FROM health_concerns
+         WHERE id = $1 AND user_id = $2`
+      : `SELECT id, user_id, title, status, summary_content, icon, created_at, updated_at
+         FROM health_concerns
+         WHERE id = $1`;
+    const params = userId ? [concernId, userId] : [concernId];
+
     const result = await this.db.query<{
       id: string;
       user_id: string;
@@ -90,12 +100,7 @@ export class ConcernService {
       icon: string | null;
       created_at: Date;
       updated_at: Date;
-    }>(
-      `SELECT id, user_id, title, status, summary_content, icon, created_at, updated_at
-       FROM health_concerns
-       WHERE id = $1`,
-      [concernId]
-    );
+    }>(query, params);
 
     const row = result.rows[0];
     return row ? this.mapRow(row) : null;
@@ -139,12 +144,14 @@ export class ConcernService {
       }
     }
 
-    // Step 3: Condition-symptom match — a symptom discussed in the context of a broader condition
-    // belongs to that condition (e.g., "Cough" belongs to "Flu")
+    // Step 3: Condition-symptom match — UNIDIRECTIONAL only
+    // If the NEW title is a symptom of an EXISTING condition, merge into the condition.
+    // e.g., user has "Flu" and mentions "Cough" → merge "Cough" into "Flu" ✓
+    // But NOT the reverse: user has "Headache" and mentions "Flu" → keep separate ✗
+    // This prevents unrelated concerns from being absorbed into each other.
     for (const concern of activeConcerns) {
       const existingTitle = concern.title.toLowerCase().trim();
-      if (this.isSymptomOfCondition(existingTitle, normalizedTitle) ||
-          this.isSymptomOfCondition(normalizedTitle, existingTitle)) {
+      if (this.isSymptomOfCondition(existingTitle, normalizedTitle)) {
         return concern;
       }
     }
@@ -189,32 +196,33 @@ export class ConcernService {
   }
 
   private areHealthSynonyms(a: string, b: string): boolean {
-    // Groups of words that refer to the same body system / condition
+    // Groups of words that are TRUE synonyms — different words for the SAME condition.
+    // NOT body parts (those are too broad — "eye stye" ≠ "eye pain").
+    // NOT symptoms that can have multiple causes (nausea, fever, cough are NOT synonyms of any body part).
     const synonymGroups = [
-      ['headache', 'headaches', 'migraine', 'migraines', 'head pain', 'dolor de cabeza', 'dolores de cabeza', 'migraña', 'migrañas', 'jaqueca', 'cefalea', 'dor de cabeça', 'enxaqueca', 'mal de tête', 'migraine', 'céphalée'],
-      ['back pain', 'backache', 'back ache', 'spine', 'lumbar', 'dolor de espalda', 'lumbago', 'dolor lumbar', 'dor nas costas', 'lombalgia', 'mal de dos'],
-      ['stomach', 'stomachache', 'belly', 'abdomen', 'abdominal', 'nausea', 'estómago', 'dolor de estómago', 'barriga', 'estômago', 'dor de estômago', 'mal au ventre'],
-      ['knee', 'rodilla', 'joelho', 'genou'],
-      ['shoulder', 'hombro', 'ombro', 'épaule'],
-      ['neck', 'cuello', 'pescoço', 'cou', 'cervical'],
+      ['headache', 'headaches', 'migraine', 'migraines', 'head pain', 'dolor de cabeza', 'dolores de cabeza', 'migraña', 'migrañas', 'jaqueca', 'cefalea', 'dor de cabeça', 'enxaqueca', 'mal de tête', 'céphalée'],
+      ['back pain', 'backache', 'back ache', 'dolor de espalda', 'lumbago', 'dolor lumbar', 'dor nas costas', 'lombalgia', 'mal de dos'],
+      ['stomach pain', 'stomachache', 'stomach ache', 'belly pain', 'abdominal pain', 'dolor de estómago', 'dolor abdominal', 'dor de estômago', 'mal au ventre'],
+      ['knee pain', 'knee injury', 'dolor de rodilla', 'lesión de rodilla', 'dor no joelho', 'douleur au genou'],
+      ['shoulder pain', 'dolor de hombro', 'dor no ombro', 'douleur à l\'épaule'],
+      ['neck pain', 'dolor de cuello', 'dor no pescoço', 'mal au cou', 'cervicalgia'],
       ['anxiety', 'anxious', 'ansiedad', 'ansioso', 'ansiedade', 'anxiété'],
-      ['insomnia', 'sleep', 'insomnio', 'sueño', 'dormir', 'insônia', 'sommeil'],
-      ['cough', 'tos', 'tosse', 'toux'],
-      ['flu', 'influenza', 'cold', 'gripe', 'resfriado', 'resfrío', 'grippe', 'rhume'],
-      ['fever', 'fiebre', 'febre', 'fièvre'],
-      ['chest', 'pecho', 'peito', 'poitrine'],
-      ['throat', 'sore throat', 'garganta', 'dolor de garganta', 'dor de garganta', 'mal de gorge'],
-      ['skin', 'rash', 'piel', 'sarpullido', 'erupción', 'pele', 'erupção', 'peau', 'éruption'],
-      ['eye', 'eyes', 'vision', 'ojo', 'ojos', 'olho', 'olhos', 'œil', 'yeux'],
-      ['ear', 'ears', 'oído', 'oreja', 'ouvido', 'oreille'],
+      ['insomnia', 'sleeplessness', 'insomnio', 'insônia', 'insomnie'],
+      ['flu', 'influenza', 'gripe', 'grippe'],
+      ['cold', 'common cold', 'resfriado', 'resfrío', 'rhume'],
+      ['sore throat', 'throat pain', 'dolor de garganta', 'dor de garganta', 'mal de gorge'],
+      ['eye stye', 'stye', 'sty', 'orzuelo', 'terçol', 'orgelet'],
+      ['rash', 'skin rash', 'sarpullido', 'erupción cutánea', 'erupção cutânea', 'éruption cutanée'],
     ];
 
     const aWords = a.split(/\s+/);
     const bWords = b.split(/\s+/);
 
     for (const group of synonymGroups) {
-      const aMatch = group.some(syn => a.includes(syn) || aWords.some(w => group.includes(w)));
-      const bMatch = group.some(syn => b.includes(syn) || bWords.some(w => group.includes(w)));
+      // Use full-phrase matching: check if the title contains a synonym phrase,
+      // or if ALL significant words of the title match words in the group
+      const aMatch = group.some(syn => a.includes(syn)) || aWords.every(w => w.length > 2 && group.some(syn => syn.includes(w)));
+      const bMatch = group.some(syn => b.includes(syn)) || bWords.every(w => w.length > 2 && group.some(syn => syn.includes(w)));
       if (aMatch && bMatch) return true;
     }
     return false;

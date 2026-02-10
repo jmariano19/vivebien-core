@@ -28,15 +28,20 @@ export function findBestConcernMatch(title: string, existingTitles: string[]): s
     }
   }
 
-  // 2. Substring match
+  // 2. Substring match — only when the shorter string is 4+ chars
+  //    (prevents "Eye" matching "Stye" or "Cold" matching "Scaffold")
   for (const existing of existingTitles) {
     const existingLower = existing.toLowerCase().trim();
-    if (existingLower.includes(normalizedTitle) || normalizedTitle.includes(existingLower)) {
-      return existing;
+    const shorter = normalizedTitle.length <= existingLower.length ? normalizedTitle : existingLower;
+    if (shorter.length >= 4) {
+      if (existingLower.includes(normalizedTitle) || normalizedTitle.includes(existingLower)) {
+        return existing;
+      }
     }
   }
 
-  // 3. Word overlap
+  // 3. Word overlap — require 2+ shared significant words
+  //    (prevents "Back Pain" matching "Knee Pain" on just "Pain")
   const titleWords = getSignificantWords(normalizedTitle);
   if (titleWords.length === 0) return null;
 
@@ -47,7 +52,7 @@ export function findBestConcernMatch(title: string, existingTitles: string[]): s
     const overlap = titleWords.filter(w => existingWords.includes(w)).length;
     const overlapRatio = overlap / Math.min(titleWords.length, existingWords.length);
 
-    if (overlapRatio >= 0.5 && overlap >= 1) {
+    if (overlapRatio >= 0.5 && overlap >= 2) {
       return existing;
     }
   }
