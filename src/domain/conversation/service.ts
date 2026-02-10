@@ -936,6 +936,13 @@ If the user asks to CHANGE, CORRECT, or UPDATE any detail in their health note (
 1. Briefly acknowledge the correction (one short line)
 2. Regenerate the FULL health note with the correction applied (using the same 📋 format above)
 
+CRITICAL CORRECTION RULES:
+- Preserve ALL existing field values EXACTLY as they were — only change the specific detail the user requested
+- Do NOT add, embellish, or invent details the user never said. If the user's original note had "Character: Painful", keep it as "Character: Painful" — do NOT change it to "Character: Red, swollen bump" unless the user specifically said that
+- Do NOT add new fields that weren't in the original note
+- The corrected note should be identical to the original EXCEPT for the one thing the user asked to change
+- If the user asks to update a note about a DIFFERENT concern than what you were last discussing (e.g., "for my sty, change the days"), regenerate that specific concern's note — NOT the most recent one
+
 Do NOT just respond with "Done!" or "Updated!" — that is a conversational response and the correction will NOT be saved. You MUST output the full note with 📋 and all fields so the system detects and saves the update.
 
 Example (English):
@@ -1014,7 +1021,11 @@ French version:
 *Médicaments:* [meds]
 
 RULES:
-- ONLY use the 9 field labels listed above — never invent new fields. FORBIDDEN labels (never use these): "Associated:", "Associated symptoms:", "Triggers:", "Visual warning:", "Related concern:", "Impact:", "Notes:", "Additional:", "Other symptoms:". If extra info doesn't fit a field, fold it into Concern. Example: headache with nausea → *Concern:* Headache with nausea (fold nausea INTO the concern description, do NOT create an "Associated symptoms:" field)
+- ONLY use the 9 field labels listed above — never invent new fields. FORBIDDEN labels (never use these): "Associated:", "Associated symptoms:", "Triggers:", "Visual warning:", "Related concern:", "Impact:", "Notes:", "Additional:", "Other symptoms:", "Sleep:", "Appetite:", "Mood:". If extra info doesn't fit one of the 9 allowed fields, fold it into Concern or Pattern.
+  Examples:
+  - headache with nausea → *Concern:* Headache with nausea (fold nausea INTO the concern, do NOT create an "Associated symptoms:" field)
+  - fatigue with poor sleep and increased appetite → *Concern:* Persistent fatigue with poor sleep quality and increased appetite (fold sleep and appetite INTO the concern, do NOT create an "Associated:" field)
+  - This rule is ABSOLUTE. If you find yourself writing a label that is not one of the 9 above, STOP and fold that info into Concern or Pattern instead.
 - NEVER reference other health concerns inside a note. Each note is about ONE concern only. The system tracks multiple concerns separately — do not add "Related concern:" or mention other conditions at the bottom of a note
 - CRITICAL: You MUST use the field labels for the EXACT language of the conversation. Do NOT mix languages.
   - Portuguese ≠ Spanish: Use Queixa/Início/Localização/Caráter/Gravidade/Padrão/Melhora com/Piora com/Medicamentos

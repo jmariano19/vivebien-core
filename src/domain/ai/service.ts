@@ -206,6 +206,39 @@ export class AIService {
   }
 
   /**
+   * Extract the concern topic from a health note's Concern/Motivo/Queixa field.
+   * More reliable than detectConcernTitle for corrections, because it reads
+   * what the AI actually wrote rather than guessing from conversation history.
+   * Returns a short title (2-5 words) or null if not found.
+   */
+  extractConcernFromNote(content: string): string | null {
+    // Match the Concern/Motivo/Queixa/Motif field in the note
+    const concernMatch = content.match(
+      /\*?(?:Concern|Motivo|Queixa|Motif)\*?:\s*\*?\s*(.+)/i
+    );
+    if (!concernMatch || !concernMatch[1]) return null;
+
+    // Clean up: remove trailing asterisks, markdown, take first sentence
+    let raw = concernMatch[1]
+      .replace(/\*+/g, '')
+      .split(/[.;,–—]/)[0]!  // Take first phrase before punctuation
+      .trim();
+
+    // Shorten to ~5 words for a clean title
+    const words = raw.split(/\s+/);
+    if (words.length > 5) {
+      raw = words.slice(0, 5).join(' ');
+    }
+
+    // Capitalize first letter of each word
+    const title = raw.split(' ')
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(' ');
+
+    return title.length >= 2 && title.length <= 60 ? title : null;
+  }
+
+  /**
    * Check if the response looks like a summary
    */
   looksLikeSummary(content: string): boolean {

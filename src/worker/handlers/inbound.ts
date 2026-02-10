@@ -281,29 +281,36 @@ async function _handleInboundMessage(
   const summaryParts = isSummary ? aiService.splitSummaryResponse(cleanedResponse) : null;
 
   // Step 8.7: If this is a summary, detect the concern title BEFORE delivery
-  // so we can show the user which concern it's filed under
+  // so we can show the user which concern it's filed under.
+  //
+  // Strategy: FIRST try extracting from the note's Concern/Motivo field (most accurate,
+  // especially for corrections where the AI knows exactly which concern it's updating).
+  // FALL BACK to detectConcernTitle (Haiku) only if extraction fails.
   let detectedConcernTitle: string | null = null;
   if (isSummary) {
     try {
-      const concernService = new ConcernService(db);
-      const existingConcerns = await concernService.getActiveConcerns(user.id);
-      const existingTitles = existingConcerns.map(c => c.title);
+      // Primary: extract concern from the note content itself
+      detectedConcernTitle = aiService.extractConcernFromNote(cleanedResponse);
 
-      const titleResult = await aiService.detectConcernTitle(
-        messages,
-        user.language,
-        existingTitles
-      );
-      // Pick the primary concern title for the header.
-      // Prefer a NEW concern title over an existing one so the header reflects
-      // what the user is currently discussing (not a previous concern).
-      const parsedTitles = titleResult.split('\n')
-        .map(t => t.replace(/^[-•*\d.)\s]+/, '').trim())
-        .filter(t => t.length > 0);
-      const newConcernTitle = parsedTitles.find(
-        t => !findBestConcernMatch(t, existingTitles)
-      );
-      detectedConcernTitle = newConcernTitle || parsedTitles[0] || null;
+      // Fallback: use Haiku-based detection if extraction didn't work
+      if (!detectedConcernTitle) {
+        const concernService = new ConcernService(db);
+        const existingConcerns = await concernService.getActiveConcerns(user.id);
+        const existingTitles = existingConcerns.map(c => c.title);
+
+        const titleResult = await aiService.detectConcernTitle(
+          messages,
+          user.language,
+          existingTitles
+        );
+        const parsedTitles = titleResult.split('\n')
+          .map(t => t.replace(/^[-•*\d.)\s]+/, '').trim())
+          .filter(t => t.length > 0);
+        const newConcernTitle = parsedTitles.find(
+          t => !findBestConcernMatch(t, existingTitles)
+        );
+        detectedConcernTitle = newConcernTitle || parsedTitles[0] || null;
+      }
 
       logger.info({ userId: user.id, concernTitle: detectedConcernTitle }, 'Concern title detected for summary');
     } catch (err) {
