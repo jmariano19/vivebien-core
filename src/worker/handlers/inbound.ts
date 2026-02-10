@@ -15,6 +15,7 @@ import { detectLanguage, extractUserName, extractNameFromAIResponse } from '../.
 import { detectConcernCommand, getCommandConfirmationMessage, getCommandErrorMessage } from '../../shared/concern-commands';
 import { ConcernCommandExecutor } from '../../domain/concern/command-executor';
 import { ConcernService } from '../../domain/concern/service';
+import { findBestConcernMatch } from '../../shared/matching';
 
 const userService = new UserService(db);
 const creditService = new CreditService(db);
@@ -299,11 +300,12 @@ async function _handleInboundMessage(
       // For the header, prefer the NEW concern title (not an existing one)
       // This way, if the user is discussing a headache and has an existing "Eye Swelling" concern,
       // the header shows "Headache" instead of "Eye Swelling"
+      // Uses findBestConcernMatch for consistent fuzzy matching (exact, substring, word overlap)
       const parsedTitles = titleResult.split('\n')
         .map(t => t.replace(/^[-•*\d.)\s]+/, '').trim())
         .filter(t => t.length > 0);
       const newConcernTitle = parsedTitles.find(
-        t => !existingTitles.some(e => e.toLowerCase() === t.toLowerCase())
+        t => !findBestConcernMatch(t, existingTitles)
       );
       detectedConcernTitle = newConcernTitle || parsedTitles[0] || null;
 

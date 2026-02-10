@@ -7,6 +7,7 @@ import {
 } from '../../shared/types';
 import { getActivePrompt, getConfigTemplate, getFeatureFlag } from '../../infra/db/client';
 import { ConcernService } from '../concern/service';
+import { findBestConcernMatch } from '../../shared/matching';
 import { logger } from '../../infra/logging/logger';
 
 export class ConversationService {
@@ -84,9 +85,54 @@ export class ConversationService {
     }));
   }
 
+  /**
+   * Get messages from the current conversation session only.
+   * A "session" ends when there's a gap of more than `sessionGapHours` between messages.
+   * This prevents old, unrelated conversations from polluting the current context
+   * (e.g., headache messages from Monday leaking into a stomach pain conversation on Friday).
+   */
+  async getSessionMessages(userId: string, limit: number = 10, sessionGapHours: number = 4): Promise<Message[]> {
+    const result = await this.db.query<{
+      role: 'user' | 'assistant';
+      content: string;
+      created_at: Date;
+    }>(
+      `SELECT role, content, created_at
+       FROM messages
+       WHERE user_id = $1
+       ORDER BY created_at DESC
+       LIMIT $2`,
+      [userId, limit]
+    );
+
+    if (result.rows.length === 0) return [];
+
+    // Walk from newest to oldest — find where the session gap is
+    const gapMs = sessionGapHours * 60 * 60 * 1000;
+    let cutoffIndex = result.rows.length; // default: include all
+
+    for (let i = 0; i < result.rows.length - 1; i++) {
+      const newer = result.rows[i]!.created_at.getTime();
+      const older = result.rows[i + 1]!.created_at.getTime();
+      if (newer - older > gapMs) {
+        cutoffIndex = i + 1; // include up to index i (the newer side of the gap)
+        break;
+      }
+    }
+
+    // Take only messages from the current session, return in chronological order
+    const sessionRows = result.rows.slice(0, cutoffIndex);
+    return sessionRows.reverse().map((row) => ({
+      role: row.role,
+      content: row.content,
+      timestamp: row.created_at,
+    }));
+  }
+
   async buildMessages(context: ConversationContext, newMessage: string): Promise<Message[]> {
-    // Load recent conversation history
-    const recentMessages = await this.getRecentMessages(context.userId, 10);
+    // Load conversation history scoped to the current session (4h gap = new session)
+    // This prevents old, unrelated conversations from polluting the AI context
+    const recentMessages = await this.getSessionMessages(context.userId, 10);
 
     // Load active health concerns for context (multi-concern aware)
     const concernService = new ConcernService(this.db);
@@ -177,6 +223,33 @@ export class ConversationService {
     },
     preDetectedTitle?: string
   ): Promise<void> {
+    // Acquire a per-user advisory lock to prevent concurrent summary updates.
+    // If two messages arrive close together, the second waits until the first finishes,
+    // preventing stale overwrites and duplicate concern creation.
+    const lockClient = await this.db.connect();
+    try {
+      await lockClient.query(`SELECT pg_advisory_lock(hashtext($1))`, [userId]);
+      logger.info({ userId }, 'Advisory lock acquired for summary update');
+
+      await this._updateHealthSummaryInner(userId, userMessage, assistantResponse, aiService, preDetectedTitle);
+    } finally {
+      await lockClient.query(`SELECT pg_advisory_unlock(hashtext($1))`, [userId]).catch(() => {});
+      lockClient.release();
+      logger.info({ userId }, 'Advisory lock released for summary update');
+    }
+  }
+
+  private async _updateHealthSummaryInner(
+    userId: string,
+    userMessage: string,
+    assistantResponse: string,
+    aiService: {
+      generateSummary: (messages: Message[], currentSummary: string | null, language?: string, focusTopic?: string, otherTopics?: string[]) => Promise<string>;
+      detectConcernTitle: (messages: Message[], language?: string, existingConcernTitles?: string[]) => Promise<string>;
+      segmentMessagesByTopic: (messages: Message[], topicTitles: string[], language?: string) => Promise<Record<string, Message[]>>;
+    },
+    preDetectedTitle?: string
+  ): Promise<void> {
     const concernService = new ConcernService(this.db);
 
     // Get user language
@@ -190,8 +263,8 @@ export class ConversationService {
     const existingConcerns = await concernService.getActiveConcerns(userId);
     const existingTitles = existingConcerns.map(c => c.title);
 
-    // Get recent messages for context
-    const recentMessages = await this.getRecentMessages(userId, 20);
+    // Get messages from the current session only (prevents cross-session contamination)
+    const recentMessages = await this.getSessionMessages(userId, 20);
 
     // Add the new exchange
     const allMessages = [
@@ -218,16 +291,12 @@ export class ConversationService {
       const titles = uniqueTitles.length > 0 ? uniqueTitles : [titleResult.trim()];
 
       // Step 1b: Filter titles — skip existing concerns that already have summaries.
-      // This prevents cross-contamination when conversation history spans multiple topics
-      // (e.g., headache data leaking into an eye stye summary that was already correct,
-      // or eye stye data leaking into a new headache summary via bad segmentation).
+      // Uses findBestConcernMatch for consistent fuzzy matching across the system
+      // (exact, substring, and word overlap — same logic used in getOrCreateConcern).
       const existingWithSummary = existingConcerns.filter(c => c.summaryContent);
+      const existingWithSummaryTitles = existingWithSummary.map(c => c.title);
       const isExistingWithSummary = (title: string): boolean => {
-        const lower = title.toLowerCase();
-        return existingWithSummary.some(c => {
-          const el = c.title.toLowerCase();
-          return el === lower || el.includes(lower) || lower.includes(el);
-        });
+        return !!findBestConcernMatch(title, existingWithSummaryTitles);
       };
 
       const newTitles = titles.filter(t => !isExistingWithSummary(t));
