@@ -186,8 +186,13 @@ export class AIService {
     const containment = this.getContainmentText(language);
     const link = this.getSummaryLinkText(language, userId);
 
+    let cleanSummary = summary;
     let header = '';
     if (concernTitle) {
+      // Strip AI-generated note header (📋 *Your Health Note* or similar) to prevent
+      // duplication with the system-generated header that includes the concern title
+      cleanSummary = cleanSummary.replace(/^📋[^\n]*\n+/, '');
+
       const headerTemplates: Record<string, string> = {
         es: `📋 *Tu Nota de Salud — ${concernTitle}*`,
         en: `📋 *Your Health Note — ${concernTitle}*`,
@@ -197,7 +202,7 @@ export class AIService {
       header = (headerTemplates[language] || headerTemplates.en!) + '\n\n';
     }
 
-    return `${header}${summary}\n\n${containment}\n\n${link}`;
+    return `${header}${cleanSummary}\n\n${containment}\n\n${link}`;
   }
 
   /**
@@ -536,10 +541,11 @@ ${baseRules}`;
     const prompt = `What health topic(s) are being discussed in this conversation? Return the topic name(s) (2-5 words each, in ${langName}).
 ${existingContext}
 RULES:
+- PRESERVE the user's own words for conditions they named. If the user says "stye" → "Eye Stye" (NOT "Skin Rash"). If the user says "migraine" → "Migraines" (NOT "Headaches"). If they say "acid reflux" → "Acid Reflux" (NOT "Stomach Pain"). The title MUST be recognizable to the user.
 - Use SIMPLE, STABLE names — the kind a patient would use (e.g., "Stomach Pain", "Knee Injury", "Headaches")
 - Do NOT use clinical terms. "Headaches" stays "Headaches" — NOT "Migraines With Aura"
 - Do NOT return generic names like "Health concern" or "Multiple symptoms" — always be SPECIFIC
-- Focus on the BODY PART or BASIC SYMPTOM, not the specific sub-type
+- Prefer SPECIFIC over BROAD: "Eye Stye" > "Eye Problem" > "Skin Rash". Use the most specific name the user's description supports.
 
 WHEN TO SPLIT into multiple concerns (one per line):
 - Different body parts: stomach pain + knee injury = 2 concerns
@@ -559,8 +565,12 @@ Dizziness
 - "I have the flu with cough and fever" → ONE concern: Flu
 - "back pain and also a rash on my arm" → TWO concerns:
 Back Pain
-Skin Rash
+Arm Rash
+- "I have a stye in my left eye" → ONE concern: Eye Stye
 - "headaches and dizziness that come together" → ONE concern: Headaches And Dizziness
+- "acid reflux and knee pain" → TWO concerns:
+Acid Reflux
+Knee Pain
 
 CONVERSATION:
 ${conversationText}
