@@ -775,6 +775,7 @@
     let pollInterval = null;
     let userLang = 'es';
     let expandedConcernId = null;
+    let userHasToggledCards = false; // tracks if user has interacted with expand/collapse
     let openMenuId = null;
     let pendingDeleteConcernId = null;
     let allConcerns = []; // store for delete operations
@@ -1044,8 +1045,18 @@
       activeConcerns.sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
 
       activeConcerns.forEach((concern, index) => {
-        const isFirst = index === 0; // most recent is expanded
-        const card = createConcernCard(concern, index, false, isFirst);
+        // Preserve user's expand/collapse state across auto-refreshes
+        const cardId = `concern-${concern.id}`;
+        let isExpanded;
+        if (userHasToggledCards) {
+          // User has interacted — respect their choice (even if all are collapsed)
+          isExpanded = (expandedConcernId === cardId);
+        } else {
+          // First load: expand the most recent card
+          isExpanded = (index === 0);
+          if (isExpanded) expandedConcernId = cardId;
+        }
+        const card = createConcernCard(concern, index, false, isExpanded);
         document.getElementById('concernsContainer').appendChild(card);
       });
 
@@ -1201,6 +1212,8 @@
     function toggleExpanded(cardId) {
       const card = document.getElementById(cardId);
       if (!card) return;
+
+      userHasToggledCards = true; // user has interacted
 
       if (card.classList.contains('expanded')) {
         card.classList.remove('expanded');

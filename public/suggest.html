@@ -342,6 +342,63 @@
       font-style: italic;
     }
 
+    /* Additional notes - multiple fields */
+    .notes-container {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .note-entry {
+      position: relative;
+    }
+    .note-entry .field-input {
+      padding-right: 36px;
+    }
+    .remove-note-btn {
+      position: absolute;
+      top: 8px;
+      right: 4px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(0,0,0,0.08);
+      color: var(--muted);
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+    .remove-note-btn:hover {
+      background: rgba(0,0,0,0.15);
+      color: var(--text);
+    }
+    .add-note-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: none;
+      background: var(--btn-color);
+      color: white;
+      font-size: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      flex-shrink: 0;
+      margin-left: auto;
+    }
+    .add-note-btn:hover {
+      opacity: 0.9;
+      transform: scale(1.05);
+    }
+    .add-note-btn:active {
+      transform: scale(0.95);
+    }
+
     /* Footer */
     .footer-actions {
       position: fixed;
@@ -589,6 +646,7 @@
     let originalData = {};
     let hasChanges = false;
     let medications = [];
+    let noteEntries = []; // Multiple notes support
     let concernMeta = { title: '', status: '' }; // For header badge
     let selectedStatus = null; // Track status changes
 
@@ -774,13 +832,22 @@
         medications = [];
       }
 
+      // Initialize note entries from existing notes (split by | separator)
+      if (data.notes) {
+        noteEntries = data.notes.split('|').map(n => n.trim()).filter(n => n);
+        if (noteEntries.length === 0) noteEntries = [''];
+      } else {
+        noteEntries = [''];
+      }
+
       const fieldKeys = ['mainConcern', 'onset', 'location', 'character', 'severity', 'pattern', 'symptoms', 'whatHelps', 'whatWorsens', 'medications', 'notes'];
 
       let fieldsHtml = fieldKeys.map(key => {
         const field = t.fields[key];
         const value = data[key] || '';
-        const isMultiLine = ['symptoms', 'notes'].includes(key);
+        const isMultiLine = ['symptoms'].includes(key);
         const isMedications = key === 'medications';
+        const isNotes = key === 'notes';
 
         if (isMedications) {
           return `
@@ -804,6 +871,23 @@
                     />
                     <button type="button" class="add-med-btn" id="add-med-btn">+</button>
                   </div>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+
+        if (isNotes) {
+          return `
+            <div class="field">
+              <label class="field-label">
+                <span class="icon">${field.icon}</span>
+                ${field.label}
+                <span class="change-dot" id="dot-${key}"></span>
+                <button type="button" class="add-note-btn" id="add-note-btn" title="+">+</button>
+              </label>
+              <div class="field-container">
+                <div class="notes-container" id="notes-container">
                 </div>
               </div>
             </div>
@@ -879,6 +963,8 @@
 
       renderMedicationChips();
       setupMedicationHandlers();
+      renderNoteEntries();
+      setupNoteHandlers();
       setupFieldListeners(fieldKeys);
       setupStatusSelector();
     }
@@ -940,6 +1026,88 @@
       setupRemoveHandlers();
     }
 
+    function renderNoteEntries() {
+      const t = translations[lang] || translations.es;
+      const container = document.getElementById('notes-container');
+      if (!container) return;
+
+      container.innerHTML = noteEntries.map((note, idx) => `
+        <div class="note-entry">
+          <textarea
+            class="field-input multi-line note-input"
+            data-note-idx="${idx}"
+            placeholder="${t.fields.notes.placeholder}"
+            rows="3"
+          >${escapeHtml(note)}</textarea>
+          ${noteEntries.length > 1 ? `<button type="button" class="remove-note-btn" data-note-idx="${idx}">&times;</button>` : ''}
+        </div>
+      `).join('');
+
+      // Check for changes
+      const originalNotes = originalData.notes || '';
+      const currentNotes = noteEntries.filter(n => n.trim()).join(' | ');
+      const dot = document.getElementById('dot-notes');
+      if (dot) {
+        if (currentNotes !== originalNotes) {
+          dot.classList.add('show');
+          hasChanges = true;
+        } else {
+          dot.classList.remove('show');
+        }
+      }
+    }
+
+    function setupNoteHandlers() {
+      const addBtn = document.getElementById('add-note-btn');
+      if (addBtn) {
+        addBtn.addEventListener('click', () => {
+          noteEntries.push('');
+          renderNoteEntries();
+          setupNoteInputListeners();
+          setupNoteRemoveHandlers();
+          // Focus the new field
+          const inputs = document.querySelectorAll('.note-input');
+          if (inputs.length > 0) inputs[inputs.length - 1].focus();
+        });
+      }
+      setupNoteInputListeners();
+      setupNoteRemoveHandlers();
+    }
+
+    function setupNoteInputListeners() {
+      document.querySelectorAll('.note-input').forEach(input => {
+        input.addEventListener('input', () => {
+          const idx = parseInt(input.dataset.noteIdx);
+          noteEntries[idx] = input.value;
+          // Update change dot
+          const originalNotes = originalData.notes || '';
+          const currentNotes = noteEntries.filter(n => n.trim()).join(' | ');
+          const dot = document.getElementById('dot-notes');
+          if (dot) {
+            if (currentNotes !== originalNotes) {
+              dot.classList.add('show');
+              hasChanges = true;
+            } else {
+              dot.classList.remove('show');
+            }
+          }
+        });
+      });
+    }
+
+    function setupNoteRemoveHandlers() {
+      document.querySelectorAll('.remove-note-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const idx = parseInt(btn.dataset.noteIdx);
+          noteEntries.splice(idx, 1);
+          if (noteEntries.length === 0) noteEntries = [''];
+          renderNoteEntries();
+          setupNoteInputListeners();
+          setupNoteRemoveHandlers();
+        });
+      });
+    }
+
     function setupStatusSelector() {
       const container = document.getElementById('statusOptions');
       if (!container) return;
@@ -997,7 +1165,7 @@
       const t = translations[lang] || translations.es;
 
       fieldKeys.forEach(key => {
-        if (key === 'medications') return;
+        if (key === 'medications' || key === 'notes') return;
         const input = document.getElementById(`field-${key}`);
         const dot = document.getElementById(`dot-${key}`);
         if (!input) return;
@@ -1035,6 +1203,8 @@
         fieldKeys.forEach(key => {
           if (key === 'medications') {
             newData[key] = medications.join(', ');
+          } else if (key === 'notes') {
+            newData[key] = noteEntries.filter(n => n.trim()).join(' | ');
           } else {
             const input = document.getElementById(`field-${key}`);
             newData[key] = input.value.trim();
