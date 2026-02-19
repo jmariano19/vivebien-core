@@ -14,8 +14,6 @@ import { processCheckinResponse } from './checkin';
 import { detectLanguage, extractUserName, extractNameFromAIResponse } from '../../shared/language';
 import { detectConcernCommand, getCommandConfirmationMessage, getCommandErrorMessage } from '../../shared/concern-commands';
 import { ConcernCommandExecutor } from '../../domain/concern/command-executor';
-import { ConcernService } from '../../domain/concern/service';
-import { findBestConcernMatch } from '../../shared/matching';
 
 const userService = new UserService(db);
 const creditService = new CreditService(db);
@@ -276,69 +274,10 @@ async function _handleInboundMessage(
   // Step 8: Post-process response (basic cleaning)
   const cleanedResponse = aiService.postProcess(aiResponse.content);
 
-  // Step 8.5: Determine delivery strategy — split summary into separate messages
-  const isSummary = aiService.looksLikeSummary(cleanedResponse);
-  const summaryParts = isSummary ? aiService.splitSummaryResponse(cleanedResponse) : null;
-
-  // Step 8.7: If this is a summary, detect the concern title BEFORE delivery
-  // so we can show the user which concern it's filed under.
-  //
-  // Strategy: FIRST try extracting from the note's Concern/Motivo field (most accurate,
-  // especially for corrections where the AI knows exactly which concern it's updating).
-  // FALL BACK to detectConcernTitle (Haiku) only if extraction fails.
-  let detectedConcernTitle: string | null = null;
-  if (isSummary) {
-    try {
-      // Primary: extract concern from the note content itself
-      detectedConcernTitle = aiService.extractConcernFromNote(cleanedResponse);
-
-      // Fallback: use Haiku-based detection if extraction didn't work
-      if (!detectedConcernTitle) {
-        const concernService = new ConcernService(db);
-        const existingConcerns = await concernService.getActiveConcerns(user.id);
-        const existingTitles = existingConcerns.map(c => c.title);
-
-        const titleResult = await aiService.detectConcernTitle(
-          messages,
-          user.language,
-          existingTitles
-        );
-        const parsedTitles = titleResult.split('\n')
-          .map(t => t.replace(/^[-•*\d.)\s]+/, '').trim())
-          .filter(t => t.length > 0);
-        const newConcernTitle = parsedTitles.find(
-          t => !findBestConcernMatch(t, existingTitles)
-        );
-        detectedConcernTitle = newConcernTitle || parsedTitles[0] || null;
-      }
-
-      logger.info({ userId: user.id, concernTitle: detectedConcernTitle }, 'Concern title detected for summary');
-    } catch (err) {
-      logger.warn({ err, userId: user.id }, 'Failed to detect concern title for display — continuing without it');
-    }
-  }
-
-  // Build the full response for history (includes containment + link if summary)
-  let responseForHistory: string;
-  if (isSummary) {
-    const summaryContent = summaryParts ? summaryParts.summary : cleanedResponse;
-    const summaryMsg = aiService.buildSummaryMessage(summaryContent, user.id, user.language || 'en', detectedConcernTitle);
-    responseForHistory = summaryParts
-      ? summaryParts.acknowledgment + '\n\n' + summaryMsg
-      : summaryMsg;
-  } else {
-    responseForHistory = cleanedResponse;
-  }
-
-  // Step 9: Extract and save user name if provided (works during onboarding or active phase)
-  // Two extraction strategies:
-  //   A) Primary: Check if AI asked for name + user responded with a name
-  //   B) Backup: Parse the AI's response for name acknowledgments (e.g. "Gracias, Elias")
+  // Step 9: Extract and save user name if provided naturally in conversation
   if (!user.name) {
     const recentMessages = await conversationService.getRecentMessages(user.id, 5);
     const extractedName = extractUserName(processedMessage, recentMessages);
-
-    // Backup: if primary extraction didn't find a name, check the AI's response
     const finalName = extractedName || extractNameFromAIResponse(cleanedResponse);
 
     if (finalName) {
@@ -349,11 +288,7 @@ async function _handleInboundMessage(
         logger
       );
       user.name = finalName;
-      logger.info({
-        userId: user.id,
-        name: finalName,
-        source: extractedName ? 'user_message' : 'ai_response',
-      }, 'User name extracted and saved');
+      logger.info({ userId: user.id, name: finalName }, 'User name extracted and saved');
     }
   }
 
@@ -363,7 +298,7 @@ async function _handleInboundMessage(
     'save_messages',
     async () => conversationService.saveMessages(user.id, conversationId, [
       { role: 'user', content: processedMessage },
-      { role: 'assistant', content: responseForHistory },
+      { role: 'assistant', content: cleanedResponse },
     ]),
     logger
   );
@@ -378,39 +313,14 @@ async function _handleInboundMessage(
     );
   }
 
-  // Step 12: Send response via Chatwoot
-  // If summary was split: Message 1 = ack (immediate), Message 2 = note (10s), Message 3 = name (5s)
-  if (summaryParts) {
-    // Message 1: Conversational acknowledgment (immediate)
-    await logExecution(
-      correlationId,
-      'send_ack',
-      async () => chatwootClient.sendMessage(conversationId, summaryParts.acknowledgment),
-      logger
-    );
-    markResponseSent();
-
-    // 10 second delay — feels like CareLog is organizing the note
-    await new Promise(resolve => setTimeout(resolve, 10000));
-
-    // Message 2: Health note + containment + link (with concern title for visibility)
-    const summaryMsg = aiService.buildSummaryMessage(summaryParts.summary, user.id, user.language || 'en', detectedConcernTitle);
-    await logExecution(
-      correlationId,
-      'send_summary',
-      async () => chatwootClient.sendMessage(conversationId, summaryMsg),
-      logger
-    );
-  } else {
-    // Single message (non-summary, or summary that couldn't be split)
-    await logExecution(
-      correlationId,
-      'send_response',
-      async () => chatwootClient.sendMessage(conversationId, responseForHistory),
-      logger
-    );
-    markResponseSent();
-  }
+  // Step 12: Send response via Chatwoot — single natural message, no splits
+  await logExecution(
+    correlationId,
+    'send_response',
+    async () => chatwootClient.sendMessage(conversationId, cleanedResponse),
+    logger
+  );
+  markResponseSent();
 
   // Step 13: Update conversation state
   await logExecution(
@@ -420,69 +330,8 @@ async function _handleInboundMessage(
     logger
   );
 
-  // Step 14: Update health summary (async, non-blocking for response)
-  // Only create/update concerns when a health note is generated (isSummary).
-  // This prevents fragmented concerns from being created mid-conversation
-  // before the AI has the full clinical picture.
-  if (isSummary) {
-    logExecution(
-      correlationId,
-      'update_summary',
-      async () => conversationService.updateHealthSummary(
-        user.id,
-        processedMessage,
-        responseForHistory,
-        aiService,
-        detectedConcernTitle || undefined
-      ),
-      logger
-    ).catch((err) => {
-      logger.error(
-        { err, userId: user.id, correlationId },
-        'Failed to update health summary - data may be inconsistent'
-      );
-    });
-  } else {
-    logger.info({ userId: user.id, messageCount: context.messageCount }, 'Conversation ongoing — waiting for summary to create/update concerns');
-  }
-
-  // Step 15: Schedule 24h check-in if this is a summary handoff message
-  if (isSummary) {
-    try {
-      const caseLabel = checkinSvc.extractCaseLabel(responseForHistory, user.language);
-
-      await checkinSvc.scheduleCheckin(user.id, conversationId, caseLabel || undefined);
-      logger.info({ userId: user.id, caseLabel }, '24h check-in scheduled after summary');
-    } catch (err) {
-      logger.error({ err, userId: user.id }, 'Failed to schedule check-in');
-      // Non-blocking - don't fail the message processing
-    }
-  }
-
   // Update last bot message timestamp
   await checkinSvc.updateLastBotMessageAt(user.id);
-
-  // Step 16: Send name ask as separate message after delay
-  // Only after a summary is delivered AND user doesn't have a name yet
-  if (isSummary && !user.name) {
-    await new Promise(resolve => setTimeout(resolve, 5000)); // 5 second delay after note
-
-    const nameAsk = aiService.getNameAskMessage(user.language || 'en');
-    await logExecution(
-      correlationId,
-      'send_name_ask',
-      async () => chatwootClient.sendMessage(conversationId, nameAsk),
-      logger
-    );
-
-    // Save name ask to message history so extractUserName can detect it
-    await conversationService.saveMessages(user.id, conversationId, [
-      { role: 'assistant', content: nameAsk },
-    ]);
-    await checkinSvc.updateLastBotMessageAt(user.id);
-
-    logger.info({ userId: user.id }, 'Sent delayed name ask after summary');
-  }
 
   return {
     status: 'completed',
