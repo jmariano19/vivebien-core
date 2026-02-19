@@ -4,7 +4,6 @@ import { authMiddleware } from '../middleware/auth';
 import { UserService } from '../../domain/user/service';
 import { ConversationService } from '../../domain/conversation/service';
 import { AIService } from '../../domain/ai/service';
-import { ConcernService } from '../../domain/concern/service';
 import { detectLanguage, extractUserName, extractNameFromAIResponse } from '../../shared/language';
 
 const TEST_CONVERSATION_ID = 99999;
@@ -19,8 +18,6 @@ export const testRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
     const userService = new UserService(db);
     const conversationService = new ConversationService(db);
     const aiService = new AIService();
-    const concernService = new ConcernService(db);
-
     // Load or create user
     const user = await userService.loadOrCreate(phone);
 
@@ -60,36 +57,14 @@ export const testRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
     // Update conversation state
     await conversationService.updateState(user.id, context);
 
-    // Update health summary after enough messages
-    if (context.messageCount >= 2) {
-      await conversationService.updateHealthSummary(user.id, message, cleanedResponse, aiService);
-    }
-
-    // Send name-ask after summary if user has no name (mirrors inbound.ts Step 16)
-    const isSummary = aiService.looksLikeSummary(cleanedResponse);
-    let nameAsk: string | null = null;
-    if (isSummary && !user.name) {
-      nameAsk = aiService.getNameAskMessage(user.language || 'en');
-      await conversationService.saveMessages(user.id, TEST_CONVERSATION_ID, [
-        { role: 'assistant', content: nameAsk },
-      ]);
-    }
-
     // Read current state
     const updatedUser = await userService.loadOrCreate(phone);
-    const concerns = await concernService.getActiveConcerns(user.id);
 
     return {
       success: true,
       aiResponse: cleanedResponse,
-      nameAsk,
       user: { id: updatedUser.id, name: updatedUser.name, language: updatedUser.language },
       messageCount: context.messageCount + 1,
-      concerns: concerns.map(c => ({
-        title: c.title,
-        status: c.status,
-        summaryContent: c.summaryContent,
-      })),
     };
   });
 
