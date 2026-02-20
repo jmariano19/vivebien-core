@@ -15,6 +15,7 @@ const summary_1 = require("./api/routes/summary");
 const concerns_1 = require("./api/routes/concerns");
 const doctor_1 = require("./api/routes/doctor");
 const test_1 = require("./api/routes/test");
+const meals_1 = require("./api/routes/meals");
 const digests_1 = require("./api/routes/digests");
 const correlation_1 = require("./api/middleware/correlation");
 const logger_1 = require("./infra/logging/logger");
@@ -48,7 +49,7 @@ process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT', () => shutdown('SIGINT'));
 // Register plugins and middleware
 async function bootstrap() {
-    logger_1.logger.info('Starting ViveBien Core API bootstrap...');
+    logger_1.logger.info('Starting Plato Inteligente API bootstrap...');
     // CORS for admin dashboard access
     await app.register(cors_1.default, {
         origin: config_1.config.corsOrigins,
@@ -78,7 +79,36 @@ async function bootstrap() {
     await app.register(concerns_1.concernRoutes, { prefix: '/api/concerns' });
     await app.register(doctor_1.doctorRoutes, { prefix: '/api/doctor' });
     await app.register(test_1.testRoutes, { prefix: '/api/test' });
+    await app.register(meals_1.mealRoutes, { prefix: '/api/meals' });
     await app.register(digests_1.digestRoutes, { prefix: '/api/digests' });
+    // Serve Plato Inteligente pages
+    // Journal page — meal timeline
+    app.get('/journal/:userId', async (request, reply) => {
+        const { userId } = request.params;
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (uuidRegex.test(userId)) {
+            return reply.sendFile('journal.html');
+        }
+        return reply.status(404).send({ error: 'Not found' });
+    });
+    // Digest page — daily summary with PDF + audio
+    app.get('/digest/:userId', async (request, reply) => {
+        const { userId } = request.params;
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (uuidRegex.test(userId)) {
+            return reply.sendFile('digest.html');
+        }
+        return reply.status(404).send({ error: 'Not found' });
+    });
+    // Patterns page — food pattern library
+    app.get('/patterns/:userId', async (request, reply) => {
+        const { userId } = request.params;
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (uuidRegex.test(userId)) {
+            return reply.sendFile('patterns.html');
+        }
+        return reply.status(404).send({ error: 'Not found' });
+    });
     // Serve doctor view page for /doctor/:userId URLs
     app.get('/doctor/:userId', async (request, reply) => {
         const { userId } = request.params;

@@ -28,6 +28,11 @@ const configSchema = zod_1.z.object({
     // Rate limiting
     claudeRpmLimit: zod_1.z.coerce.number().default(50),
     whisperRpmLimit: zod_1.z.coerce.number().default(30),
+    // Voice synthesis (ElevenLabs)
+    elevenLabsApiKey: zod_1.z.string().optional(),
+    elevenLabsVoiceId: zod_1.z.string().optional(), // Default voice for digest audio
+    // Daily digest
+    digestCronHour: zod_1.z.coerce.number().min(0).max(23).default(21), // 9pm default
 });
 function loadConfig() {
     const result = configSchema.safeParse({
@@ -47,6 +52,9 @@ function loadConfig() {
         logLevel: process.env.LOG_LEVEL,
         claudeRpmLimit: process.env.CLAUDE_RPM_LIMIT,
         whisperRpmLimit: process.env.WHISPER_RPM_LIMIT,
+        elevenLabsApiKey: process.env.ELEVENLABS_API_KEY,
+        elevenLabsVoiceId: process.env.ELEVENLABS_VOICE_ID,
+        digestCronHour: process.env.DIGEST_CRON_HOUR,
     });
     if (!result.success) {
         // Logger not available yet during config init — use stderr

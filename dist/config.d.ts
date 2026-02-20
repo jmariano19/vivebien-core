@@ -16,6 +16,9 @@ declare const configSchema: z.ZodObject<{
     logLevel: z.ZodDefault<z.ZodEnum<["debug", "info", "warn", "error"]>>;
     claudeRpmLimit: z.ZodDefault<z.ZodNumber>;
     whisperRpmLimit: z.ZodDefault<z.ZodNumber>;
+    elevenLabsApiKey: z.ZodOptional<z.ZodString>;
+    elevenLabsVoiceId: z.ZodOptional<z.ZodString>;
+    digestCronHour: z.ZodDefault<z.ZodNumber>;
 }, "strip", z.ZodTypeAny, {
     nodeEnv: "development" | "production" | "test";
     port: number;
@@ -32,7 +35,10 @@ declare const configSchema: z.ZodObject<{
     logLevel: "debug" | "info" | "warn" | "error";
     claudeRpmLimit: number;
     whisperRpmLimit: number;
+    digestCronHour: number;
     openaiApiKey?: string | undefined;
+    elevenLabsApiKey?: string | undefined;
+    elevenLabsVoiceId?: string | undefined;
 }, {
     apiSecretKey: string;
     databaseUrl: string;
@@ -50,6 +56,9 @@ declare const configSchema: z.ZodObject<{
     logLevel?: "debug" | "info" | "warn" | "error" | undefined;
     claudeRpmLimit?: number | undefined;
     whisperRpmLimit?: number | undefined;
+    elevenLabsApiKey?: string | undefined;
+    elevenLabsVoiceId?: string | undefined;
+    digestCronHour?: number | undefined;
 }>;
 export declare const config: {
     nodeEnv: "development" | "production" | "test";
@@ -67,7 +76,10 @@ export declare const config: {
     logLevel: "debug" | "info" | "warn" | "error";
     claudeRpmLimit: number;
     whisperRpmLimit: number;
+    digestCronHour: number;
     openaiApiKey?: string | undefined;
+    elevenLabsApiKey?: string | undefined;
+    elevenLabsVoiceId?: string | undefined;
 };
 export type Config = z.infer<typeof configSchema>;
 export {};

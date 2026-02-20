@@ -10,6 +10,7 @@ import { summaryRoutes } from './api/routes/summary';
 import { concernRoutes } from './api/routes/concerns';
 import { doctorRoutes } from './api/routes/doctor';
 import { testRoutes } from './api/routes/test';
+import { mealRoutes } from './api/routes/meals';
 import { digestRoutes } from './api/routes/digests';
 import { correlationMiddleware } from './api/middleware/correlation';
 import { logger } from './infra/logging/logger';
@@ -48,7 +49,7 @@ process.on('SIGINT', () => shutdown('SIGINT'));
 
 // Register plugins and middleware
 async function bootstrap() {
-  logger.info('Starting ViveBien Core API bootstrap...');
+  logger.info('Starting Plato Inteligente API bootstrap...');
   // CORS for admin dashboard access
   await app.register(cors, {
     origin: config.corsOrigins,
@@ -80,7 +81,39 @@ async function bootstrap() {
   await app.register(concernRoutes, { prefix: '/api/concerns' });
   await app.register(doctorRoutes, { prefix: '/api/doctor' });
   await app.register(testRoutes, { prefix: '/api/test' });
+  await app.register(mealRoutes, { prefix: '/api/meals' });
   await app.register(digestRoutes, { prefix: '/api/digests' });
+
+  // Serve Plato Inteligente pages
+  // Journal page — meal timeline
+  app.get('/journal/:userId', async (request, reply) => {
+    const { userId } = request.params as { userId: string };
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (uuidRegex.test(userId)) {
+      return reply.sendFile('journal.html');
+    }
+    return reply.status(404).send({ error: 'Not found' });
+  });
+
+  // Digest page — daily summary with PDF + audio
+  app.get('/digest/:userId', async (request, reply) => {
+    const { userId } = request.params as { userId: string };
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (uuidRegex.test(userId)) {
+      return reply.sendFile('digest.html');
+    }
+    return reply.status(404).send({ error: 'Not found' });
+  });
+
+  // Patterns page — food pattern library
+  app.get('/patterns/:userId', async (request, reply) => {
+    const { userId } = request.params as { userId: string };
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (uuidRegex.test(userId)) {
+      return reply.sendFile('patterns.html');
+    }
+    return reply.status(404).send({ error: 'Not found' });
+  });
 
   // Serve doctor view page for /doctor/:userId URLs
   app.get('/doctor/:userId', async (request, reply) => {

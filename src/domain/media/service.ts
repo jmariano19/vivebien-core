@@ -73,10 +73,10 @@ export class MediaService {
         : 'image/jpeg';
 
       const prompts: Record<string, string> = {
-        es: 'Analiza esta imagen en el contexto de salud. Describe síntomas, medicamentos o documentos médicos visibles. Sé conciso. Responde en español.',
-        en: 'Analyze this image in a health context. Describe any symptoms, medications, or medical documents visible. Be concise. Respond in English.',
-        pt: 'Analise esta imagem no contexto de saúde. Descreva sintomas, medicamentos ou documentos médicos visíveis. Seja conciso. Responda em português.',
-        fr: 'Analysez cette image dans un contexte de santé. Décrivez les symptômes, médicaments ou documents médicaux visibles. Soyez concis. Répondez en français.',
+        es: 'Analiza esta foto de comida. Describe el plato específicamente: nombre del plato, ingredientes visibles, método de preparación. Si es comida latina, identifica el país de origen (dominicana, mexicana, salvadoreña, etc.). Sé conciso y específico. Responde en español.',
+        en: 'Analyze this food photo. Describe the dish specifically: name of the dish, visible ingredients, preparation method. If it\'s Latin food, identify the country of origin (Dominican, Mexican, Salvadoran, etc.). Be concise and specific. Respond in English.',
+        pt: 'Analise esta foto de comida. Descreva o prato especificamente: nome do prato, ingredientes visíveis, método de preparo. Se for comida latina, identifique o país de origem. Seja conciso e específico. Responda em português.',
+        fr: 'Analysez cette photo de nourriture. Décrivez le plat spécifiquement: nom du plat, ingrédients visibles, méthode de préparation. Si c\'est de la cuisine latine, identifiez le pays d\'origine. Soyez concis et spécifique. Répondez en français.',
       };
 
       const response = await this.anthropic.messages.create({

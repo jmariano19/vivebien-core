@@ -34,6 +34,13 @@ const configSchema = z.object({
   // Rate limiting
   claudeRpmLimit: z.coerce.number().default(50),
   whisperRpmLimit: z.coerce.number().default(30),
+
+  // Voice synthesis (ElevenLabs)
+  elevenLabsApiKey: z.string().optional(),
+  elevenLabsVoiceId: z.string().optional(), // Default voice for digest audio
+
+  // Daily digest
+  digestCronHour: z.coerce.number().min(0).max(23).default(21), // 9pm default
 });
 
 function loadConfig() {
@@ -54,6 +61,9 @@ function loadConfig() {
     logLevel: process.env.LOG_LEVEL,
     claudeRpmLimit: process.env.CLAUDE_RPM_LIMIT,
     whisperRpmLimit: process.env.WHISPER_RPM_LIMIT,
+    elevenLabsApiKey: process.env.ELEVENLABS_API_KEY,
+    elevenLabsVoiceId: process.env.ELEVENLABS_VOICE_ID,
+    digestCronHour: process.env.DIGEST_CRON_HOUR,
   });
 
   if (!result.success) {
