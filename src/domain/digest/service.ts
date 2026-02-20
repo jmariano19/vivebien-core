@@ -446,7 +446,9 @@ RULES:
       digestDate: row.digest_date,
       eventCount: row.meal_count, // Reusing column, now tracks all events
       pdfUrl: row.pdf_url,
-      summaryJson: row.pattern_summary ? JSON.parse(row.pattern_summary) : null,
+      summaryJson: row.pattern_summary
+        ? (typeof row.pattern_summary === 'string' ? JSON.parse(row.pattern_summary) : row.pattern_summary)
+        : null,
       createdAt: row.created_at,
     };
   }
