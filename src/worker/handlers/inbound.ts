@@ -107,20 +107,17 @@ async function _handleInboundMessage(
     }
   }
 
-  // ── Step 3: Detect & update language ─────────────────────────────────────
-  const hasVoiceMessage = attachments?.some(a => a.type === 'audio');
-  if (user.isNew || hasVoiceMessage) {
-    const detectedLang = detectLanguage(processedMessage);
-    if (detectedLang && detectedLang !== user.language) {
-      await logExecution(
-        correlationId,
-        'update_language',
-        async () => userService.updateLanguage(user.id, detectedLang),
-        logger,
-      );
-      user.language = detectedLang;
-      logger.info({ userId: user.id, language: detectedLang }, 'Language updated');
-    }
+  // ── Step 3: Detect & update language (always — user may switch languages) ─
+  const detectedLang = detectLanguage(processedMessage);
+  if (detectedLang && detectedLang !== user.language) {
+    await logExecution(
+      correlationId,
+      'update_language',
+      async () => userService.updateLanguage(user.id, detectedLang),
+      logger,
+    );
+    user.language = detectedLang;
+    logger.info({ userId: user.id, language: detectedLang }, 'Language updated');
   }
 
   // ── Step 4: Safety check (crisis keywords — no AI) ───────────────────────
