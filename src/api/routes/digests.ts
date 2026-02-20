@@ -2,7 +2,9 @@ import { FastifyInstance } from 'fastify';
 import { DigestService } from '../../domain/digest/service';
 import { HealthEventService } from '../../domain/health-event/service';
 import { ChatwootClient } from '../../adapters/chatwoot/client';
+import { generateSummaryPdf } from '../../domain/pdf/generator';
 import { db } from '../../infra/db/client';
+import { logger } from '../../infra/logging/logger';
 
 const digestService = new DigestService(db);
 const healthEventService = new HealthEventService(db);
@@ -151,10 +153,35 @@ export async function digestRoutes(app: FastifyInstance) {
         user.name || undefined,
       );
 
-      // 6. Send summary via WhatsApp
+      // 6. Generate PDF and send via WhatsApp
+      let pdfSent = false;
       if (result.summaryData && Object.keys(result.summaryData).length > 0) {
-        const summaryText = formatSummaryForWhatsApp(result.summaryData, user.language);
-        await chatwootClient.sendMessage(conversationId, summaryText);
+        // Try to generate branded PDF
+        try {
+          const pdfBuffer = await generateSummaryPdf(result.summaryData);
+          if (pdfBuffer) {
+            const userName = ((result.summaryData as Record<string, unknown>).greeting_name as string || user.name || 'User').replace(/\s+/g, '_');
+            const dateStr = new Date().toISOString().split('T')[0];
+            const fileName = `Plato_Inteligente_${userName}_${dateStr}.pdf`;
+            await chatwootClient.sendAttachment(
+              conversationId,
+              pdfBuffer,
+              fileName,
+              '📋 Tu resumen nocturno está listo. Ábrelo para ver tu análisis completo de hoy.',
+            );
+            pdfSent = true;
+            logger.info({ userId, fileName }, 'PDF summary sent via WhatsApp');
+          }
+        } catch (pdfError) {
+          const pdfErr = pdfError instanceof Error ? pdfError : new Error(String(pdfError));
+          logger.warn({ error: pdfErr.message, userId }, 'PDF generation failed, falling back to text');
+        }
+
+        // Fallback: send text summary if PDF failed
+        if (!pdfSent) {
+          const summaryText = formatSummaryForWhatsApp(result.summaryData, user.language);
+          await chatwootClient.sendMessage(conversationId, summaryText);
+        }
       }
 
       return reply.send({
@@ -163,6 +190,7 @@ export async function digestRoutes(app: FastifyInstance) {
         digest: result.digest,
         summaryData: result.summaryData,
         deliveredTo: conversationId,
+        pdfSent,
       });
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));

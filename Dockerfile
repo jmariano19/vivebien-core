@@ -23,6 +23,19 @@ RUN npm prune --production
 # Stage 2: Production
 FROM node:20-alpine AS production
 
+# Install Chromium for Puppeteer PDF generation
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont
+
+# Set Puppeteer to use installed Chromium
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
 # Security: run as non-root user
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001 -G nodejs
@@ -39,6 +52,9 @@ COPY --chown=nodejs:nodejs prompts ./prompts
 
 # Copy public folder for dashboard
 COPY --chown=nodejs:nodejs public ./public
+
+# Copy PDF assets (logo, icons)
+COPY --chown=nodejs:nodejs plato-summary/assets ./plato-summary/assets
 
 # Set environment
 ENV NODE_ENV=production

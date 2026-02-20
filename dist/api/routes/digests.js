@@ -4,7 +4,9 @@ exports.digestRoutes = digestRoutes;
 const service_1 = require("../../domain/digest/service");
 const service_2 = require("../../domain/health-event/service");
 const client_1 = require("../../adapters/chatwoot/client");
+const generator_1 = require("../../domain/pdf/generator");
 const client_2 = require("../../infra/db/client");
+const logger_1 = require("../../infra/logging/logger");
 const digestService = new service_1.DigestService(client_2.db);
 const healthEventService = new service_2.HealthEventService(client_2.db);
 const chatwootClient = new client_1.ChatwootClient();
@@ -115,10 +117,30 @@ async function digestRoutes(app) {
             }
             // 5. Generate digest
             const result = await digestService.generateDigest(userId, new Date(), user.language, user.name || undefined);
-            // 6. Send summary via WhatsApp
+            // 6. Generate PDF and send via WhatsApp
+            let pdfSent = false;
             if (result.summaryData && Object.keys(result.summaryData).length > 0) {
-                const summaryText = formatSummaryForWhatsApp(result.summaryData, user.language);
-                await chatwootClient.sendMessage(conversationId, summaryText);
+                // Try to generate branded PDF
+                try {
+                    const pdfBuffer = await (0, generator_1.generateSummaryPdf)(result.summaryData);
+                    if (pdfBuffer) {
+                        const userName = (result.summaryData.greeting_name || user.name || 'User').replace(/\s+/g, '_');
+                        const dateStr = new Date().toISOString().split('T')[0];
+                        const fileName = `Plato_Inteligente_${userName}_${dateStr}.pdf`;
+                        await chatwootClient.sendAttachment(conversationId, pdfBuffer, fileName, '📋 Tu resumen nocturno está listo. Ábrelo para ver tu análisis completo de hoy.');
+                        pdfSent = true;
+                        logger_1.logger.info({ userId, fileName }, 'PDF summary sent via WhatsApp');
+                    }
+                }
+                catch (pdfError) {
+                    const pdfErr = pdfError instanceof Error ? pdfError : new Error(String(pdfError));
+                    logger_1.logger.warn({ error: pdfErr.message, userId }, 'PDF generation failed, falling back to text');
+                }
+                // Fallback: send text summary if PDF failed
+                if (!pdfSent) {
+                    const summaryText = formatSummaryForWhatsApp(result.summaryData, user.language);
+                    await chatwootClient.sendMessage(conversationId, summaryText);
+                }
             }
             return reply.send({
                 success: true,
@@ -126,6 +148,7 @@ async function digestRoutes(app) {
                 digest: result.digest,
                 summaryData: result.summaryData,
                 deliveredTo: conversationId,
+                pdfSent,
             });
         }
         catch (error) {
