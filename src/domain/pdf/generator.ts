@@ -671,11 +671,9 @@ export async function generateSummaryPdf(summaryData: Record<string, unknown>): 
     // Wait extra time for Google Fonts to load
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Measure actual page height
-    const pageHeight = await page.evaluate(() => {
-      const el = document.querySelector('.page');
-      return el ? el.scrollHeight : 800;
-    });
+    // Measure actual page height (runs in browser context via Puppeteer)
+    // @ts-ignore — document exists in browser context inside page.evaluate
+    const pageHeight: number = await page.evaluate('document.querySelector(".page")?.scrollHeight || 800');
 
     // Generate single-page PDF
     const pdfBuffer = await page.pdf({
