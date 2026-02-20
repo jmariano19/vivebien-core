@@ -92,13 +92,16 @@ async function digestRoutes(app) {
                 return reply.status(404).send({ success: false, error: 'User not found' });
             }
             const user = userResult.rows[0];
-            // 2. Find their conversation
-            const convResult = await client_2.db.query(`SELECT conversation_id FROM conversation_state
-         WHERE user_id = $1
-         ORDER BY updated_at DESC LIMIT 1`, [userId]);
-            const conversationId = convResult.rows[0]?.conversation_id;
+            // 2. Find their conversation via Chatwoot API (look up by phone)
+            const phoneResult = await client_2.db.query('SELECT phone FROM users WHERE id = $1', [userId]);
+            const phone = phoneResult.rows[0]?.phone;
+            if (!phone) {
+                return reply.status(404).send({ success: false, error: 'No phone number found for user' });
+            }
+            const conversations = await chatwootClient.searchConversations(phone);
+            const conversationId = conversations[0]?.id;
             if (!conversationId) {
-                return reply.status(404).send({ success: false, error: 'No conversation found for user' });
+                return reply.status(404).send({ success: false, error: 'No conversation found in Chatwoot for this user' });
             }
             // 3. Check for events
             const today = new Date().toISOString().split('T')[0];

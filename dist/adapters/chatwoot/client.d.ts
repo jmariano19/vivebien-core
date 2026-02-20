@@ -25,6 +25,13 @@ export declare class ChatwootClient {
         };
     }>;
     /**
+     * Search for conversations by phone number or contact query
+     */
+    searchConversations(query: string): Promise<{
+        id: number;
+        status: string;
+    }[]>;
+    /**
      * Toggle conversation status (open/resolved/pending)
      */
     updateStatus(conversationId: number, status: 'open' | 'resolved' | 'pending'): Promise<void>;

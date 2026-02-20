@@ -77,6 +77,43 @@ class ChatwootClient {
         }
     }
     /**
+     * Search for conversations by phone number or contact query
+     */
+    async searchConversations(query) {
+        const url = `${this.baseUrl}/api/v1/accounts/${this.accountId}/conversations/filter`;
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'api_access_token': this.apiKey,
+                },
+                body: JSON.stringify({
+                    payload: [
+                        {
+                            attribute_key: 'phone_number',
+                            filter_operator: 'contains',
+                            values: [query],
+                            query_operator: null,
+                        },
+                    ],
+                }),
+            });
+            if (!response.ok) {
+                throw new errors_1.ChatwootError(`Failed to search conversations: ${response.status}`);
+            }
+            const data = await response.json();
+            return data.data?.payload || [];
+        }
+        catch (error) {
+            if (error instanceof errors_1.ChatwootError) {
+                throw error;
+            }
+            const err = error;
+            throw new errors_1.ChatwootError(`Network error: ${err.message}`, err);
+        }
+    }
+    /**
      * Toggle conversation status (open/resolved/pending)
      */
     async updateStatus(conversationId, status) {

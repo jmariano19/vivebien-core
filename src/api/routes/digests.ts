@@ -114,17 +114,20 @@ export async function digestRoutes(app: FastifyInstance) {
 
       const user = userResult.rows[0]!;
 
-      // 2. Find their conversation
-      const convResult = await db.query<{ conversation_id: number }>(
-        `SELECT conversation_id FROM conversation_state
-         WHERE user_id = $1
-         ORDER BY updated_at DESC LIMIT 1`,
+      // 2. Find their conversation via Chatwoot API (look up by phone)
+      const phoneResult = await db.query<{ phone: string }>(
+        'SELECT phone FROM users WHERE id = $1',
         [userId],
       );
+      const phone = phoneResult.rows[0]?.phone;
+      if (!phone) {
+        return reply.status(404).send({ success: false, error: 'No phone number found for user' });
+      }
 
-      const conversationId = convResult.rows[0]?.conversation_id;
+      const conversations = await chatwootClient.searchConversations(phone);
+      const conversationId = conversations[0]?.id;
       if (!conversationId) {
-        return reply.status(404).send({ success: false, error: 'No conversation found for user' });
+        return reply.status(404).send({ success: false, error: 'No conversation found in Chatwoot for this user' });
       }
 
       // 3. Check for events
