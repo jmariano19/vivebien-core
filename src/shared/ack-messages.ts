@@ -1,74 +1,72 @@
 /**
- * Plato Inteligente — Ack Message Templates
+ * Plato Inteligente — Smart Ack Messages
  *
- * Short, warm acknowledgments sent when a user submits health data.
- * No AI needed — just template strings picked at random.
- * Two types: INPUT acks (food, symptoms, labs) and QUESTION acks.
+ * Generates personalized acknowledgments that MIRROR what the user said.
+ * Uses ONE tiny Haiku call (~$0.001) to generate a warm, short ack.
+ * Falls back to template acks if the AI call fails.
  */
 
-const INPUT_ACKS: Record<string, string[]> = {
+import Anthropic from '@anthropic-ai/sdk';
+import { config } from '../config';
+import { logger } from '../infra/logging/logger';
+
+const client = new Anthropic({
+  apiKey: config.anthropicApiKey,
+});
+
+// ============================================================================
+// Fallback Templates (used if Haiku call fails)
+// ============================================================================
+
+const FALLBACK_INPUT_ACKS: Record<string, string[]> = {
   es: [
-    'Anotado \ud83d\udccb',
+    'Anotado 📋',
     'Lo tengo. Va para tu resumen de esta noche.',
-    'Recibido \u2713 Lo incluyo en tu an\u00e1lisis de hoy.',
-    'Guardado. Esta noche lo hacemos visible.',
+    'Recibido ✓ Lo incluyo en tu análisis de hoy.',
   ],
   en: [
-    'Got it \ud83d\udccb',
+    'Got it 📋',
     "Noted. It'll be in your summary tonight.",
-    'Received \u2713 Adding it to today\'s analysis.',
-    "Saved. We'll make sense of it tonight.",
+    'Received ✓ Adding it to today\'s analysis.',
   ],
   pt: [
-    'Anotado \ud83d\udccb',
-    'Recebi. Vai pro seu resumo de hoje \u00e0 noite.',
-    'Guardado \u2713 Incluo na sua an\u00e1lise de hoje.',
-    'Salvo. Hoje \u00e0 noite fazemos vis\u00edvel.',
+    'Anotado 📋',
+    'Recebi. Vai pro seu resumo de hoje à noite.',
   ],
   fr: [
-    'Not\u00e9 \ud83d\udccb',
-    'Re\u00e7u. \u00c7a sera dans votre r\u00e9sum\u00e9 ce soir.',
-    'Enregistr\u00e9 \u2713 Je l\'inclus dans votre analyse.',
-    'Gard\u00e9. Ce soir on le rend visible.',
+    'Noté 📋',
+    'Reçu. Ça sera dans votre résumé ce soir.',
   ],
 };
 
-const QUESTION_ACKS: Record<string, string[]> = {
+const FALLBACK_QUESTION_ACKS: Record<string, string[]> = {
   es: [
-    'Buena pregunta \ud83d\udc40 Te la respondo en tu resumen de esta noche.',
+    'Buena pregunta 👀 Te la respondo en tu resumen de esta noche.',
     'Me la apunto. Esta noche te doy la respuesta con contexto.',
-    'Esa me la llevo para tu an\u00e1lisis de hoy. Te respondo esta noche.',
   ],
   en: [
-    "Good question \ud83d\udc40 I'll answer it in your summary tonight.",
+    "Good question 👀 I'll answer it in your summary tonight.",
     "Noted that one. Tonight's summary will have your answer.",
-    "Taking that in. You'll get the answer with full context tonight.",
   ],
   pt: [
-    'Boa pergunta \ud83d\udc40 Respondo no seu resumo de hoje \u00e0 noite.',
-    'Anotei. Hoje \u00e0 noite te dou a resposta com contexto.',
+    'Boa pergunta 👀 Respondo no seu resumo de hoje à noite.',
   ],
   fr: [
-    'Bonne question \ud83d\udc40 Je vous r\u00e9ponds dans votre r\u00e9sum\u00e9 ce soir.',
-    'Not\u00e9e. Ce soir vous aurez la r\u00e9ponse avec contexte.',
+    'Bonne question 👀 Je vous réponds dans votre résumé ce soir.',
   ],
 };
 
-/**
- * Question detection keywords by language.
- * If the message starts with any of these (case-insensitive), it's a question.
- */
+// ============================================================================
+// Question Detection
+// ============================================================================
+
 const QUESTION_STARTERS: Record<string, string[]> = {
-  es: ['qu\u00e9', 'que', 'c\u00f3mo', 'como', 'por qu\u00e9', 'por que', 'cu\u00e1ndo', 'cuando', 'd\u00f3nde', 'donde', 'cu\u00e1l', 'cual', 'cu\u00e1nto', 'cuanto', 'puedo', 'debo', 'es bueno', 'es malo', 'se puede'],
+  es: ['qué', 'que', 'cómo', 'como', 'por qué', 'por que', 'cuándo', 'cuando', 'dónde', 'donde', 'cuál', 'cual', 'cuánto', 'cuanto', 'puedo', 'debo', 'es bueno', 'es malo', 'se puede'],
   en: ['what', 'how', 'why', 'when', 'where', 'which', 'can', 'should', 'is it', 'do i', 'does', 'will', 'could', 'would'],
   pt: ['que', 'como', 'por que', 'quando', 'onde', 'qual', 'posso', 'devo'],
-  fr: ['que', 'comment', 'pourquoi', 'quand', 'o\u00f9', 'ou', 'quel', 'quelle', 'est-ce', 'puis-je'],
+  fr: ['que', 'comment', 'pourquoi', 'quand', 'où', 'ou', 'quel', 'quelle', 'est-ce', 'puis-je'],
 };
 
-/**
- * Detect if a message is a question.
- * Uses: (1) contains "?" or (2) starts with question words in any language.
- */
 export function isQuestion(message: string): boolean {
   if (message.includes('?')) return true;
 
@@ -84,14 +82,74 @@ export function isQuestion(message: string): boolean {
   return false;
 }
 
+// ============================================================================
+// Smart Ack Generator (Haiku)
+// ============================================================================
+
 /**
- * Pick a random ack message for the given language and message type.
+ * Generate a personalized ack that mirrors the user's message.
+ * Uses Haiku for ~$0.001 per call. Falls back to templates on failure.
  */
-export function getAckMessage(language: string, isQuestionMsg: boolean): string {
-  const lang = language in INPUT_ACKS ? language : 'es';
+export async function getSmartAck(
+  userMessage: string,
+  language: string,
+  isQuestionMsg: boolean,
+): Promise<string> {
+  try {
+    const lang = language || 'es';
+    const langName = { es: 'Spanish', en: 'English', pt: 'Portuguese', fr: 'French' }[lang] || 'Spanish';
+
+    const prompt = isQuestionMsg
+      ? `The user sent this health-related question via WhatsApp: "${userMessage}"
+
+Generate a SHORT (1-2 sentences max) warm acknowledgment in ${langName} that:
+1. Shows you understood their specific question
+2. Tells them the answer will be in their nightly summary tonight
+
+Example style: "Entiendo tu pregunta sobre el dolor de cabeza. Esta noche te damos contexto en tu resumen."
+Do NOT answer the question. Just acknowledge it.`
+      : `The user sent this health-related message via WhatsApp: "${userMessage}"
+
+Generate a SHORT (1-2 sentences max) warm acknowledgment in ${langName} that:
+1. Mirrors/reflects what they shared (show you understood the specific thing)
+2. Tells them it's noted for their nightly summary
+
+Example style: "Anotado lo del arroz con pollo 📋 Lo incluimos en tu resumen de esta noche."
+Do NOT give health advice. Just acknowledge.`;
+
+    const response = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 100,
+      messages: [{ role: 'user', content: prompt }],
+    });
+
+    const content = response.content[0];
+    if (content && content.type === 'text' && content.text.trim()) {
+      return content.text.trim();
+    }
+
+    // Fallback if response is empty
+    return getFallbackAck(lang, isQuestionMsg);
+  } catch (error) {
+    const err = error as Error;
+    logger.warn({ error: err.message }, 'Smart ack failed, using fallback template');
+    return getFallbackAck(language || 'es', isQuestionMsg);
+  }
+}
+
+/**
+ * Pick a random fallback ack (no AI needed).
+ */
+export function getFallbackAck(language: string, isQuestionMsg: boolean): string {
+  const lang = language in FALLBACK_INPUT_ACKS ? language : 'es';
   const pool = isQuestionMsg
-    ? (QUESTION_ACKS[lang] || QUESTION_ACKS.es!)
-    : (INPUT_ACKS[lang] || INPUT_ACKS.es!);
+    ? (FALLBACK_QUESTION_ACKS[lang] || FALLBACK_QUESTION_ACKS.es!)
+    : (FALLBACK_INPUT_ACKS[lang] || FALLBACK_INPUT_ACKS.es!);
 
   return pool[Math.floor(Math.random() * pool.length)]!;
+}
+
+// Keep old function name for backward compatibility
+export function getAckMessage(language: string, isQuestionMsg: boolean): string {
+  return getFallbackAck(language, isQuestionMsg);
 }

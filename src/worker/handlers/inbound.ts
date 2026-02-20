@@ -23,7 +23,7 @@ import { ChatwootClient } from '../../adapters/chatwoot/client';
 import { db } from '../../infra/db/client';
 import { logExecution } from '../../infra/logging/logger';
 import { detectLanguage } from '../../shared/language';
-import { isQuestion, getAckMessage } from '../../shared/ack-messages';
+import { isQuestion, getSmartAck } from '../../shared/ack-messages';
 
 const userService = new UserService(db);
 const healthEventService = new HealthEventService(db);
@@ -193,8 +193,8 @@ async function _handleInboundMessage(
     'Health event saved',
   );
 
-  // ── Step 7: Send template ack ────────────────────────────────────────────
-  const ackMessage = getAckMessage(user.language, questionDetected);
+  // ── Step 7: Send smart ack (Haiku — mirrors the user's message) ─────────
+  const ackMessage = await getSmartAck(processedMessage, user.language, questionDetected);
 
   await logExecution(
     correlationId,
