@@ -133,10 +133,10 @@ async function _handleInboundMessage(
 
     // Send single combined welcome + name question (avoids message ordering issues)
     const welcomeMessages: Record<string, string> = {
-      es: 'Hola 👋\nEstoy aquí para ayudarte a entender qué hacer con lo que ya tienes en tu cocina.\nExplícame qué estás comiendo hoy — o mándame una foto.\n\n¿Cómo te llamas? Así lo hacemos personal.',
-      en: 'Hello 👋\nI\'m here to help you make the most of what you already have in your kitchen.\nTell me what you\'re eating today — or send me a photo.\n\nWhat\'s your name? So we can make it personal.',
-      pt: 'Olá 👋\nEstou aqui para te ajudar a aproveitar o que você já tem na cozinha.\nMe conta o que está comendo hoje — ou manda uma foto.\n\nQual é o seu nome? Assim personalizamos tudo.',
-      fr: 'Bonjour 👋\nJe suis là pour vous aider à tirer le meilleur de ce que vous avez déjà dans votre cuisine.\nDites-moi ce que vous mangez aujourd\'hui — ou envoyez-moi une photo.\n\nComment vous appelez-vous? Pour personnaliser votre expérience.',
+      es: 'Hola 👋\nEstoy aquí para ayudarte a entender qué hacer con lo que ya tienes en tu cocina.\n\nAquí no te voy a señalar lo que hiciste mal.\nTampoco te voy a dar una dieta.\nSolo vamos a mirar tu día con calma y entender qué pasó en tu cuerpo.\nSin juicio. Sin presión.\n\nExplícame qué estás comiendo hoy — o mándame una foto.\n\n¿Cómo te llamas? Así lo hacemos personal.',
+      en: 'Hello 👋\nI\'m here to help you make the most of what you already have in your kitchen.\n\nI\'m not going to point out what you did wrong.\nI\'m not going to give you a diet.\nWe\'re just going to look at your day calmly and understand what happened in your body.\nNo judgment. No pressure.\n\nTell me what you\'re eating today — or send me a photo.\n\nWhat\'s your name? So we can make it personal.',
+      pt: 'Olá 👋\nEstou aqui para te ajudar a aproveitar o que você já tem na cozinha.\n\nAqui não vou te apontar o que fez de errado.\nTambém não vou te dar uma dieta.\nSó vamos olhar seu dia com calma e entender o que aconteceu no seu corpo.\nSem julgamento. Sem pressão.\n\nMe conta o que está comendo hoje — ou manda uma foto.\n\nQual é o seu nome? Assim personalizamos tudo.',
+      fr: 'Bonjour 👋\nJe suis là pour vous aider à tirer le meilleur de ce que vous avez déjà dans votre cuisine.\n\nIci, je ne vais pas pointer ce que vous avez mal fait.\nJe ne vais pas non plus vous donner un régime.\nOn va simplement regarder votre journée calmement et comprendre ce qui s\'est passé dans votre corps.\nSans jugement. Sans pression.\n\nDites-moi ce que vous mangez aujourd\'hui — ou envoyez-moi une photo.\n\nComment vous appelez-vous? Pour personnaliser votre expérience.',
     };
 
     const lang = user.language || 'es';
