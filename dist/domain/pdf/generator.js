@@ -123,10 +123,12 @@ function mapToPdfData(raw) {
 // ──────────────────────────────────────────────
 function renderHtml(rawData) {
     const data = mapToPdfData(rawData);
-    const name = data.name || '';
+    const name = data.name || data.greeting_name || '';
     const day = data.day_number || 1;
     const date = data.date || '';
-    const title1 = data.title_line1 || `${name}, tu día tiene un patrón.`;
+    // Always include the user's name in the title if we have it
+    const defaultTitle1 = name ? `${name}, tu día tiene un patrón.` : 'Tu día tiene un patrón.';
+    const title1 = data.title_line1 && data.title_line1.includes(name) ? data.title_line1 : defaultTitle1;
     const title2 = data.title_line2 || 'Hoy lo hicimos visible.';
     const logoB64 = loadBase64Asset('logo.png');
     const searchB64 = loadBase64Asset('search.png');

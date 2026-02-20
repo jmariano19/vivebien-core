@@ -12,10 +12,10 @@ const healthEventService = new service_2.HealthEventService(client_2.db);
 const chatwootClient = new client_1.ChatwootClient();
 // Heads-up messages
 const HEADS_UP_MESSAGES = {
-    es: 'Estamos afinando tu resumen nocturno con cuidado. En aproximadamente 15 minutos lo tendrás listo. Si al leerlo hay algo que no refleja exactamente tu día o tus síntomas, escríbenos aquí mismo. Lo ajustamos para que el próximo sea aún más preciso y útil para ti.',
-    en: "We're putting the finishing touches on your nightly summary. You'll have it in about 15 minutes. If anything doesn't reflect your day or symptoms accurately, just write us here. We'll adjust so the next one is even more precise and useful for you.",
-    pt: 'Estamos finalizando seu resumo noturno com cuidado. Em aproximadamente 15 minutos estará pronto. Se ao ler houver algo que não reflete exatamente seu dia ou sintomas, escreva aqui mesmo. Ajustamos para que o próximo seja ainda mais preciso.',
-    fr: "Nous préparons votre résumé nocturne avec soin. Dans environ 15 minutes il sera prêt. Si en le lisant quelque chose ne reflète pas exactement votre journée, écrivez-nous ici. Nous ajusterons pour que le prochain soit encore plus précis.",
+    es: 'Estamos terminando tu resumen nocturno. En unos 15 minutos lo tendrás listo.\nSi algo no refleja exactamente tu día o cómo te sentiste, escríbenos aquí mismo. Lo afinamos para que cada noche sea más clara que la anterior.',
+    en: "Your nightly summary is almost ready. You'll have it in about 15 minutes.\nIf anything doesn't quite match your day, just write us here. We'll fine-tune it so each night gets clearer.",
+    pt: 'Seu resumo noturno está quase pronto. Em uns 15 minutos estará listo.\nSe algo não refletir exatamente seu dia, escreva aqui. Ajustamos para que cada noite seja mais clara.',
+    fr: "Votre résumé nocturne est presque prêt. Dans environ 15 minutes il sera là.\nSi quelque chose ne reflète pas votre journée, écrivez-nous ici. On ajuste pour que chaque soir soit plus clair.",
 };
 async function digestRoutes(app) {
     // GET /api/digests/:userId/latest

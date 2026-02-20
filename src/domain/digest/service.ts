@@ -222,8 +222,8 @@ SECTIONS REQUIRED (output as JSON):
   "experiment_heading": "One specific experiment for tomorrow",
   "experiment_steps": ["Step 1", "Step 2", "Step 3"],
   "observe_text": "What to notice after the experiment",
-  "footer_quote_1": "Revision: Dra. Hernandez",
-  "footer_quote_2": "Tu Plato Inteligente"
+  "footer_quote_1": "Short motivational closing line (e.g. 'No estás haciendo dieta.')",
+  "footer_quote_2": "Second line of the closing thought (e.g. 'Estás aprendiendo a leer tu biología.')"
 }
 
 RULES:
