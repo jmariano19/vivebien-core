@@ -25,12 +25,10 @@ export declare class ChatwootClient {
         };
     }>;
     /**
-     * Search for conversations by phone number or contact query
+     * Find the most recent conversation for a phone number
+     * 1. Search contacts by phone → 2. Get contact's conversations
      */
-    searchConversations(query: string): Promise<{
-        id: number;
-        status: string;
-    }[]>;
+    findConversationByPhone(phone: string): Promise<number | null>;
     /**
      * Toggle conversation status (open/resolved/pending)
      */

@@ -114,36 +114,37 @@ export class ChatwootClient {
   }
 
   /**
-   * Search for conversations by phone number or contact query
+   * Find the most recent conversation for a phone number
+   * 1. Search contacts by phone → 2. Get contact's conversations
    */
-  async searchConversations(query: string): Promise<{ id: number; status: string }[]> {
-    const url = `${this.baseUrl}/api/v1/accounts/${this.accountId}/conversations/filter`;
-
+  async findConversationByPhone(phone: string): Promise<number | null> {
     try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'api_access_token': this.apiKey,
-        },
-        body: JSON.stringify({
-          payload: [
-            {
-              attribute_key: 'phone_number',
-              filter_operator: 'contains',
-              values: [query],
-              query_operator: null,
-            },
-          ],
-        }),
+      // Step 1: Search for contact by phone
+      const searchUrl = `${this.baseUrl}/api/v1/accounts/${this.accountId}/contacts/search?q=${encodeURIComponent(phone)}`;
+      const searchResponse = await fetch(searchUrl, {
+        headers: { 'api_access_token': this.apiKey },
       });
 
-      if (!response.ok) {
-        throw new ChatwootError(`Failed to search conversations: ${response.status}`);
+      if (!searchResponse.ok) {
+        throw new ChatwootError(`Failed to search contacts: ${searchResponse.status}`);
       }
 
-      const data = await response.json() as { data: { payload: { id: number; status: string }[] } };
-      return data.data?.payload || [];
+      const searchData = await searchResponse.json() as { payload: { id: number; phone_number: string }[] };
+      const contact = searchData.payload?.[0];
+      if (!contact) return null;
+
+      // Step 2: Get conversations for this contact
+      const convUrl = `${this.baseUrl}/api/v1/accounts/${this.accountId}/contacts/${contact.id}/conversations`;
+      const convResponse = await fetch(convUrl, {
+        headers: { 'api_access_token': this.apiKey },
+      });
+
+      if (!convResponse.ok) {
+        throw new ChatwootError(`Failed to get contact conversations: ${convResponse.status}`);
+      }
+
+      const convData = await convResponse.json() as { payload: { id: number; status: string }[] };
+      return convData.payload?.[0]?.id || null;
     } catch (error) {
       if (error instanceof ChatwootError) {
         throw error;

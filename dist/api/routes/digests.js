@@ -98,8 +98,7 @@ async function digestRoutes(app) {
             if (!phone) {
                 return reply.status(404).send({ success: false, error: 'No phone number found for user' });
             }
-            const conversations = await chatwootClient.searchConversations(phone);
-            const conversationId = conversations[0]?.id;
+            const conversationId = await chatwootClient.findConversationByPhone(phone);
             if (!conversationId) {
                 return reply.status(404).send({ success: false, error: 'No conversation found in Chatwoot for this user' });
             }
