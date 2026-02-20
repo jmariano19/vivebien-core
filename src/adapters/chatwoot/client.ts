@@ -173,6 +173,72 @@ export class ChatwootClient {
   }
 
   /**
+   * Send a file attachment to a conversation (for PDFs, images, etc.)
+   * Uses multipart/form-data as required by Chatwoot API.
+   */
+  async sendAttachment(
+    conversationId: number,
+    fileBuffer: Buffer,
+    fileName: string,
+    message?: string,
+  ): Promise<void> {
+    const url = `${this.baseUrl}/api/v1/accounts/${this.accountId}/conversations/${conversationId}/messages`;
+
+    try {
+      // Determine MIME type
+      const mimeType = fileName.endsWith('.pdf') ? 'application/pdf'
+        : fileName.endsWith('.png') ? 'image/png'
+        : fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') ? 'image/jpeg'
+        : 'application/octet-stream';
+
+      // Build multipart form data
+      const boundary = `----FormBoundary${Date.now()}`;
+      const parts: Buffer[] = [];
+
+      // Message type field
+      parts.push(Buffer.from(
+        `--${boundary}\r\nContent-Disposition: form-data; name="message_type"\r\n\r\noutgoing\r\n`
+      ));
+
+      // Content field (optional caption)
+      if (message) {
+        parts.push(Buffer.from(
+          `--${boundary}\r\nContent-Disposition: form-data; name="content"\r\n\r\n${message}\r\n`
+        ));
+      }
+
+      // File field
+      parts.push(Buffer.from(
+        `--${boundary}\r\nContent-Disposition: form-data; name="attachments[]"; filename="${fileName}"\r\nContent-Type: ${mimeType}\r\n\r\n`
+      ));
+      parts.push(fileBuffer);
+      parts.push(Buffer.from(`\r\n--${boundary}--\r\n`));
+
+      const body = Buffer.concat(parts);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': `multipart/form-data; boundary=${boundary}`,
+          'api_access_token': this.apiKey,
+        },
+        body,
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new ChatwootError(`Failed to send attachment: ${response.status} ${error}`);
+      }
+
+      logger.debug({ conversationId, fileName }, 'Attachment sent via Chatwoot');
+    } catch (error) {
+      if (error instanceof ChatwootError) throw error;
+      const err = error as Error;
+      throw new ChatwootError(`Failed to send attachment: ${err.message}`, err);
+    }
+  }
+
+  /**
    * Download attachment from Chatwoot
    */
   async downloadAttachment(url: string): Promise<Buffer> {
