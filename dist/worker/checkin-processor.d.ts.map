@@ -1,0 +1,1 @@
+{"version":3,"file":"checkin-processor.d.ts","sourceRoot":"","sources":["../../src/worker/checkin-processor.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,GAAG,EAAE,MAAM,QAAQ,CAAC;AAE7B,OAAO,EAAoB,cAAc,EAAE,MAAM,oBAAoB,CAAC;AAEtE;;GAEG;AACH,wBAAsB,iBAAiB,CAAC,GAAG,EAAE,GAAG,CAAC,cAAc,CAAC,GAAG,OAAO,CAAC;IAAE,IAAI,EAAE,OAAO,CAAA;CAAE,CAAC,CAgB5F"}

@@ -1,0 +1,1 @@
+{"version":3,"file":"processor.d.ts","sourceRoot":"","sources":["../../src/worker/processor.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,GAAG,EAAE,MAAM,QAAQ,CAAC;AAG7B,OAAO,EAAE,cAAc,EAAE,SAAS,EAAE,MAAM,iBAAiB,CAAC;AAE5D,MAAM,MAAM,OAAO,GAAG,iBAAiB,GAAG,eAAe,GAAG,eAAe,CAAC;AAE5E,wBAAsB,UAAU,CAAC,GAAG,EAAE,GAAG,CAAC,cAAc,CAAC,GAAG,OAAO,CAAC,SAAS,CAAC,CAgE7E"}
