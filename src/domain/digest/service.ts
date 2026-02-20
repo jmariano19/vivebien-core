@@ -261,7 +261,7 @@ RULES:
           const summaryData = JSON.parse(jsonText);
 
           // Log AI usage
-          const { logAIUsage } = await import('../../infra/logging/logger');
+          const { logAIUsage } = await import('../../infra/logging/logger.js');
           await logAIUsage({
             userId: profile.name || 'unknown',
             correlationId: `digest-${new Date().toISOString().split('T')[0]}`,

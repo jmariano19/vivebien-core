@@ -236,13 +236,14 @@ async function scheduleDigestJobs() {
 }
 
 // Schedule the cron — runs at DIGEST_CRON_HOUR every day
+const digestCronHour = parseInt(process.env.DIGEST_CRON_HOUR || '21', 10);
 digestQueue.add('schedule-digests', {}, {
   repeat: {
-    pattern: `0 ${config.digestCronHour} * * *`,
+    pattern: `0 ${digestCronHour} * * *`,
   },
   jobId: 'daily-digest-scheduler',
 }).then(() => {
-  logger.info({ cronHour: config.digestCronHour }, 'Daily digest cron scheduled');
+  logger.info({ cronHour: digestCronHour }, 'Daily digest cron scheduled');
 }).catch(err => {
   logger.error({ err }, 'Failed to schedule digest cron');
 });
@@ -256,6 +257,7 @@ const digestSchedulerWorker = new Worker(
       return { scheduled: true };
     }
     // Regular jobs handled by digestWorker
+    return { skipped: true };
   },
   {
     connection: redis,

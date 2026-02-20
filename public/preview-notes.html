@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Preview - Additional Notes with + Button</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #F9F6F0;
+      --card-bg: #FFF;
+      --primary: #2E915E;
+      --btn-color: #216F64;
+      --text: #373737;
+      --text-dark: #000;
+      --muted: rgba(0,0,0,0.45);
+      --input-bg: #f8f6f2;
+      --shadow: 0 2px 12px rgba(0,0,0,0.06);
+      --radius: 15px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+    }
+
+    .page {
+      width: 402px;
+      min-height: 100vh;
+      padding: 16px 22px 120px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 0 16px;
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'Lora', Georgia, serif;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .header h1 {
+      font-family: 'Lora', Georgia, serif;
+      font-size: 32px;
+      font-weight: 500;
+      color: var(--text);
+      line-height: 36px;
+      margin-bottom: 8px;
+    }
+    .header-subtitle {
+      font-size: 14px;
+      font-weight: 400;
+      color: var(--muted);
+      line-height: 20px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      padding: 20px 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .field {
+      margin-bottom: 20px;
+    }
+    .field:last-child {
+      margin-bottom: 0;
+    }
+
+    .field-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+    .field-label .icon {
+      font-size: 16px;
+      color: initial;
+    }
+
+    .field-container {
+      background: #F5F3EE;
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-top: 8px;
+      margin-bottom: 20px;
+    }
+
+    .field-input {
+      width: 100%;
+      padding: 0;
+      border: none;
+      border-radius: 0;
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      line-height: 24px;
+      color: var(--text);
+      background: transparent;
+      resize: none;
+      outline: none;
+    }
+    .field-input::placeholder {
+      color: #999;
+      font-weight: 300;
+    }
+    .field-input.multi-line {
+      min-height: 80px;
+    }
+
+    .change-dot {
+      display: none;
+      width: 8px;
+      height: 8px;
+      background: var(--primary);
+      border-radius: 50%;
+      margin-left: auto;
+    }
+    .change-dot.show {
+      display: block;
+    }
+
+    /* Additional notes - multiple fields */
+    .notes-container {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .note-entry {
+      position: relative;
+    }
+    .note-entry .field-input {
+      padding-right: 36px;
+    }
+    .remove-note-btn {
+      position: absolute;
+      top: 8px;
+      right: 4px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(0,0,0,0.08);
+      color: var(--muted);
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+    .remove-note-btn:hover {
+      background: rgba(0,0,0,0.15);
+      color: var(--text);
+    }
+    .add-note-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: none;
+      background: var(--btn-color);
+      color: white;
+      font-size: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      flex-shrink: 0;
+      margin-left: auto;
+    }
+    .add-note-btn:hover {
+      opacity: 0.9;
+      transform: scale(1.05);
+    }
+    .add-note-btn:active {
+      transform: scale(0.95);
+    }
+
+    /* Note separator */
+    .note-separator {
+      height: 1px;
+      background: rgba(0,0,0,0.08);
+      margin: 2px 0;
+    }
+
+    .footer-actions {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #DFD6CB;
+      padding: 16px 24px;
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+    }
+
+    .btn {
+      flex: 1;
+      max-width: 200px;
+      padding: 14px 24px;
+      border-radius: 24px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+    .btn-primary {
+      background: var(--btn-color);
+      color: white;
+      font-weight: 600;
+    }
+    .btn-secondary {
+      background: #9CA3AF;
+      color: white;
+    }
+
+    .preview-badge {
+      background: #ff6b35;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-left: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="topbar">
+      <span class="brand">CareLog</span>
+      <span class="preview-badge">Preview</span>
+    </div>
+
+    <div class="header">
+      <h1>Update Summary</h1>
+      <p class="header-subtitle">You're adding context — nothing is lost.</p>
+    </div>
+
+    <div class="card">
+      <!-- Sample field before notes -->
+      <div class="field">
+        <label class="field-label">
+          <span class="icon">⚠️</span>
+          What makes it worse
+          <span class="change-dot"></span>
+        </label>
+        <div class="field-container">
+          <input type="text" class="field-input" placeholder="E.g.: Sitting for long periods, bright light..." value="Bright lights, loud noises" />
+        </div>
+      </div>
+
+      <!-- ADDITIONAL NOTES with + button -->
+      <div class="field" id="notes-field">
+        <label class="field-label">
+          <span class="icon">📝</span>
+          Additional notes
+          <span class="change-dot" id="dot-notes"></span>
+          <button type="button" class="add-note-btn" id="add-note-btn" title="Add another note">+</button>
+        </label>
+        <div class="field-container">
+          <div class="notes-container" id="notes-container">
+            <!-- Notes rendered by JS -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-actions">
+    <button class="btn btn-secondary">Cancel</button>
+    <button class="btn btn-primary">Update</button>
+  </div>
+
+  <script>
+    let noteEntries = ['Feeling better in the mornings'];
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function renderNotes() {
+      const container = document.getElementById('notes-container');
+      container.innerHTML = noteEntries.map((note, idx) => `
+        <div class="note-entry">
+          <textarea
+            class="field-input multi-line note-input"
+            data-note-idx="${idx}"
+            placeholder="Short notes are fine..."
+            rows="3"
+          >${escapeHtml(note)}</textarea>
+          ${noteEntries.length > 1 ? `<button type="button" class="remove-note-btn" data-note-idx="${idx}">&times;</button>` : ''}
+        </div>
+        ${idx < noteEntries.length - 1 ? '<div class="note-separator"></div>' : ''}
+      `).join('');
+
+      // Bind input listeners
+      document.querySelectorAll('.note-input').forEach(input => {
+        input.addEventListener('input', () => {
+          const i = parseInt(input.dataset.noteIdx);
+          noteEntries[i] = input.value;
+        });
+      });
+
+      // Bind remove buttons
+      document.querySelectorAll('.remove-note-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const i = parseInt(btn.dataset.noteIdx);
+          noteEntries.splice(i, 1);
+          if (noteEntries.length === 0) noteEntries = [''];
+          renderNotes();
+        });
+      });
+    }
+
+    document.getElementById('add-note-btn').addEventListener('click', () => {
+      noteEntries.push('');
+      renderNotes();
+      const inputs = document.querySelectorAll('.note-input');
+      if (inputs.length > 0) inputs[inputs.length - 1].focus();
+    });
+
+    renderNotes();
+  </script>
+</body>
+</html>
