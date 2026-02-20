@@ -4,6 +4,7 @@
  * Generates personalized acknowledgments that MIRROR what the user said.
  * Uses ONE tiny Haiku call (~$0.001) to generate a warm, short ack.
  * Falls back to template acks if the AI call fails.
+ * Image-only messages skip AI entirely and use image templates.
  */
 
 import Anthropic from '@anthropic-ai/sdk';
@@ -13,6 +14,31 @@ import { logger } from '../infra/logging/logger';
 const client = new Anthropic({
   apiKey: config.anthropicApiKey,
 });
+
+// ============================================================================
+// Image Ack Templates (no AI needed — just acknowledge the photo)
+// ============================================================================
+
+const IMAGE_ACKS: Record<string, string[]> = {
+  es: [
+    'Foto recibida 📸 La analizamos en tu resumen de esta noche.',
+    'Imagen guardada 📸 Esta noche la revisamos con detalle.',
+    'Recibida tu foto 📸 La incluimos en el análisis de hoy.',
+  ],
+  en: [
+    'Photo received 📸 We\'ll analyze it in your summary tonight.',
+    'Image saved 📸 We\'ll review it in detail tonight.',
+    'Got your photo 📸 Including it in today\'s analysis.',
+  ],
+  pt: [
+    'Foto recebida 📸 Analisamos no seu resumo de hoje à noite.',
+    'Imagem guardada 📸 Revisamos com detalhe hoje à noite.',
+  ],
+  fr: [
+    'Photo reçue 📸 On l\'analyse dans votre résumé ce soir.',
+    'Image enregistrée 📸 On la revoit en détail ce soir.',
+  ],
+};
 
 // ============================================================================
 // Fallback Templates (used if Haiku call fails)
@@ -87,35 +113,76 @@ export function isQuestion(message: string): boolean {
 // ============================================================================
 
 /**
+ * Check if the message is image-only (no real text content from the user).
+ */
+function isImageOnlyMessage(message: string): boolean {
+  const cleaned = message
+    .replace(/\[Image attached\]/gi, '')
+    .replace(/\[Image description\]:.*$/gm, '')
+    .trim();
+  return cleaned.length === 0;
+}
+
+/**
+ * Get a random image ack template.
+ */
+function getImageAck(language: string): string {
+  const lang = language in IMAGE_ACKS ? language : 'es';
+  const pool = IMAGE_ACKS[lang] || IMAGE_ACKS.es!;
+  return pool[Math.floor(Math.random() * pool.length)]!;
+}
+
+/**
  * Generate a personalized ack that mirrors the user's message.
- * Uses Haiku for ~$0.001 per call. Falls back to templates on failure.
+ * - Image-only messages: use template (no AI)
+ * - Text messages: use Haiku (~$0.001) to mirror what they said
+ * - Falls back to templates on any failure
  */
 export async function getSmartAck(
   userMessage: string,
   language: string,
   isQuestionMsg: boolean,
+  hasImage: boolean = false,
 ): Promise<string> {
+  const lang = language || 'es';
+
+  // Image-only messages: skip AI, use template
+  if (hasImage && isImageOnlyMessage(userMessage)) {
+    return getImageAck(lang);
+  }
+
+  // Strip image markers from the text before sending to Haiku
+  const cleanMessage = userMessage
+    .replace(/\[Image attached\]/gi, '')
+    .replace(/\[Image description\]:.*$/gm, '')
+    .trim();
+
+  // If after cleaning there's no meaningful text, use fallback
+  if (!cleanMessage) {
+    return hasImage ? getImageAck(lang) : getFallbackAck(lang, isQuestionMsg);
+  }
+
   try {
-    const lang = language || 'es';
     const langName = { es: 'Spanish', en: 'English', pt: 'Portuguese', fr: 'French' }[lang] || 'Spanish';
+    const imageNote = hasImage ? ' They also sent a photo.' : '';
 
     const prompt = isQuestionMsg
-      ? `The user sent this health-related question via WhatsApp: "${userMessage}"
+      ? `You are a WhatsApp health companion. The user sent this message: "${cleanMessage}"${imageNote}
 
-Generate a SHORT (1-2 sentences max) warm acknowledgment in ${langName} that:
-1. Shows you understood their specific question
-2. Tells them the answer will be in their nightly summary tonight
+Generate ONLY a short acknowledgment (1-2 sentences) in ${langName} that:
+1. Shows you understood their specific question (mirror their words)
+2. Says the answer will be in their nightly summary
 
-Example style: "Entiendo tu pregunta sobre el dolor de cabeza. Esta noche te damos contexto en tu resumen."
-Do NOT answer the question. Just acknowledge it.`
-      : `The user sent this health-related message via WhatsApp: "${userMessage}"
+Reply ONLY with the acknowledgment. No quotes, no explanation.
+Example: "Entiendo tu pregunta sobre el dolor de cabeza. Esta noche te damos contexto en tu resumen."`
+      : `You are a WhatsApp health companion. The user sent this message: "${cleanMessage}"${imageNote}
 
-Generate a SHORT (1-2 sentences max) warm acknowledgment in ${langName} that:
-1. Mirrors/reflects what they shared (show you understood the specific thing)
-2. Tells them it's noted for their nightly summary
+Generate ONLY a short acknowledgment (1-2 sentences) in ${langName} that:
+1. Mirrors what they shared (repeat back the specific thing they mentioned)
+2. Says it's noted for their nightly summary
 
-Example style: "Anotado lo del arroz con pollo 📋 Lo incluimos en tu resumen de esta noche."
-Do NOT give health advice. Just acknowledge.`;
+Reply ONLY with the acknowledgment. No quotes, no explanation.
+Example: "Anotado lo del arroz con pollo 📋 Lo incluimos en tu resumen de esta noche."`;
 
     const response = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
@@ -125,15 +192,19 @@ Do NOT give health advice. Just acknowledge.`;
 
     const content = response.content[0];
     if (content && content.type === 'text' && content.text.trim()) {
-      return content.text.trim();
+      // Strip any wrapping quotes that Haiku might add
+      let ack = content.text.trim();
+      if ((ack.startsWith('"') && ack.endsWith('"')) || (ack.startsWith('"') && ack.endsWith('"'))) {
+        ack = ack.slice(1, -1);
+      }
+      return ack;
     }
 
-    // Fallback if response is empty
     return getFallbackAck(lang, isQuestionMsg);
   } catch (error) {
     const err = error as Error;
     logger.warn({ error: err.message }, 'Smart ack failed, using fallback template');
-    return getFallbackAck(language || 'es', isQuestionMsg);
+    return getFallbackAck(lang, isQuestionMsg);
   }
 }
 

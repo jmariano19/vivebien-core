@@ -194,7 +194,8 @@ async function _handleInboundMessage(
   );
 
   // ── Step 7: Send smart ack (Haiku — mirrors the user's message) ─────────
-  const ackMessage = await getSmartAck(processedMessage, user.language, questionDetected);
+  const hasImage = !!imageUrl;
+  const ackMessage = await getSmartAck(processedMessage, user.language, questionDetected, hasImage);
 
   await logExecution(
     correlationId,
