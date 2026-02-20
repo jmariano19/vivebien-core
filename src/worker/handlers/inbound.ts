@@ -131,28 +131,19 @@ async function _handleInboundMessage(
   if (user.isNew) {
     logger.info({ userId: user.id }, 'New user — sending welcome and asking for name');
 
-    // Send welcome greeting
+    // Send single combined welcome + name question (avoids message ordering issues)
     const welcomeMessages: Record<string, string> = {
-      es: 'Hola 👋\nSoy tu guía de nutrición de Plato Inteligente.\nTe ayudo a comer mejor con lo que ya tienes en tu cocina. Una doctora de verdad entrena la inteligencia artificial que te ayuda.',
-      en: 'Hello 👋\nI\'m your nutrition guide from Plato Inteligente.\nI help you eat better with what you already have in your kitchen. A real doctor trains the AI that helps you.',
-      pt: 'Olá 👋\nSou seu guia de nutrição do Plato Inteligente.\nTe ajudo a comer melhor com o que você já tem na cozinha. Uma médica de verdade treina a inteligência artificial que te ajuda.',
-      fr: 'Bonjour 👋\nJe suis votre guide nutrition de Plato Inteligente.\nJe vous aide à mieux manger avec ce que vous avez déjà dans votre cuisine. Un vrai médecin entraîne l\'IA qui vous aide.',
-    };
-
-    const askNameMessages: Record<string, string> = {
-      es: '¿Cómo te llamas? Así personalizo tu experiencia.',
-      en: 'What\'s your name? So I can personalize your experience.',
-      pt: 'Qual é o seu nome? Assim posso personalizar sua experiência.',
-      fr: 'Quel est votre nom? Pour personnaliser votre expérience.',
+      es: 'Hola 👋\nEstoy aquí para ayudarte a entender qué hacer con lo que ya tienes en tu cocina.\nExplícame qué estás comiendo hoy — o mándame una foto.\n\n¿Cómo te llamas? Así lo hacemos personal.',
+      en: 'Hello 👋\nI\'m here to help you make the most of what you already have in your kitchen.\nTell me what you\'re eating today — or send me a photo.\n\nWhat\'s your name? So we can make it personal.',
+      pt: 'Olá 👋\nEstou aqui para te ajudar a aproveitar o que você já tem na cozinha.\nMe conta o que está comendo hoje — ou manda uma foto.\n\nQual é o seu nome? Assim personalizamos tudo.',
+      fr: 'Bonjour 👋\nJe suis là pour vous aider à tirer le meilleur de ce que vous avez déjà dans votre cuisine.\nDites-moi ce que vous mangez aujourd\'hui — ou envoyez-moi une photo.\n\nComment vous appelez-vous? Pour personnaliser votre expérience.',
     };
 
     const lang = user.language || 'es';
     const welcome = welcomeMessages[lang] || welcomeMessages.es!;
-    const askName = askNameMessages[lang] || askNameMessages.es!;
 
-    // Send welcome + name question
+    // Single message — no ordering issues
     await chatwootClient.sendMessage(conversationId, welcome);
-    await chatwootClient.sendMessage(conversationId, askName);
     markResponseSent();
 
     // Update phase to awaiting_name
@@ -193,12 +184,12 @@ async function _handleInboundMessage(
         [user.id],
       );
 
-      // Send personalized confirmation + food prompt
+      // Send personalized confirmation (short — welcome already gave food prompt)
       const confirmMessages: Record<string, string> = {
-        es: `¡Mucho gusto, ${rawName}! 🙌\nMándame una foto de lo que vas a comer, o dime qué tienes en la nevera.`,
-        en: `Nice to meet you, ${rawName}! 🙌\nSend me a photo of what you're about to eat, or tell me what you have in your fridge.`,
-        pt: `Prazer, ${rawName}! 🙌\nMe manda uma foto do que vai comer, ou me diz o que tem na geladeira.`,
-        fr: `Enchanté, ${rawName}! 🙌\nEnvoyez-moi une photo de ce que vous allez manger, ou dites-moi ce que vous avez dans votre frigo.`,
+        es: `¡Mucho gusto, ${rawName}! 🙌 Listo, vamos.`,
+        en: `Nice to meet you, ${rawName}! 🙌 Let's go.`,
+        pt: `Prazer, ${rawName}! 🙌 Vamos lá.`,
+        fr: `Enchanté, ${rawName}! 🙌 C'est parti.`,
       };
 
       const lang = user.language || 'es';

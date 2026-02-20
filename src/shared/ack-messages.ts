@@ -46,39 +46,49 @@ const IMAGE_ACKS: Record<string, string[]> = {
 
 const FALLBACK_INPUT_ACKS: Record<string, string[]> = {
   es: [
-    'Anotado 📋',
-    'Lo tengo. Va para tu resumen de esta noche.',
-    'Recibido ✓ Lo incluyo en tu análisis de hoy.',
+    'Listo, lo tengo 👍',
+    'Va quedando el registro del día.',
+    'Perfecto, queda registrado.',
+    'Ahí va 📋',
+    'Recibido ✓',
   ],
   en: [
-    'Got it 📋',
-    "Noted. It'll be in your summary tonight.",
-    'Received ✓ Adding it to today\'s analysis.',
+    'Got it 👍',
+    'Logged for the day.',
+    'Perfect, noted.',
+    'Received ✓',
+    'All good 📋',
   ],
   pt: [
-    'Anotado 📋',
-    'Recebi. Vai pro seu resumo de hoje à noite.',
+    'Beleza, anotei 👍',
+    'Registrado pro dia.',
+    'Recebi ✓',
   ],
   fr: [
-    'Noté 📋',
-    'Reçu. Ça sera dans votre résumé ce soir.',
+    'C\'est noté 👍',
+    'Bien reçu.',
+    'Enregistré ✓',
   ],
 };
 
 const FALLBACK_QUESTION_ACKS: Record<string, string[]> = {
   es: [
-    'Buena pregunta 👀 Te la respondo en tu resumen de esta noche.',
-    'Me la apunto. Esta noche te doy la respuesta con contexto.',
+    'Buena pregunta 👀',
+    'Interesante, lo revisamos.',
+    'Me la apunto 🤔',
   ],
   en: [
-    "Good question 👀 I'll answer it in your summary tonight.",
-    "Noted that one. Tonight's summary will have your answer.",
+    'Good question 👀',
+    'Interesting one, noted.',
+    "I'll look into that 🤔",
   ],
   pt: [
-    'Boa pergunta 👀 Respondo no seu resumo de hoje à noite.',
+    'Boa pergunta 👀',
+    'Interessante, anoto aqui.',
   ],
   fr: [
-    'Bonne question 👀 Je vous réponds dans votre résumé ce soir.',
+    'Bonne question 👀',
+    'Intéressant, je note.',
   ],
 };
 
@@ -167,26 +177,48 @@ export async function getSmartAck(
     const imageNote = hasImage ? ' They also sent a photo.' : '';
 
     const prompt = isQuestionMsg
-      ? `You are a WhatsApp health companion. The user sent this message: "${cleanMessage}"${imageNote}
+      ? `You are a warm WhatsApp nutrition companion. The user sent: "${cleanMessage}"${imageNote}
 
-Generate ONLY a short acknowledgment (1-2 sentences) in ${langName} that:
-1. Shows you understood their specific question (mirror their words)
-2. Says the answer will be in their nightly summary
+Write a SHORT ack (1 sentence, max 15 words) in ${langName} that:
+- Shows you understood their specific question
+- Feels like a friend texting back, not a robot
 
-Reply ONLY with the acknowledgment. No quotes, no explanation.
-Example: "Entiendo tu pregunta sobre el dolor de cabeza. Esta noche te damos contexto en tu resumen."`
-      : `You are a WhatsApp health companion. The user sent this message: "${cleanMessage}"${imageNote}
+RULES:
+- NEVER start with "Anotado" or "Noted" — vary your openings
+- NEVER mention "resumen", "summary", or "tonight" — just acknowledge warmly
+- Use 1 emoji max, and not always the same one
+- Keep it casual and warm like WhatsApp
 
-Generate ONLY a short acknowledgment (1-2 sentences) in ${langName} that:
-1. Mirrors what they shared (repeat back the specific thing they mentioned)
-2. Says it's noted for their nightly summary
+Vary your style. Examples of good variety:
+- "Buena pregunta sobre las grasas 🤔"
+- "Ah, eso del azúcar es interesante — lo revisamos."
+- "Ojo con eso, te cuento más luego 👀"
 
-Reply ONLY with the acknowledgment. No quotes, no explanation.
-Example: "Anotado lo del arroz con pollo 📋 Lo incluimos en tu resumen de esta noche."`;
+Reply ONLY with the ack. No quotes.`
+      : `You are a warm WhatsApp nutrition companion. The user sent: "${cleanMessage}"${imageNote}
+
+Write a SHORT ack (1 sentence, max 15 words) in ${langName} that:
+- Reflects back what they shared using THEIR words
+- Feels like a friend texting back, not a system confirmation
+
+RULES:
+- NEVER start with "Anotado" — vary your openings every time
+- NEVER say "lo incluimos en tu resumen" or "tonight's summary" — just acknowledge warmly
+- Use 1 emoji max, and vary which emoji you use
+- Match their energy — if they're casual, be casual
+
+Vary your style. Examples of good variety:
+- "Huevos con tortilla, clásico 💪"
+- "Rica esa combinación de pollo con ensalada."
+- "4 vasos de agua, bien ahí 💧"
+- "Tacos con aguacate suena increíble 🤤"
+- "Eso se escucha pesado, descansa bien."
+
+Reply ONLY with the ack. No quotes.`;
 
     const response = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 100,
+      max_tokens: 60,
       messages: [{ role: 'user', content: prompt }],
     });
 
