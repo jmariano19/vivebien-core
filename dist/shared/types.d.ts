@@ -53,7 +53,7 @@ export interface ConversationContext {
     metadata: Record<string, unknown>;
     language?: string;
 }
-export type ConversationPhase = 'onboarding' | 'active' | 'paused' | 'completed' | 'crisis';
+export type ConversationPhase = 'onboarding' | 'awaiting_name' | 'active' | 'paused' | 'completed' | 'crisis';
 export type CheckinStatus = 'not_scheduled' | 'scheduled' | 'sent' | 'canceled' | 'completed';
 export interface CheckinState {
     userId: string;

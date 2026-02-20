@@ -87,6 +87,83 @@ async function _handleInboundMessage(data, logger, markResponseSent) {
         user.language = detectedLang;
         logger.info({ userId: user.id, language: detectedLang }, 'Language updated');
     }
+    // ── Step 3b: Check conversation phase (for name collection flow) ─────────
+    const conversationState = await client_2.db.query('SELECT phase FROM conversation_state WHERE user_id = $1', [user.id]);
+    const currentPhase = conversationState.rows[0]?.phase || 'onboarding';
+    // ── NEW USER: Send welcome + ask for name ────────────────────────────────
+    if (user.isNew) {
+        logger.info({ userId: user.id }, 'New user — sending welcome and asking for name');
+        // Send welcome greeting
+        const welcomeMessages = {
+            es: 'Hola 👋\nSoy tu guía de nutrición de Plato Inteligente.\nTe ayudo a comer mejor con lo que ya tienes en tu cocina. Una doctora de verdad entrena la inteligencia artificial que te ayuda.',
+            en: 'Hello 👋\nI\'m your nutrition guide from Plato Inteligente.\nI help you eat better with what you already have in your kitchen. A real doctor trains the AI that helps you.',
+            pt: 'Olá 👋\nSou seu guia de nutrição do Plato Inteligente.\nTe ajudo a comer melhor com o que você já tem na cozinha. Uma médica de verdade treina a inteligência artificial que te ajuda.',
+            fr: 'Bonjour 👋\nJe suis votre guide nutrition de Plato Inteligente.\nJe vous aide à mieux manger avec ce que vous avez déjà dans votre cuisine. Un vrai médecin entraîne l\'IA qui vous aide.',
+        };
+        const askNameMessages = {
+            es: '¿Cómo te llamas? Así personalizo tu experiencia.',
+            en: 'What\'s your name? So I can personalize your experience.',
+            pt: 'Qual é o seu nome? Assim posso personalizar sua experiência.',
+            fr: 'Quel est votre nom? Pour personnaliser votre expérience.',
+        };
+        const lang = user.language || 'es';
+        const welcome = welcomeMessages[lang] || welcomeMessages.es;
+        const askName = askNameMessages[lang] || askNameMessages.es;
+        // Send welcome + name question
+        await chatwootClient.sendMessage(conversationId, welcome);
+        await chatwootClient.sendMessage(conversationId, askName);
+        markResponseSent();
+        // Update phase to awaiting_name
+        await client_2.db.query(`UPDATE conversation_state SET phase = 'awaiting_name' WHERE user_id = $1`, [user.id]);
+        // Still save the health event (their first message might have food info)
+        await healthEventService.saveEvent({
+            userId: user.id,
+            rawInput: processedMessage,
+            imageUrl,
+            language: user.language,
+            isQuestion: false,
+            source: 'whatsapp',
+        });
+        return {
+            status: 'completed',
+            correlationId,
+            action: 'welcome_sent_awaiting_name',
+        };
+    }
+    // ── AWAITING NAME: Capture the user's name ───────────────────────────────
+    if (currentPhase === 'awaiting_name') {
+        const rawName = extractName(processedMessage);
+        logger.info({ userId: user.id, rawName }, 'Capturing user name');
+        if (rawName) {
+            // Save name to user record
+            await userService.updateName(user.id, rawName);
+            // Update phase to active
+            await client_2.db.query(`UPDATE conversation_state SET phase = 'active' WHERE user_id = $1`, [user.id]);
+            // Send personalized confirmation + food prompt
+            const confirmMessages = {
+                es: `¡Mucho gusto, ${rawName}! 🙌\nMándame una foto de lo que vas a comer, o dime qué tienes en la nevera.`,
+                en: `Nice to meet you, ${rawName}! 🙌\nSend me a photo of what you're about to eat, or tell me what you have in your fridge.`,
+                pt: `Prazer, ${rawName}! 🙌\nMe manda uma foto do que vai comer, ou me diz o que tem na geladeira.`,
+                fr: `Enchanté, ${rawName}! 🙌\nEnvoyez-moi une photo de ce que vous allez manger, ou dites-moi ce que vous avez dans votre frigo.`,
+            };
+            const lang = user.language || 'es';
+            await chatwootClient.sendMessage(conversationId, confirmMessages[lang] || confirmMessages.es);
+            markResponseSent();
+            logger.info({ userId: user.id, name: rawName }, 'Name saved, phase set to active');
+            return {
+                status: 'completed',
+                correlationId,
+                action: 'name_captured',
+            };
+        }
+        else {
+            // Couldn't extract a name — skip and move to active phase
+            // Their message is probably food info, treat it normally
+            await client_2.db.query(`UPDATE conversation_state SET phase = 'active' WHERE user_id = $1`, [user.id]);
+            logger.info({ userId: user.id }, 'Could not extract name, moving to active phase');
+            // Fall through to normal processing below
+        }
+    }
     // ── Step 4: Safety check (crisis keywords — no AI) ───────────────────────
     const safetyCheck = await (0, logger_1.logExecution)(correlationId, 'safety_check', async () => conversationService.checkSafety(processedMessage, {
         userId: user.id,
@@ -146,6 +223,68 @@ async function _handleInboundMessage(data, logger, markResponseSent) {
         correlationId,
         action: questionDetected ? 'question_acked' : 'input_acked',
     };
+}
+// ============================================================================
+// Name Extraction Helper
+// ============================================================================
+/**
+ * Extract a name from the user's response.
+ * Handles common patterns like:
+ *   - "Maria" (just the name)
+ *   - "Me llamo Maria"
+ *   - "My name is Maria"
+ *   - "Soy Maria"
+ *   - "Maria Garcia" (first + last)
+ *
+ * Returns null if the message doesn't look like a name
+ * (e.g., it's food info, a question, etc.)
+ */
+function extractName(message) {
+    const trimmed = message.trim();
+    // Skip if empty or too long (probably not a name)
+    if (!trimmed || trimmed.length > 100)
+        return null;
+    // Skip if it looks like food/health info (contains common food words or is very long)
+    const foodIndicators = [
+        'comí', 'comiste', 'desayuno', 'almuerzo', 'cena', 'arroz', 'pollo',
+        'breakfast', 'lunch', 'dinner', 'ate', 'eating', 'food', 'hungry',
+        'dolor', 'pain', 'headache', 'stomach', 'foto', 'photo', 'image',
+        'tengo', 'i have', 'nevera', 'fridge', 'cocina', 'kitchen',
+    ];
+    const lower = trimmed.toLowerCase();
+    if (foodIndicators.some(word => lower.includes(word))) {
+        return null;
+    }
+    // Skip if it's a question
+    if (trimmed.includes('?'))
+        return null;
+    // Try common name patterns
+    const patterns = [
+        /^(?:me llamo|mi nombre es|soy|i'm|i am|my name is|meu nome é|eu sou|je m'appelle|je suis)\s+(.+)$/i,
+    ];
+    for (const pattern of patterns) {
+        const match = trimmed.match(pattern);
+        if (match && match[1]) {
+            return cleanName(match[1]);
+        }
+    }
+    // If it's short (1-3 words) and doesn't have numbers, treat it as a name
+    const words = trimmed.split(/\s+/);
+    if (words.length <= 3 && !/\d/.test(trimmed) && trimmed.length <= 50) {
+        return cleanName(trimmed);
+    }
+    return null;
+}
+/**
+ * Clean and capitalize a name string.
+ */
+function cleanName(raw) {
+    return raw
+        .replace(/[.!,;:'"]+$/g, '') // Remove trailing punctuation
+        .split(/\s+/)
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ')
+        .trim();
 }
 // ============================================================================
 // Media Processing (voice → Whisper transcription, images → save URL only)

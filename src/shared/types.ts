@@ -74,6 +74,7 @@ export interface ConversationContext {
 
 export type ConversationPhase =
   | 'onboarding'
+  | 'awaiting_name'
   | 'active'
   | 'paused'
   | 'completed'
