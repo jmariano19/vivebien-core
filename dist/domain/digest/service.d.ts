@@ -44,6 +44,7 @@ export declare class DigestService {
     private client;
     private rateLimiter;
     private healthEventService;
+    private googleFitService;
     constructor(db: Pool);
     /**
      * Generate the full nightly digest for a user.
