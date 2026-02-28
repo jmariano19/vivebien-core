@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Conectar Google Fit · CareLog</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Lora:ital,wght@0,400;1,400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green:    #2D6A4F;
+      --green-lt: #40916C;
+      --green-bg: #F0FAF4;
+      --text:     #1B2D27;
+      --muted:    #6B7C75;
+      --border:   #D8EAE1;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--green-bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 48px 40px;
+      max-width: 440px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+    }
+
+    .logo {
+      width: 52px;
+      height: 52px;
+      background: var(--green);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 24px;
+      font-size: 24px;
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--green);
+      margin-bottom: 12px;
+    }
+
+    .subtitle {
+      font-family: 'Lora', serif;
+      font-style: italic;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.6;
+      margin-bottom: 32px;
+    }
+
+    .benefits {
+      background: var(--green-bg);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 32px;
+      text-align: left;
+    }
+
+    .benefit {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .benefit:last-child { margin-bottom: 0; }
+
+    .benefit-icon {
+      font-size: 20px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .benefit-text {
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--text);
+    }
+
+    .benefit-text strong {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .connect-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: var(--green);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 16px 32px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      width: 100%;
+      transition: background 0.2s;
+    }
+
+    .connect-btn:hover { background: var(--green-lt); }
+
+    .privacy-note {
+      margin-top: 20px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    /* Success / Error states */
+    .status-banner {
+      display: none;
+      border-radius: 10px;
+      padding: 14px 18px;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 24px;
+    }
+
+    .status-banner.success {
+      background: #E8F5E9;
+      color: #2E7D32;
+    }
+
+    .status-banner.error {
+      background: #FFEBEE;
+      color: #C62828;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">💚</div>
+    <h1>Conecta tu Google Fit</h1>
+    <p class="subtitle">
+      Tu resumen nocturno será más completo —<br/>
+      sin que tengas que enviar nada.
+    </p>
+
+    <div id="statusBanner" class="status-banner"></div>
+
+    <div class="benefits">
+      <div class="benefit">
+        <span class="benefit-icon">😴</span>
+        <div class="benefit-text">
+          <strong>Sueño automático</strong>
+          Cuántas horas dormiste y cómo estuvo tu descanso.
+        </div>
+      </div>
+      <div class="benefit">
+        <span class="benefit-icon">💓</span>
+        <div class="benefit-text">
+          <strong>Frecuencia cardíaca</strong>
+          Tu pulso en reposo — una señal clave del estrés y la recuperación.
+        </div>
+      </div>
+      <div class="benefit">
+        <span class="benefit-icon">🚶</span>
+        <div class="benefit-text">
+          <strong>Actividad del día</strong>
+          Pasos, minutos activos y calorías quemadas — sin que levantes un dedo.
+        </div>
+      </div>
+    </div>
+
+    <a id="connectBtn" href="#" class="connect-btn">
+      <svg width="20" height="20" viewBox="0 0 48 48" fill="none">
+        <path fill="#fff" d="M24 9.5c3.7 0 6.2 1.6 7.7 2.9l5.7-5.7C33.9 3.5 29.4 1.5 24 1.5 15.1 1.5 7.5 6.8 4 14.3l6.6 5.2C12.3 13.5 17.7 9.5 24 9.5z"/>
+        <path fill="#fff" d="M46.1 24.5c0-1.6-.1-2.8-.4-4H24v7.6h12.5c-.5 2.9-2.2 5.3-4.6 6.9l7 5.5C43 36.5 46.1 30.9 46.1 24.5z"/>
+        <path fill="#fff" d="M10.6 28.5c-.5-1.5-.8-3-.8-4.5s.3-3 .8-4.5L4 14.3C2.4 17.5 1.5 21.1 1.5 25s.9 7.5 2.5 10.7l6.6-5.2z"/>
+        <path fill="#fff" d="M24 46.5c5.4 0 9.9-1.8 13.2-4.9l-7-5.5c-1.7 1.1-3.9 1.9-6.2 1.9-6.3 0-11.7-4-13.4-9.5l-6.6 5.2C7.5 41.2 15.1 46.5 24 46.5z"/>
+      </svg>
+      Conectar con Google Fit
+    </a>
+
+    <p class="privacy-note">
+      Solo leemos tu data de salud. No compartimos nada con terceros.
+      Puedes desconectar cuando quieras.
+    </p>
+  </div>
+
+  <script>
+    // Get userId from URL: /connect-googlefit?userId=XXX
+    const params   = new URLSearchParams(window.location.search);
+    const userId   = params.get('userId');
+    const fitParam = params.get('fit');
+
+    // Handle redirect back from OAuth
+    if (fitParam === 'connected') {
+      const banner = document.getElementById('statusBanner');
+      banner.textContent = '✅ ¡Google Fit conectado! Tu próximo resumen incluirá tus datos de salud.';
+      banner.className   = 'status-banner success';
+      banner.style.display = 'block';
+    } else if (fitParam === 'denied' || fitParam === 'error') {
+      const banner = document.getElementById('statusBanner');
+      banner.textContent = '❌ No pudimos conectar Google Fit. Intenta de nuevo.';
+      banner.className   = 'status-banner error';
+      banner.style.display = 'block';
+    }
+
+    // Set connect button href
+    const btn = document.getElementById('connectBtn');
+    if (userId) {
+      btn.href = `/api/integrations/googlefit/connect?userId=${userId}`;
+    } else {
+      btn.style.opacity  = '0.5';
+      btn.style.cursor   = 'not-allowed';
+      btn.href           = '#';
+      btn.title          = 'userId requerido';
+    }
+  </script>
+</body>
+</html>
