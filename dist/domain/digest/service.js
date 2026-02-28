@@ -74,7 +74,7 @@ class DigestService {
             logger_1.logger.warn({ userId, err }, 'Google Fit fetch failed — proceeding without it');
         }
         // 6. Generate the summary with ONE Sonnet call
-        const summaryData = await this.generateSummaryWithSonnet(todayEvents, weekEvents, profile, recentSummaries, googleFitSummary);
+        const summaryData = await this.generateSummaryWithSonnet(todayEvents, weekEvents, profile, recentSummaries, googleFitSummary, userId);
         // 7. Mark today's events as processed
         for (const event of todayEvents) {
             try {
@@ -102,7 +102,7 @@ class DigestService {
     /**
      * The ONE AI call — Sonnet processes the entire day.
      */
-    async generateSummaryWithSonnet(todayEvents, weekEvents, profile, recentSummaries, googleFitSummary = null) {
+    async generateSummaryWithSonnet(todayEvents, weekEvents, profile, recentSummaries, googleFitSummary = null, userId = 'unknown') {
         await this.rateLimiter.acquire();
         // Format today's events for the prompt
         const todayFormatted = todayEvents.map(e => ({
@@ -201,7 +201,7 @@ RULES:
                     // Log AI usage
                     const { logAIUsage } = await import('../../infra/logging/logger.js');
                     await logAIUsage({
-                        userId: profile.name || 'unknown',
+                        userId: userId,
                         correlationId: `digest-${new Date().toISOString().split('T')[0]}`,
                         model: 'claude-sonnet-4-5-20250929',
                         inputTokens: response.usage.input_tokens,

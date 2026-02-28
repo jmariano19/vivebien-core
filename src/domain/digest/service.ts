@@ -128,6 +128,7 @@ export class DigestService {
       profile,
       recentSummaries,
       googleFitSummary,
+      userId,
     );
 
     // 7. Mark today's events as processed
@@ -174,6 +175,7 @@ export class DigestService {
     profile: UserProfile,
     recentSummaries: DailyDigest[],
     googleFitSummary: string | null = null,
+    userId: string = 'unknown',
   ): Promise<Record<string, unknown>> {
     await this.rateLimiter.acquire();
 
@@ -284,7 +286,7 @@ RULES:
           // Log AI usage
           const { logAIUsage } = await import('../../infra/logging/logger.js');
           await logAIUsage({
-            userId: profile.name || 'unknown',
+            userId: userId,
             correlationId: `digest-${new Date().toISOString().split('T')[0]}`,
             model: 'claude-sonnet-4-5-20250929',
             inputTokens: response.usage.input_tokens,
