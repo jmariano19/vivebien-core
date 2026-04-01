@@ -54,6 +54,33 @@ export interface ConversationContext {
     language?: string;
 }
 export type ConversationPhase = 'onboarding' | 'awaiting_name' | 'active' | 'paused' | 'completed' | 'crisis';
+export type Archetype = 'performance' | 'skeptic' | 'curious' | 'passive' | 'unknown';
+export type CoachingPhase = 'phase_1' | 'phase_2';
+export interface ArchetypeScores {
+    performance: number;
+    skeptic: number;
+    curious: number;
+    passive: number;
+}
+export interface OnboardingAnswer {
+    question: number;
+    answer: string;
+}
+export interface ClientProfile {
+    id: string;
+    userId: string;
+    archetype: Archetype;
+    archetypeScores: ArchetypeScores;
+    coachingPhase: CoachingPhase;
+    onboardingAnswers: OnboardingAnswer[];
+    patternsConfirmed: number;
+    graduationPending: boolean;
+    graduatedAt: Date | null;
+    coachNotes: string | null;
+    behavioralData: Record<string, unknown>;
+    createdAt: Date;
+    updatedAt: Date;
+}
 export type CheckinStatus = 'not_scheduled' | 'scheduled' | 'sent' | 'canceled' | 'completed';
 export interface CheckinState {
     userId: string;

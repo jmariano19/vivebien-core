@@ -2,31 +2,45 @@
 /**
  * Plato Inteligente — Inbound Message Handler
  *
- * Simplified flow: NO AI calls during the day.
- *   1. Load/create user
- *   2. Transcribe voice (Whisper) if needed
- *   3. Detect & update language
- *   4. Safety check (rule-based crisis keywords)
- *   5. Detect if it's a question
- *   6. Save raw input to health_events (processed=FALSE)
- *   7. Send template ack via Chatwoot
+ * Flow: NO AI calls during the day (except Whisper for voice).
  *
- * All intelligence is concentrated in the nightly pipeline.
+ * NEW USER:
+ *   1. Create client profile
+ *   2. Send intro + Q1
+ *   3. Set conversation phase = 'onboarding', onboarding_step = 1
+ *
+ * ONBOARDING (steps 1-5):
+ *   1. Save answer to client profile
+ *   2. If step < 5: send next question
+ *   3. If step == 5: score archetype → save → send completion + archetype message
+ *                    set phase = 'active'
+ *
+ * ACTIVE:
+ *   1. Transcribe voice (Whisper) if needed
+ *   2. Detect language
+ *   3. Safety check (rule-based, no AI)
+ *   4. Save raw input to health_events (processed=FALSE)
+ *   5. Send smart ack (Haiku mirrors the user's words)
+ *
+ * All pattern detection and PDF generation happen in the nightly pipeline.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.handleInboundMessage = handleInboundMessage;
 const service_1 = require("../../domain/user/service");
 const service_2 = require("../../domain/health-event/service");
-const service_3 = require("../../domain/media/service");
-const service_4 = require("../../domain/conversation/service");
+const service_3 = require("../../domain/client-profile/service");
+const service_4 = require("../../domain/media/service");
+const service_5 = require("../../domain/conversation/service");
 const client_1 = require("../../adapters/chatwoot/client");
 const client_2 = require("../../infra/db/client");
 const logger_1 = require("../../infra/logging/logger");
 const language_1 = require("../../shared/language");
 const ack_messages_1 = require("../../shared/ack-messages");
+const onboarding_1 = require("../../shared/onboarding");
 const userService = new service_1.UserService(client_2.db);
 const healthEventService = new service_2.HealthEventService(client_2.db);
-const conversationService = new service_4.ConversationService(client_2.db);
+const clientProfileService = new service_3.ClientProfileService(client_2.db);
+const conversationService = new service_5.ConversationService(client_2.db);
 const chatwootClient = new client_1.ChatwootClient();
 async function handleInboundMessage(data, logger) {
     const { correlationId, conversationId } = data;
@@ -69,94 +83,85 @@ async function _handleInboundMessage(data, logger, markResponseSent) {
     // ── Step 1: Load or create user ──────────────────────────────────────────
     const user = await (0, logger_1.logExecution)(correlationId, 'load_user', async () => userService.loadOrCreate(phone), logger);
     logger.info({ userId: user.id, isNew: user.isNew }, 'User loaded');
-    // ── Step 2: Transcribe voice messages (Whisper — only AI call during day) ─
+    // ── Step 2: Detect language early (before onboarding check) ─────────────
+    const detectedLang = (0, language_1.detectLanguage)(message) || user.language || 'es';
+    if (detectedLang !== user.language) {
+        await userService.updateLanguage(user.id, detectedLang);
+        user.language = detectedLang;
+    }
+    const lang = user.language || 'es';
+    // ── Step 3: Load conversation state ─────────────────────────────────────
+    const stateResult = await client_2.db.query('SELECT phase, onboarding_step FROM conversation_state WHERE user_id = $1', [user.id]);
+    const currentPhase = stateResult.rows[0]?.phase || 'onboarding';
+    const onboardingStep = stateResult.rows[0]?.onboarding_step || 0;
+    // ── NEW USER: Start onboarding ───────────────────────────────────────────
+    if (user.isNew) {
+        logger.info({ userId: user.id }, 'New user — starting onboarding');
+        // Create client profile
+        await clientProfileService.create(user.id);
+        // Send intro + Q1 as a single message
+        const intro = (0, onboarding_1.getOnboardingIntro)(lang);
+        const q1 = (0, onboarding_1.getQuestion)(1, lang);
+        await chatwootClient.sendMessage(conversationId, `${intro}\n\n${q1}`);
+        markResponseSent();
+        // Set onboarding_step = 1 (waiting for answer to Q1)
+        await client_2.db.query(`UPDATE conversation_state
+       SET phase = 'onboarding', onboarding_step = 1
+       WHERE user_id = $1`, [user.id]);
+        return { status: 'completed', correlationId, action: 'onboarding_started' };
+    }
+    // ── ONBOARDING: Process answer, send next question ───────────────────────
+    if (currentPhase === 'onboarding' && onboardingStep >= 1 && onboardingStep <= 5) {
+        logger.info({ userId: user.id, step: onboardingStep }, 'Processing onboarding answer');
+        // Save this answer
+        await clientProfileService.saveOnboardingAnswer(user.id, onboardingStep, message);
+        if (onboardingStep < 5) {
+            // Send the next question
+            const nextStep = onboardingStep + 1;
+            const nextQuestion = (0, onboarding_1.getQuestion)(nextStep, lang);
+            await chatwootClient.sendMessage(conversationId, nextQuestion);
+            markResponseSent();
+            // Advance the step
+            await client_2.db.query(`UPDATE conversation_state SET onboarding_step = $2 WHERE user_id = $1`, [user.id, nextStep]);
+            return { status: 'completed', correlationId, action: `onboarding_q${onboardingStep}_answered` };
+        }
+        else {
+            // Q5 answered — score archetype, send completion messages, move to active
+            const profile = await clientProfileService.findByUserId(user.id);
+            const answers = profile?.onboardingAnswers ?? [];
+            const { archetype, scores } = (0, onboarding_1.detectArchetype)(answers);
+            await clientProfileService.setArchetype(user.id, archetype, scores);
+            logger.info({ userId: user.id, archetype, scores }, 'Archetype detected');
+            // Send completion message + archetype-specific first impression
+            const completionMsg = (0, onboarding_1.getOnboardingComplete)(lang);
+            const archetypeMsg = (0, onboarding_1.getArchetypeMessage)(archetype, lang);
+            await chatwootClient.sendMessage(conversationId, `${completionMsg}\n\n${archetypeMsg}`);
+            markResponseSent();
+            // Move to active phase
+            await client_2.db.query(`UPDATE conversation_state
+         SET phase = 'active', onboarding_step = NULL
+         WHERE user_id = $1`, [user.id]);
+            return { status: 'completed', correlationId, action: 'onboarding_complete' };
+        }
+    }
+    // ── ACTIVE: Normal message flow (save + ack) ─────────────────────────────
+    // Step A: Transcribe voice messages (only AI cost during the day)
     let processedMessage = message;
     let imageUrl = null;
     if (attachments && attachments.length > 0) {
-        processedMessage = await (0, logger_1.logExecution)(correlationId, 'process_media', async () => processAttachments(attachments, message, user.language || 'es', logger), logger);
-        // Capture image URL for health_events
+        processedMessage = await (0, logger_1.logExecution)(correlationId, 'process_media', async () => processAttachments(attachments, message, lang, logger), logger);
         const imageAttachment = attachments.find(a => a.type === 'image');
         if (imageAttachment) {
             imageUrl = imageAttachment.url;
         }
     }
-    // ── Step 3: Detect & update language (always — user may switch languages) ─
-    const detectedLang = (0, language_1.detectLanguage)(processedMessage);
-    if (detectedLang && detectedLang !== user.language) {
-        await (0, logger_1.logExecution)(correlationId, 'update_language', async () => userService.updateLanguage(user.id, detectedLang), logger);
-        user.language = detectedLang;
-        logger.info({ userId: user.id, language: detectedLang }, 'Language updated');
+    // Step B: Re-detect language from processed message (voice may differ)
+    const finalLang = (0, language_1.detectLanguage)(processedMessage) || lang;
+    if (finalLang !== user.language) {
+        await userService.updateLanguage(user.id, finalLang);
+        user.language = finalLang;
     }
-    // ── Step 3b: Check conversation phase (for name collection flow) ─────────
-    const conversationState = await client_2.db.query('SELECT phase FROM conversation_state WHERE user_id = $1', [user.id]);
-    const currentPhase = conversationState.rows[0]?.phase || 'onboarding';
-    // ── NEW USER: Send welcome + ask for name ────────────────────────────────
-    if (user.isNew) {
-        logger.info({ userId: user.id }, 'New user — sending welcome and asking for name');
-        // Send single combined welcome + name question (avoids message ordering issues)
-        const welcomeMessages = {
-            es: 'Hola 👋\nEstoy aquí para ayudarte a entender qué hacer con lo que ya tienes en tu cocina.\n\nAquí no te voy a señalar lo que hiciste mal.\nTampoco te voy a dar una dieta.\nSolo vamos a mirar tu día con calma y entender qué pasó en tu cuerpo.\nSin juicio. Sin presión.\n\nExplícame qué estás comiendo hoy — o mándame una foto.\n\n¿Cómo te llamas? Así lo hacemos personal.',
-            en: 'Hello 👋\nI\'m here to help you make the most of what you already have in your kitchen.\n\nI\'m not going to point out what you did wrong.\nI\'m not going to give you a diet.\nWe\'re just going to look at your day calmly and understand what happened in your body.\nNo judgment. No pressure.\n\nTell me what you\'re eating today — or send me a photo.\n\nWhat\'s your name? So we can make it personal.',
-            pt: 'Olá 👋\nEstou aqui para te ajudar a aproveitar o que você já tem na cozinha.\n\nAqui não vou te apontar o que fez de errado.\nTambém não vou te dar uma dieta.\nSó vamos olhar seu dia com calma e entender o que aconteceu no seu corpo.\nSem julgamento. Sem pressão.\n\nMe conta o que está comendo hoje — ou manda uma foto.\n\nQual é o seu nome? Assim personalizamos tudo.',
-            fr: 'Bonjour 👋\nJe suis là pour vous aider à tirer le meilleur de ce que vous avez déjà dans votre cuisine.\n\nIci, je ne vais pas pointer ce que vous avez mal fait.\nJe ne vais pas non plus vous donner un régime.\nOn va simplement regarder votre journée calmement et comprendre ce qui s\'est passé dans votre corps.\nSans jugement. Sans pression.\n\nDites-moi ce que vous mangez aujourd\'hui — ou envoyez-moi une photo.\n\nComment vous appelez-vous? Pour personnaliser votre expérience.',
-        };
-        const lang = user.language || 'es';
-        const welcome = welcomeMessages[lang] || welcomeMessages.es;
-        // Single message — no ordering issues
-        await chatwootClient.sendMessage(conversationId, welcome);
-        markResponseSent();
-        // Update phase to awaiting_name
-        await client_2.db.query(`UPDATE conversation_state SET phase = 'awaiting_name' WHERE user_id = $1`, [user.id]);
-        // Still save the health event (their first message might have food info)
-        await healthEventService.saveEvent({
-            userId: user.id,
-            rawInput: processedMessage,
-            imageUrl,
-            language: user.language,
-            isQuestion: false,
-            source: 'whatsapp',
-        });
-        return {
-            status: 'completed',
-            correlationId,
-            action: 'welcome_sent_awaiting_name',
-        };
-    }
-    // ── AWAITING NAME: Capture the user's name ───────────────────────────────
-    if (currentPhase === 'awaiting_name') {
-        const rawName = extractName(processedMessage);
-        logger.info({ userId: user.id, rawName }, 'Capturing user name');
-        if (rawName) {
-            // Save name to user record
-            await userService.updateName(user.id, rawName);
-            // Update phase to active
-            await client_2.db.query(`UPDATE conversation_state SET phase = 'active' WHERE user_id = $1`, [user.id]);
-            // Send personalized confirmation (short — welcome already gave food prompt)
-            const confirmMessages = {
-                es: `¡Mucho gusto, ${rawName}! 🙌 Listo, vamos.`,
-                en: `Nice to meet you, ${rawName}! 🙌 Let's go.`,
-                pt: `Prazer, ${rawName}! 🙌 Vamos lá.`,
-                fr: `Enchanté, ${rawName}! 🙌 C'est parti.`,
-            };
-            const lang = user.language || 'es';
-            await chatwootClient.sendMessage(conversationId, confirmMessages[lang] || confirmMessages.es);
-            markResponseSent();
-            logger.info({ userId: user.id, name: rawName }, 'Name saved, phase set to active');
-            return {
-                status: 'completed',
-                correlationId,
-                action: 'name_captured',
-            };
-        }
-        else {
-            // Couldn't extract a name — skip and move to active phase
-            // Their message is probably food info, treat it normally
-            await client_2.db.query(`UPDATE conversation_state SET phase = 'active' WHERE user_id = $1`, [user.id]);
-            logger.info({ userId: user.id }, 'Could not extract name, moving to active phase');
-            // Fall through to normal processing below
-        }
-    }
-    // ── Step 4: Safety check (crisis keywords — no AI) ───────────────────────
+    // Step C: Safety check (rule-based crisis keywords — no AI)
     const safetyCheck = await (0, logger_1.logExecution)(correlationId, 'safety_check', async () => conversationService.checkSafety(processedMessage, {
         userId: user.id,
         conversationId,
@@ -168,7 +173,6 @@ async function _handleInboundMessage(data, logger, markResponseSent) {
     }), logger);
     if (safetyCheck.isUrgent) {
         logger.warn({ userId: user.id, type: safetyCheck.type }, 'Crisis message detected');
-        // For crisis messages, still save the event, but also send crisis resources
         const crisisMessages = {
             es: 'Tu mensaje es importante para nosotros. Si estás en crisis, por favor llama a la Línea Nacional 800-290-0024 o Línea de la Vida 800-911-2000. Estamos aquí contigo.',
             en: 'Your message matters to us. If you\'re in crisis, please call 988 (Suicide & Crisis Lifeline). We\'re here with you.',
@@ -177,7 +181,6 @@ async function _handleInboundMessage(data, logger, markResponseSent) {
         };
         await chatwootClient.sendMessage(conversationId, crisisMessages[user.language] || crisisMessages.es);
         markResponseSent();
-        // Save the event anyway (for the nightly pipeline to see context)
         await healthEventService.saveEvent({
             userId: user.id,
             rawInput: processedMessage,
@@ -186,15 +189,11 @@ async function _handleInboundMessage(data, logger, markResponseSent) {
             isQuestion: false,
             source: 'whatsapp',
         });
-        return {
-            status: 'completed',
-            correlationId,
-            action: 'crisis_response_sent',
-        };
+        return { status: 'completed', correlationId, action: 'crisis_response_sent' };
     }
-    // ── Step 5: Detect if it's a question ────────────────────────────────────
+    // Step D: Detect if it's a question
     const questionDetected = (0, ack_messages_1.isQuestion)(processedMessage);
-    // ── Step 6: Save to health_events (raw, unprocessed) ─────────────────────
+    // Step E: Save to health_events (raw, unprocessed — nightly pipeline handles the rest)
     const event = await (0, logger_1.logExecution)(correlationId, 'save_health_event', async () => healthEventService.saveEvent({
         userId: user.id,
         rawInput: processedMessage,
@@ -204,7 +203,7 @@ async function _handleInboundMessage(data, logger, markResponseSent) {
         source: 'whatsapp',
     }), logger);
     logger.info({ eventId: event.id, userId: user.id, isQuestion: questionDetected }, 'Health event saved');
-    // ── Step 7: Send smart ack (Haiku — mirrors the user's message) ─────────
+    // Step F: Send smart ack (Haiku mirrors the user's message, ~$0.001)
     const hasImage = !!imageUrl;
     const ackMessage = await (0, ack_messages_1.getSmartAck)(processedMessage, user.language, questionDetected, hasImage);
     await (0, logger_1.logExecution)(correlationId, 'send_ack', async () => chatwootClient.sendMessage(conversationId, ackMessage), logger);
@@ -217,77 +216,14 @@ async function _handleInboundMessage(data, logger, markResponseSent) {
     };
 }
 // ============================================================================
-// Name Extraction Helper
-// ============================================================================
-/**
- * Extract a name from the user's response.
- * Handles common patterns like:
- *   - "Maria" (just the name)
- *   - "Me llamo Maria"
- *   - "My name is Maria"
- *   - "Soy Maria"
- *   - "Maria Garcia" (first + last)
- *
- * Returns null if the message doesn't look like a name
- * (e.g., it's food info, a question, etc.)
- */
-function extractName(message) {
-    const trimmed = message.trim();
-    // Skip if empty or too long (probably not a name)
-    if (!trimmed || trimmed.length > 100)
-        return null;
-    // Skip if it looks like food/health info (contains common food words or is very long)
-    const foodIndicators = [
-        'comí', 'comiste', 'desayuno', 'almuerzo', 'cena', 'arroz', 'pollo',
-        'breakfast', 'lunch', 'dinner', 'ate', 'eating', 'food', 'hungry',
-        'dolor', 'pain', 'headache', 'stomach', 'foto', 'photo', 'image',
-        'tengo', 'i have', 'nevera', 'fridge', 'cocina', 'kitchen',
-    ];
-    const lower = trimmed.toLowerCase();
-    if (foodIndicators.some(word => lower.includes(word))) {
-        return null;
-    }
-    // Skip if it's a question
-    if (trimmed.includes('?'))
-        return null;
-    // Try common name patterns
-    const patterns = [
-        /^(?:me llamo|mi nombre es|soy|i'm|i am|my name is|meu nome é|eu sou|je m'appelle|je suis)\s+(.+)$/i,
-    ];
-    for (const pattern of patterns) {
-        const match = trimmed.match(pattern);
-        if (match && match[1]) {
-            return cleanName(match[1]);
-        }
-    }
-    // If it's short (1-3 words) and doesn't have numbers, treat it as a name
-    const words = trimmed.split(/\s+/);
-    if (words.length <= 3 && !/\d/.test(trimmed) && trimmed.length <= 50) {
-        return cleanName(trimmed);
-    }
-    return null;
-}
-/**
- * Clean and capitalize a name string.
- */
-function cleanName(raw) {
-    return raw
-        .replace(/[.!,;:'"]+$/g, '') // Remove trailing punctuation
-        .split(/\s+/)
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-        .join(' ')
-        .trim();
-}
-// ============================================================================
 // Media Processing (voice → Whisper transcription, images → save URL only)
 // ============================================================================
 async function processAttachments(attachments, originalMessage, language, logger) {
     const parts = [];
     for (const attachment of attachments) {
         if (attachment.type === 'audio') {
-            // Voice messages: transcribe with Whisper (only external call during the day)
             logger.info({ url: attachment.url }, 'Transcribing voice message');
-            const transcription = await service_3.mediaService.transcribeAudio(attachment.url, language);
+            const transcription = await service_4.mediaService.transcribeAudio(attachment.url, language);
             if (transcription && !transcription.startsWith('[')) {
                 parts.push(`[Voice message]: ${transcription}`);
             }
@@ -296,8 +232,7 @@ async function processAttachments(attachments, originalMessage, language, logger
             }
         }
         else if (attachment.type === 'image') {
-            // Images: just note that an image was sent. NO Vision call.
-            // The nightly pipeline will analyze images in batch.
+            // Images noted only — Vision analysis deferred to nightly pipeline
             parts.push('[Image attached]');
             logger.info({ url: attachment.url }, 'Image attachment noted (deferred to nightly)');
         }

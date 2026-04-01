@@ -81,6 +81,42 @@ export type ConversationPhase =
   | 'crisis';
 
 // ============================================================================
+// Plato Inteligente — Client Profile Types
+// ============================================================================
+
+export type Archetype = 'performance' | 'skeptic' | 'curious' | 'passive' | 'unknown';
+
+export type CoachingPhase = 'phase_1' | 'phase_2';
+
+export interface ArchetypeScores {
+  performance: number;
+  skeptic: number;
+  curious: number;
+  passive: number;
+}
+
+export interface OnboardingAnswer {
+  question: number; // 1-5
+  answer: string;
+}
+
+export interface ClientProfile {
+  id: string;
+  userId: string;
+  archetype: Archetype;
+  archetypeScores: ArchetypeScores;
+  coachingPhase: CoachingPhase;
+  onboardingAnswers: OnboardingAnswer[];
+  patternsConfirmed: number;
+  graduationPending: boolean;
+  graduatedAt: Date | null;
+  coachNotes: string | null;
+  behavioralData: Record<string, unknown>;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ============================================================================
 // Check-in Types (24-hour follow-up)
 // ============================================================================
 
