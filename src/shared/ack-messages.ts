@@ -93,6 +93,88 @@ const FALLBACK_QUESTION_ACKS: Record<string, string[]> = {
 };
 
 // ============================================================================
+// Social Message Detection + Templates
+// Short replies like "yes", "thanks", "ok" — no food log, just a warm reply
+// ============================================================================
+
+const SOCIAL_PATTERNS: Record<string, RegExp[]> = {
+  es: [
+    /^(gracias|muchas gracias|ok|okey|okay|sí|si|no|claro|entendido|perfecto|genial|excelente|bien|bueno|de nada|por favor|hola|hasta luego|bye|chao|👍|😊|🙏)$/i,
+  ],
+  en: [
+    /^(thanks|thank you|ok|okay|yes|no|sure|got it|great|perfect|awesome|nice|cool|hi|hello|bye|goodbye|👍|😊|🙏)$/i,
+  ],
+  pt: [
+    /^(obrigado|obrigada|ok|okay|sim|não|nao|claro|entendido|perfeito|ótimo|otimo|bom|oi|tchau|👍|😊|🙏)$/i,
+  ],
+  fr: [
+    /^(merci|ok|okay|oui|non|bien sûr|compris|parfait|super|génial|genial|bonjour|au revoir|👍|😊|🙏)$/i,
+  ],
+};
+
+const SOCIAL_ACKS: Record<string, string[]> = {
+  es: ['😊', '👍', '¡Aquí estoy!', 'Cuando quieras.', 'Con gusto.'],
+  en: ['😊', '👍', 'Here for you!', 'Anytime.', 'You got it.'],
+  pt: ['😊', '👍', 'Aqui estou!', 'Quando quiser.', 'Com prazer.'],
+  fr: ['😊', '👍', 'Je suis là!', 'Quand vous voulez.', 'Avec plaisir.'],
+};
+
+export function isSocialMessage(message: string): boolean {
+  const trimmed = message.trim();
+  // Very short messages (1-2 words, no food/health content)
+  if (trimmed.length > 30) return false;
+  const lang = detectMessageLanguage(trimmed);
+  const patterns = SOCIAL_PATTERNS[lang] || Object.values(SOCIAL_PATTERNS).flat();
+  return patterns.some(p => p.test(trimmed));
+}
+
+function detectMessageLanguage(message: string): string {
+  const lower = message.toLowerCase();
+  if (/gracias|sí|si|hola|claro|bien/.test(lower)) return 'es';
+  if (/thanks|thank|yes|okay|sure|great/.test(lower)) return 'en';
+  if (/obrigad|sim|ótimo|oi/.test(lower)) return 'pt';
+  if (/merci|oui|bien|bonjour/.test(lower)) return 'fr';
+  return 'es';
+}
+
+export function getSocialAck(language: string): string {
+  const lang = language in SOCIAL_ACKS ? language : 'es';
+  const pool = SOCIAL_ACKS[lang]!;
+  return pool[Math.floor(Math.random() * pool.length)]!;
+}
+
+// ============================================================================
+// Question Ack Templates (NO Haiku — clear expectation setting)
+// ============================================================================
+
+const QUESTION_ACK_TEMPLATES: Record<string, string[]> = {
+  es: [
+    'Buena pregunta 👀 Te la respondo esta noche en tu resumen con contexto de tu día.',
+    'Me la apunto. Esta noche te doy la respuesta basada en tus datos.',
+    'Anotada la pregunta. La incluyo en tu análisis de esta noche.',
+  ],
+  en: [
+    "Good question 👀 I'll answer it tonight in your summary with the context of your day.",
+    "Noted. Tonight I'll give you the answer based on your own data.",
+    "Question logged. I'll include it in tonight's analysis.",
+  ],
+  pt: [
+    'Boa pergunta 👀 Respondo hoje à noite no seu resumo com contexto do seu dia.',
+    'Anotei. Esta noite te dou a resposta baseada nos seus dados.',
+  ],
+  fr: [
+    'Bonne question 👀 Je vous réponds ce soir dans votre résumé avec le contexte de votre journée.',
+    'Noté. Ce soir je vous donne la réponse basée sur vos données.',
+  ],
+};
+
+export function getQuestionAck(language: string): string {
+  const lang = language in QUESTION_ACK_TEMPLATES ? language : 'es';
+  const pool = QUESTION_ACK_TEMPLATES[lang]!;
+  return pool[Math.floor(Math.random() * pool.length)]!;
+}
+
+// ============================================================================
 // Question Detection
 // ============================================================================
 
@@ -144,8 +226,10 @@ function getImageAck(language: string): string {
 
 /**
  * Generate a personalized ack that mirrors the user's message.
- * - Image-only messages: use template (no AI)
- * - Text messages: use Haiku (~$0.001) to mirror what they said
+ * - Social messages ("thanks", "ok", "yes"): warm 1-word reply, no AI
+ * - Question messages: template that sets expectation (answer tonight), no AI
+ * - Image-only messages: use template, no AI
+ * - Food/health text: use Haiku (~$0.001) to mirror what they said
  * - Falls back to templates on any failure
  */
 export async function getSmartAck(
@@ -155,6 +239,17 @@ export async function getSmartAck(
   hasImage: boolean = false,
 ): Promise<string> {
   const lang = language || 'es';
+
+  // Social messages: short warm reply, no AI, no food logging feel
+  if (!hasImage && isSocialMessage(userMessage)) {
+    return getSocialAck(lang);
+  }
+
+  // Question messages: structured template, no AI
+  // Sets clear expectation that the answer comes tonight in the summary
+  if (isQuestionMsg && !hasImage) {
+    return getQuestionAck(lang);
+  }
 
   // Image-only messages: skip AI, use template
   if (hasImage && isImageOnlyMessage(userMessage)) {
@@ -176,26 +271,7 @@ export async function getSmartAck(
     const langName = { es: 'Spanish', en: 'English', pt: 'Portuguese', fr: 'French' }[lang] || 'Spanish';
     const imageNote = hasImage ? ' They also sent a photo.' : '';
 
-    const prompt = isQuestionMsg
-      ? `You are a warm WhatsApp nutrition companion. The user sent: "${cleanMessage}"${imageNote}
-
-Write a SHORT ack (1 sentence, max 15 words) in ${langName} that:
-- Shows you understood their specific question
-- Feels like a friend texting back, not a robot
-
-RULES:
-- NEVER start with "Anotado" or "Noted" — vary your openings
-- NEVER mention "resumen", "summary", or "tonight" — just acknowledge warmly
-- Use 1 emoji max, and not always the same one
-- Keep it casual and warm like WhatsApp
-
-Vary your style. Examples of good variety:
-- "Buena pregunta sobre las grasas 🤔"
-- "Ah, eso del azúcar es interesante — lo revisamos."
-- "Ojo con eso, te cuento más luego 👀"
-
-Reply ONLY with the ack. No quotes.`
-      : `You are a warm WhatsApp nutrition companion. The user sent: "${cleanMessage}"${imageNote}
+    const prompt = `You are a warm WhatsApp nutrition companion. The user sent: "${cleanMessage}"${imageNote}
 
 Write a SHORT ack (1 sentence, max 15 words) in ${langName} that:
 - Reflects back what they shared using THEIR words

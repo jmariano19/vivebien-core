@@ -6,11 +6,16 @@
  * Falls back to template acks if the AI call fails.
  * Image-only messages skip AI entirely and use image templates.
  */
+export declare function isSocialMessage(message: string): boolean;
+export declare function getSocialAck(language: string): string;
+export declare function getQuestionAck(language: string): string;
 export declare function isQuestion(message: string): boolean;
 /**
  * Generate a personalized ack that mirrors the user's message.
- * - Image-only messages: use template (no AI)
- * - Text messages: use Haiku (~$0.001) to mirror what they said
+ * - Social messages ("thanks", "ok", "yes"): warm 1-word reply, no AI
+ * - Question messages: template that sets expectation (answer tonight), no AI
+ * - Image-only messages: use template, no AI
+ * - Food/health text: use Haiku (~$0.001) to mirror what they said
  * - Falls back to templates on any failure
  */
 export declare function getSmartAck(userMessage: string, language: string, isQuestionMsg: boolean, hasImage?: boolean): Promise<string>;
