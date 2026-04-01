@@ -17,6 +17,7 @@ const doctor_1 = require("./api/routes/doctor");
 const test_1 = require("./api/routes/test");
 const meals_1 = require("./api/routes/meals");
 const digests_1 = require("./api/routes/digests");
+const integrations_1 = require("./api/routes/integrations");
 const correlation_1 = require("./api/middleware/correlation");
 const logger_1 = require("./infra/logging/logger");
 const client_1 = require("./infra/db/client");
@@ -81,7 +82,12 @@ async function bootstrap() {
     await app.register(test_1.testRoutes, { prefix: '/api/test' });
     await app.register(meals_1.mealRoutes, { prefix: '/api/meals' });
     await app.register(digests_1.digestRoutes, { prefix: '/api/digests' });
+    await app.register(integrations_1.integrationsRoutes);
     // Serve Plato Inteligente pages
+    // Google Fit connect page
+    app.get('/connect-googlefit', async (_, reply) => {
+        return reply.sendFile('connect-googlefit.html');
+    });
     // Journal page — meal timeline
     app.get('/journal/:userId', async (request, reply) => {
         const { userId } = request.params;

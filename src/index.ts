@@ -12,6 +12,7 @@ import { doctorRoutes } from './api/routes/doctor';
 import { testRoutes } from './api/routes/test';
 import { mealRoutes } from './api/routes/meals';
 import { digestRoutes } from './api/routes/digests';
+import { integrationsRoutes } from './api/routes/integrations';
 import { correlationMiddleware } from './api/middleware/correlation';
 import { logger } from './infra/logging/logger';
 import { db } from './infra/db/client';
@@ -83,8 +84,14 @@ async function bootstrap() {
   await app.register(testRoutes, { prefix: '/api/test' });
   await app.register(mealRoutes, { prefix: '/api/meals' });
   await app.register(digestRoutes, { prefix: '/api/digests' });
+  await app.register(integrationsRoutes);
 
   // Serve Plato Inteligente pages
+  // Google Fit connect page
+  app.get('/connect-googlefit', async (_, reply) => {
+    return reply.sendFile('connect-googlefit.html');
+  });
+
   // Journal page — meal timeline
   app.get('/journal/:userId', async (request, reply) => {
     const { userId } = request.params as { userId: string };

@@ -22,6 +22,7 @@ const config_1 = require("../../config");
 const logger_1 = require("../../infra/logging/logger");
 const service_1 = require("../health-event/service");
 const rate_limiter_1 = require("../../shared/rate-limiter");
+const service_2 = require("../integrations/googlefit/service");
 // ============================================================================
 // Service
 // ============================================================================
@@ -30,11 +31,13 @@ class DigestService {
     client;
     rateLimiter;
     healthEventService;
+    googleFitService;
     constructor(db) {
         this.db = db;
         this.client = new sdk_1.default({ apiKey: config_1.config.anthropicApiKey });
         this.rateLimiter = new rate_limiter_1.RateLimiter({ maxRequestsPerMinute: config_1.config.claudeRpmLimit });
         this.healthEventService = new service_1.HealthEventService(db);
+        this.googleFitService = new service_2.GoogleFitService();
     }
     /**
      * Generate the full nightly digest for a user.
@@ -58,9 +61,21 @@ class DigestService {
         const profile = await this.loadUserProfile(userId, userName, language);
         // 4. Get recent summaries for continuity
         const recentSummaries = await this.getRecentSummaries(userId, 3);
-        // 5. Generate the summary with ONE Sonnet call
-        const summaryData = await this.generateSummaryWithSonnet(todayEvents, weekEvents, profile, recentSummaries);
-        // 6. Mark today's events as processed
+        // 5. Fetch Google Fit data if user has connected it (never blocks the digest)
+        let googleFitSummary = null;
+        try {
+            const fitData = await this.googleFitService.fetchTodayData(userId);
+            if (fitData?.rawSummary) {
+                googleFitSummary = fitData.rawSummary;
+                logger_1.logger.info({ userId, fitData: googleFitSummary }, 'Google Fit data fetched for digest');
+            }
+        }
+        catch (err) {
+            logger_1.logger.warn({ userId, err }, 'Google Fit fetch failed — proceeding without it');
+        }
+        // 6. Generate the summary with ONE Sonnet call
+        const summaryData = await this.generateSummaryWithSonnet(todayEvents, weekEvents, profile, recentSummaries, googleFitSummary, userId);
+        // 7. Mark today's events as processed
         for (const event of todayEvents) {
             try {
                 // Extract event type from the AI's analysis
@@ -74,7 +89,7 @@ class DigestService {
                 logger_1.logger.warn({ eventId: event.id, error: err }, 'Failed to mark event processed');
             }
         }
-        // 7. Save the digest
+        // 8. Save the digest
         const digest = await this.saveDigest(userId, dateStr, todayEvents.length, null, // PDF URL — filled after PDF generation
         summaryData);
         logger_1.logger.info({ userId, date: dateStr, eventCount: todayEvents.length }, 'Nightly digest generated');
@@ -87,7 +102,7 @@ class DigestService {
     /**
      * The ONE AI call — Sonnet processes the entire day.
      */
-    async generateSummaryWithSonnet(todayEvents, weekEvents, profile, recentSummaries) {
+    async generateSummaryWithSonnet(todayEvents, weekEvents, profile, recentSummaries, googleFitSummary = null, userId = 'unknown') {
         await this.rateLimiter.acquire();
         // Format today's events for the prompt
         const todayFormatted = todayEvents.map(e => ({
@@ -113,7 +128,11 @@ class DigestService {
 USER PROFILE:
 ${JSON.stringify(profile, null, 2)}
 
-TODAY'S HEALTH EVENTS (chronological):
+${googleFitSummary ? `DEVICE DATA (Google Fit — automatic, no user input required):
+${googleFitSummary}
+Use this to enrich the summary. Connect sleep hours to energy, resting HR to stress, steps to activity patterns. Keep it personal and warm — not clinical.
+
+` : ''}TODAY'S HEALTH EVENTS (chronological):
 ${JSON.stringify(todayFormatted, null, 2)}
 
 ${questions.length > 0 ? `QUESTIONS ASKED TODAY:\n${questions.map(q => `- "${q.rawInput}"`).join('\n')}\n` : ''}
@@ -182,7 +201,7 @@ RULES:
                     // Log AI usage
                     const { logAIUsage } = await import('../../infra/logging/logger.js');
                     await logAIUsage({
-                        userId: profile.name || 'unknown',
+                        userId: userId,
                         correlationId: `digest-${new Date().toISOString().split('T')[0]}`,
                         model: 'claude-sonnet-4-5-20250929',
                         inputTokens: response.usage.input_tokens,
