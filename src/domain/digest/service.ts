@@ -19,6 +19,7 @@ import { logger } from '../../infra/logging/logger';
 import { HealthEventService, HealthEvent } from '../health-event/service';
 import { RateLimiter } from '../../shared/rate-limiter';
 import { GoogleFitService } from '../integrations/googlefit/service';
+import { renderHtml } from '../pdf/generator';
 
 // ============================================================================
 // Types
@@ -38,6 +39,7 @@ export interface DigestGenerationResult {
   digest: DailyDigest;
   summaryData: Record<string, unknown>;
   eventsProcessed: number;
+  nightlySummaryId: string | null;
 }
 
 export interface UserProfile {
@@ -91,7 +93,7 @@ export class DigestService {
     if (todayEvents.length === 0) {
       logger.info({ userId, date: dateStr }, 'No events to digest');
       const digest = await this.saveDigest(userId, dateStr, 0, null, null);
-      return { digest, summaryData: {}, eventsProcessed: 0 };
+      return { digest, summaryData: {}, eventsProcessed: 0, nightlySummaryId: null };
     }
 
     // 2. Get last 7 days for pattern detection
@@ -154,6 +156,16 @@ export class DigestService {
       summaryData,
     );
 
+    // 9. Render HTML and save to nightly_summaries (status=pending, waits for approval)
+    let nightlySummaryId: string | null = null;
+    try {
+      const htmlContent = renderHtml(summaryData);
+      nightlySummaryId = await this.saveNightlySummary(userId, digest.id, htmlContent, summaryData, dateStr);
+      logger.info({ userId, nightlySummaryId }, 'Nightly summary saved — pending approval');
+    } catch (err) {
+      logger.warn({ userId, error: err }, 'Failed to save nightly summary HTML — digest still saved');
+    }
+
     logger.info(
       { userId, date: dateStr, eventCount: todayEvents.length },
       'Nightly digest generated',
@@ -163,6 +175,7 @@ export class DigestService {
       digest,
       summaryData,
       eventsProcessed: todayEvents.length,
+      nightlySummaryId,
     };
   }
 
@@ -439,6 +452,32 @@ RULES:
     );
 
     return this.mapRow(result.rows[0]);
+  }
+
+  /**
+   * Save rendered HTML to nightly_summaries table (status=pending).
+   * Returns the summary ID.
+   */
+  private async saveNightlySummary(
+    userId: string,
+    digestId: string,
+    htmlContent: string,
+    digestData: Record<string, unknown>,
+    dateStr: string,
+  ): Promise<string> {
+    const result = await this.db.query<{ id: string }>(
+      `INSERT INTO nightly_summaries (user_id, digest_id, html_content, digest_data, status, digest_date)
+       VALUES ($1, $2, $3, $4, 'pending', $5)
+       ON CONFLICT (user_id, digest_date)
+       DO UPDATE SET
+         html_content = EXCLUDED.html_content,
+         digest_data  = EXCLUDED.digest_data,
+         digest_id    = EXCLUDED.digest_id,
+         status       = 'pending'
+       RETURNING id`,
+      [userId, digestId, htmlContent, JSON.stringify(digestData), dateStr],
+    );
+    return result.rows[0]!.id;
   }
 
   /**

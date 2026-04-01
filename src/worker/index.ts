@@ -105,20 +105,10 @@ const digestWorker = new Worker(
         return result;
       }
 
-      // Send summary as text message via WhatsApp
-      if (conversationId && result.summaryData) {
-        try {
-          const summaryText = formatSummaryForWhatsApp(result.summaryData, language || 'es');
-          await chatwootClient.sendMessage(conversationId, summaryText);
-          logger.info({ userId, conversationId }, 'Nightly summary sent via WhatsApp');
-        } catch (sendErr) {
-          logger.error({ error: sendErr, userId }, 'Failed to send summary via WhatsApp');
-        }
-      }
-
+      // Summary saved as pending — Jeff approves in dashboard before it's sent
       logger.info(
-        { userId, eventCount: result.eventsProcessed },
-        'Nightly digest completed',
+        { userId, eventCount: result.eventsProcessed, nightlySummaryId: result.nightlySummaryId },
+        'Nightly digest generated — pending approval in dashboard',
       );
 
       return result;
@@ -200,18 +190,7 @@ async function scheduleDigestJobs() {
 
       const dateKey = today;
 
-      // Step 1: Send heads-up message NOW
-      await digestQueue.add('heads-up', {
-        userId,
-        language: user.language,
-        userName: user.name,
-        conversationId,
-        jobType: 'heads-up',
-      }, {
-        jobId: `headsup-${userId}-${dateKey}`,
-      });
-
-      // Step 2: Schedule the actual digest generation with 15 min delay
+      // Schedule digest generation (no heads-up — Jeff approves before delivery)
       await digestQueue.add('generate-digest', {
         userId,
         language: user.language,
@@ -220,7 +199,6 @@ async function scheduleDigestJobs() {
         jobType: 'generate-digest',
       }, {
         jobId: `digest-${userId}-${dateKey}`,
-        delay: 15 * 60 * 1000, // 15 minutes
         attempts: 2,
         backoff: { type: 'exponential', delay: 30000 },
       });

@@ -12,6 +12,7 @@ import { doctorRoutes } from './api/routes/doctor';
 import { testRoutes } from './api/routes/test';
 import { mealRoutes } from './api/routes/meals';
 import { digestRoutes } from './api/routes/digests';
+import { nightlyRoutes } from './api/routes/nightly';
 import { integrationsRoutes } from './api/routes/integrations';
 import { correlationMiddleware } from './api/middleware/correlation';
 import { logger } from './infra/logging/logger';
@@ -84,6 +85,7 @@ async function bootstrap() {
   await app.register(testRoutes, { prefix: '/api/test' });
   await app.register(mealRoutes, { prefix: '/api/meals' });
   await app.register(digestRoutes, { prefix: '/api/digests' });
+  await app.register(nightlyRoutes, { prefix: '/api/nightly' });
   await app.register(integrationsRoutes);
 
   // Serve Plato Inteligente pages
