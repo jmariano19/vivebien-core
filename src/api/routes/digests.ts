@@ -90,6 +90,68 @@ export async function digestRoutes(app: FastifyInstance) {
   });
 
   /**
+   * POST /api/digests/:userId/generate-draft
+   *
+   * Runs the AI pipeline and saves to nightly_summaries as status=pending.
+   * Does NOT send to WhatsApp. Dashboard calls this, then shows a preview.
+   */
+  app.post('/:userId/generate-draft', async (request, reply) => {
+    const { userId } = request.params as { userId: string };
+
+    try {
+      const userResult = await db.query<{ language: string; name: string | null }>(
+        'SELECT language, name FROM users WHERE id = $1',
+        [userId],
+      );
+
+      if (userResult.rows.length === 0) {
+        return reply.status(404).send({ success: false, error: 'User not found' });
+      }
+
+      const user = userResult.rows[0]!;
+      const today = new Date().toISOString().split('T')[0]!;
+
+      const events = await healthEventService.getUnprocessedEvents(userId, today);
+      if (events.length === 0) {
+        return reply.status(400).send({ success: false, error: 'No events to summarize today' });
+      }
+
+      const result = await digestService.generateDigest(
+        userId,
+        new Date(),
+        user.language,
+        user.name || undefined,
+      );
+
+      if (result.eventsProcessed === 0) {
+        return reply.status(400).send({ success: false, error: 'No events were processed' });
+      }
+
+      const summaryResult = await db.query(
+        `INSERT INTO nightly_summaries (user_id, digest_id, html_content, digest_data, status, digest_date)
+         VALUES ($1, $2, '', $3, 'pending', $4)
+         ON CONFLICT (user_id, digest_date)
+         DO UPDATE SET digest_data = $3, status = 'pending', digest_id = $2, created_at = NOW()
+         RETURNING *`,
+        [userId, result.digest.id, JSON.stringify(result.summaryData), today],
+      );
+
+      const summary = summaryResult.rows[0];
+
+      return reply.send({
+        success: true,
+        summaryId: summary.id,
+        digestData: result.summaryData,
+        eventsProcessed: result.eventsProcessed,
+        status: 'pending',
+      });
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      return reply.status(500).send({ success: false, error: err.message });
+    }
+  });
+
+  /**
    * POST /api/digests/:userId/trigger-nightly
    *
    * Manually trigger the FULL nightly sequence:
