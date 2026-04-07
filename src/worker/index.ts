@@ -26,6 +26,7 @@ import { ChatwootClient } from '../adapters/chatwoot/client';
 const QUEUE_NAME = 'vivebien-inbound';
 const CHECKIN_QUEUE_NAME = 'vivebien-checkin';
 const DIGEST_QUEUE_NAME = 'plato-daily-digest';
+const REMINDER_QUEUE_NAME = 'plato-daily-reminder';
 
 const chatwootClient = new ChatwootClient();
 const healthEventService = new HealthEventService(db);
@@ -40,6 +41,41 @@ const HEADS_UP_MESSAGES: Record<string, string> = {
   pt: 'Seu resumo noturno está quase pronto. Em uns 15 minutos estará listo.\nSe algo não refletir exatamente seu dia, escreva aqui. Ajustamos para que cada noite seja mais clara.',
   fr: "Votre résumé nocturne est presque prêt. Dans environ 15 minutes il sera là.\nSi quelque chose ne reflète pas votre journée, écrivez-nous ici. On ajuste pour que chaque soir soit plus clair.",
 };
+
+// ============================================================================
+// Daily Food Log Reminder Messages
+// ============================================================================
+
+const FOOD_LOG_REMINDERS: Record<string, string[]> = {
+  es: [
+    '¿Cómo estuvo tu día? Cuéntame lo que comiste — texto, foto o nota de voz. 🍽',
+    'Antes de que se te olvide, ¿qué comiste hoy? Mándame lo que recuerdes. 📋',
+    '¿Cómo fue el día de hoy? Mándame tu registro cuando puedas. 🌙',
+    'Ya casi termina el día. ¿Qué comiste hoy? 🍽',
+  ],
+  en: [
+    "How was your day? Tell me what you ate — text, photo, or voice note. 🍽",
+    "Before you forget — what did you eat today? Send me whatever you remember. 📋",
+    "How did today go? Send me your log when you can. 🌙",
+    "Day's almost done. What did you eat today? 🍽",
+  ],
+  pt: [
+    'Como foi seu dia? Me conta o que você comeu — texto, foto ou nota de voz. 🍽',
+    'Antes de esquecer, o que você comeu hoje? Me manda o que lembrar. 📋',
+    'Como foi o dia de hoje? Me manda seu registro quando puder. 🌙',
+  ],
+  fr: [
+    "Comment s'est passée votre journée ? Dites-moi ce que vous avez mangé — texte, photo ou note vocale. 🍽",
+    "Avant d'oublier — qu'avez-vous mangé aujourd'hui ? Envoyez-moi ce dont vous vous souvenez. 📋",
+    "La journée touche à sa fin. Qu'avez-vous mangé aujourd'hui ? 🌙",
+  ],
+};
+
+function getReminder(language: string): string {
+  const lang = language in FOOD_LOG_REMINDERS ? language : 'es';
+  const pool = FOOD_LOG_REMINDERS[lang]!;
+  return pool[Math.floor(Math.random() * pool.length)]!;
+}
 
 // ============================================================================
 // Worker 1: Inbound Messages
@@ -244,6 +280,94 @@ const digestSchedulerWorker = new Worker(
 );
 
 // ============================================================================
+// Daily Reminder — Scheduler + Worker
+// ============================================================================
+
+const reminderQueue = new Queue(REMINDER_QUEUE_NAME, { connection: redis });
+
+async function scheduleReminderJobs() {
+  logger.info('Running daily reminder scheduler...');
+
+  try {
+    // Find all active users (phase = active in conversation_state)
+    const usersResult = await db.query<{
+      user_id: string;
+      language: string;
+      conversation_id: number;
+    }>(
+      `SELECT cs.user_id, u.language, cs.conversation_id
+       FROM conversation_state cs
+       JOIN users u ON u.id = cs.user_id
+       WHERE cs.phase = 'active'
+         AND cs.conversation_id IS NOT NULL`,
+    );
+
+    if (usersResult.rows.length === 0) {
+      logger.info('No active users for daily reminder');
+      return;
+    }
+
+    const today = new Date().toISOString().split('T')[0]!;
+
+    for (const user of usersResult.rows) {
+      await reminderQueue.add('send-reminder', {
+        userId: user.user_id,
+        language: user.language,
+        conversationId: user.conversation_id,
+      }, {
+        jobId: `reminder-${user.user_id}-${today}`,
+        attempts: 2,
+        backoff: { type: 'exponential', delay: 15000 },
+      });
+    }
+
+    logger.info({ userCount: usersResult.rows.length }, 'Daily reminder jobs scheduled');
+  } catch (error) {
+    logger.error({ error }, 'Failed to schedule reminder jobs');
+  }
+}
+
+const reminderWorker = new Worker(
+  REMINDER_QUEUE_NAME,
+  async (job: Job) => {
+    if (job.name === 'schedule-reminders') {
+      await scheduleReminderJobs();
+      return { scheduled: true };
+    }
+
+    const { language, conversationId, userId } = job.data;
+    const message = getReminder(language || 'es');
+    await chatwootClient.sendMessage(conversationId, message);
+    logger.info({ userId, conversationId }, 'Daily food log reminder sent');
+    return { sent: true };
+  },
+  {
+    connection: redis,
+    concurrency: 5,
+    lockDuration: 60000,
+  },
+);
+
+// Schedule reminder cron — runs at REMINDER_CRON_HOUR daily (default 7pm)
+const reminderCronHour = parseInt(process.env.REMINDER_CRON_HOUR || '19', 10);
+reminderQueue.add('schedule-reminders', {}, {
+  repeat: { pattern: `0 ${reminderCronHour} * * *` },
+  jobId: 'daily-reminder-scheduler',
+}).then(() => {
+  logger.info({ cronHour: reminderCronHour }, 'Daily reminder cron scheduled');
+}).catch(err => {
+  logger.error({ err }, 'Failed to schedule reminder cron');
+});
+
+reminderWorker.on('ready', () => {
+  logger.info({ queue: REMINDER_QUEUE_NAME }, 'Reminder worker ready');
+});
+
+reminderWorker.on('failed', (job: Job | undefined, err: Error) => {
+  logger.error({ jobId: job?.id, error: err.message }, 'Reminder job failed');
+});
+
+// ============================================================================
 // Format summary for WhatsApp text delivery
 // ============================================================================
 
@@ -428,7 +552,9 @@ const shutdown = async (signal: string) => {
     await checkinWorker.close();
     await digestWorker.close();
     await digestSchedulerWorker.close();
+    await reminderWorker.close();
     await digestQueue.close();
+    await reminderQueue.close();
     clearTimeout(timeout);
 
     await db.end();
