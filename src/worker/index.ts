@@ -330,11 +330,16 @@ const reminderWorker = new Worker(
   },
 );
 
-// Schedule meal check-in cron — runs at 8 PM ET daily
-reminderQueue.add('schedule-reminders', {}, {
-  repeat: { pattern: '0 20 * * *', tz: 'America/New_York' },
-  jobId: 'daily-reminder-scheduler',
-}).then(() => {
+// Clear any stale repeat jobs then register the correct cron
+reminderQueue.getRepeatableJobs().then(async (jobs) => {
+  for (const job of jobs) {
+    await reminderQueue.removeRepeatableByKey(job.key);
+    logger.info({ key: job.key }, 'Removed stale reminder repeat job');
+  }
+  await reminderQueue.add('schedule-reminders', {}, {
+    repeat: { pattern: '0 20 * * *', tz: 'America/New_York' },
+    jobId: 'daily-reminder-scheduler',
+  });
   logger.info({ cron: '0 20 * * * America/New_York' }, 'Daily meal check-in cron scheduled');
 }).catch(err => {
   logger.error({ err }, 'Failed to schedule meal check-in cron');
@@ -445,11 +450,16 @@ const weeklySummaryWorker = new Worker(
   },
 );
 
-// Schedule weekly summary cron — every Friday at 8 PM ET
-weeklySummaryQueue.add('schedule-weekly-summaries', {}, {
-  repeat: { pattern: '0 20 * * 5', tz: 'America/New_York' },
-  jobId: 'weekly-summary-scheduler',
-}).then(() => {
+// Clear any stale repeat jobs then register the correct cron
+weeklySummaryQueue.getRepeatableJobs().then(async (jobs) => {
+  for (const job of jobs) {
+    await weeklySummaryQueue.removeRepeatableByKey(job.key);
+    logger.info({ key: job.key }, 'Removed stale weekly summary repeat job');
+  }
+  await weeklySummaryQueue.add('schedule-weekly-summaries', {}, {
+    repeat: { pattern: '0 20 * * 5', tz: 'America/New_York' },
+    jobId: 'weekly-summary-scheduler',
+  });
   logger.info({ cron: '0 20 * * 5 America/New_York' }, 'Weekly Friday summary cron scheduled');
 }).catch(err => {
   logger.error({ err }, 'Failed to schedule weekly summary cron');
