@@ -46,28 +46,28 @@ const IMAGE_ACKS: Record<string, string[]> = {
 
 const FALLBACK_INPUT_ACKS: Record<string, string[]> = {
   es: [
-    'Listo, lo tengo 👍',
-    'Va quedando el registro del día.',
-    'Perfecto, queda registrado.',
-    'Ahí va 📋',
     'Recibido ✓',
+    'Listo.',
+    'Anotado.',
+    'Va.',
+    'Ok 👍',
   ],
   en: [
-    'Got it 👍',
-    'Logged for the day.',
-    'Perfect, noted.',
     'Received ✓',
-    'All good 📋',
+    'Got it.',
+    'Noted.',
+    'Ok 👍',
+    'Logged.',
   ],
   pt: [
-    'Beleza, anotei 👍',
-    'Registrado pro dia.',
-    'Recebi ✓',
+    'Recebido ✓',
+    'Anotado.',
+    'Ok 👍',
   ],
   fr: [
-    'C\'est noté 👍',
-    'Bien reçu.',
-    'Enregistré ✓',
+    'Reçu ✓',
+    'Noté.',
+    'Ok 👍',
   ],
 };
 
@@ -271,26 +271,19 @@ export async function getSmartAck(
     const langName = { es: 'Spanish', en: 'English', pt: 'Portuguese', fr: 'French' }[lang] || 'Spanish';
     const imageNote = hasImage ? ' They also sent a photo.' : '';
 
-    const prompt = `You are a warm WhatsApp nutrition companion. The user sent: "${cleanMessage}"${imageNote}
+    const prompt = `The user sent a WhatsApp food log: "${cleanMessage}"${imageNote}
 
-Write a SHORT ack (1 sentence, max 15 words) in ${langName} that:
-- Reflects back what they shared using THEIR words
-- Feels like a friend texting back, not a system confirmation
+Reply with a very short confirmation in ${langName} — 1-4 words max.
+Style: simple, neutral, like a read receipt with a word. No warmth, no commentary on the food.
 
-RULES:
-- NEVER start with "Anotado" — vary your openings every time
-- NEVER say "lo incluimos en tu resumen" or "tonight's summary" — just acknowledge warmly
-- Use 1 emoji max, and vary which emoji you use
-- Match their energy — if they're casual, be casual
+Examples:
+- "Recibido ✓"
+- "Listo."
+- "Anotado."
+- "Va."
+- "Ok 👍"
 
-Vary your style. Examples of good variety:
-- "Huevos con tortilla, clásico 💪"
-- "Rica esa combinación de pollo con ensalada."
-- "4 vasos de agua, bien ahí 💧"
-- "Tacos con aguacate suena increíble 🤤"
-- "Eso se escucha pesado, descansa bien."
-
-Reply ONLY with the ack. No quotes.`;
+Vary which one you use. Reply ONLY with the ack. No quotes.`;
 
     const response = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
