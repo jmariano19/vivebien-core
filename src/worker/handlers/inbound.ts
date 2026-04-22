@@ -124,6 +124,12 @@ async function _handleInboundMessage(
   const currentPhase = stateResult.rows[0]?.phase || 'onboarding';
   const onboardingStep = stateResult.rows[0]?.onboarding_step || 0;
 
+  // Keep conversation_id current so schedulers can find this user
+  await db.query(
+    'UPDATE conversation_state SET conversation_id = $2 WHERE user_id = $1',
+    [user.id, conversationId],
+  );
+
   // ── NEW USER: Start onboarding ───────────────────────────────────────────
   if (user.isNew) {
     logger.info({ userId: user.id }, 'New user — starting onboarding');
