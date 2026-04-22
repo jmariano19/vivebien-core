@@ -13,6 +13,7 @@
  */
 
 import { Worker, Job, Queue } from 'bullmq';
+import Anthropic from '@anthropic-ai/sdk';
 import { redis, closeRedis } from '../infra/queue/client';
 import { processJob } from './processor';
 import { processCheckinJob } from './checkin-processor';
@@ -27,6 +28,7 @@ const QUEUE_NAME = 'vivebien-inbound';
 const CHECKIN_QUEUE_NAME = 'vivebien-checkin';
 const DIGEST_QUEUE_NAME = 'plato-daily-digest';
 const REMINDER_QUEUE_NAME = 'plato-daily-reminder';
+const WEEKLY_SUMMARY_QUEUE_NAME = 'plato-weekly-summary';
 
 const chatwootClient = new ChatwootClient();
 const healthEventService = new HealthEventService(db);
@@ -43,38 +45,18 @@ const HEADS_UP_MESSAGES: Record<string, string> = {
 };
 
 // ============================================================================
-// Daily Food Log Reminder Messages
+// Daily Meal Check-in Messages
 // ============================================================================
 
-const FOOD_LOG_REMINDERS: Record<string, string[]> = {
-  es: [
-    '¿Cómo estuvo tu día? Cuéntame lo que comiste — texto, foto o nota de voz. 🍽',
-    'Antes de que se te olvide, ¿qué comiste hoy? Mándame lo que recuerdes. 📋',
-    '¿Cómo fue el día de hoy? Mándame tu registro cuando puedas. 🌙',
-    'Ya casi termina el día. ¿Qué comiste hoy? 🍽',
-  ],
-  en: [
-    "How was your day? Tell me what you ate — text, photo, or voice note. 🍽",
-    "Before you forget — what did you eat today? Send me whatever you remember. 📋",
-    "How did today go? Send me your log when you can. 🌙",
-    "Day's almost done. What did you eat today? 🍽",
-  ],
-  pt: [
-    'Como foi seu dia? Me conta o que você comeu — texto, foto ou nota de voz. 🍽',
-    'Antes de esquecer, o que você comeu hoje? Me manda o que lembrar. 📋',
-    'Como foi o dia de hoje? Me manda seu registro quando puder. 🌙',
-  ],
-  fr: [
-    "Comment s'est passée votre journée ? Dites-moi ce que vous avez mangé — texte, photo ou note vocale. 🍽",
-    "Avant d'oublier — qu'avez-vous mangé aujourd'hui ? Envoyez-moi ce dont vous vous souvenez. 📋",
-    "La journée touche à sa fin. Qu'avez-vous mangé aujourd'hui ? 🌙",
-  ],
+const MEAL_CHECKIN_MESSAGES: Record<string, string> = {
+  es: '¿Qué comiste hoy? 🍽\n\n• *Desayuno:* ¿qué comiste?\n• *Comida:* ¿qué comiste?\n• *Cena:* ¿qué comiste?\n\nEscríbeme lo que recuerdes, aunque sea poco.',
+  en: "What did you eat today? 🍽\n\n• *Breakfast:* what did you have?\n• *Lunch:* what did you have?\n• *Dinner:* what did you have?\n\nSend me whatever you remember, even if it's just a little.",
+  pt: 'O que você comeu hoje? 🍽\n\n• *Café da manhã:* o que comeu?\n• *Almoço:* o que comeu?\n• *Jantar:* o que comeu?\n\nMe manda o que lembrar, mesmo que seja pouco.',
+  fr: "Qu'avez-vous mangé aujourd'hui ? 🍽\n\n• *Petit-déjeuner:* qu'avez-vous mangé ?\n• *Déjeuner:* qu'avez-vous mangé ?\n• *Dîner:* qu'avez-vous mangé ?\n\nEnvoyez-moi ce dont vous vous souvenez, même un peu.",
 };
 
-function getReminder(language: string): string {
-  const lang = language in FOOD_LOG_REMINDERS ? language : 'es';
-  const pool = FOOD_LOG_REMINDERS[lang]!;
-  return pool[Math.floor(Math.random() * pool.length)]!;
+function getMealCheckin(language: string): string {
+  return MEAL_CHECKIN_MESSAGES[language] ?? MEAL_CHECKIN_MESSAGES.es!;
 }
 
 // ============================================================================
@@ -336,9 +318,9 @@ const reminderWorker = new Worker(
     }
 
     const { language, conversationId, userId } = job.data;
-    const message = getReminder(language || 'es');
+    const message = getMealCheckin(language || 'es');
     await chatwootClient.sendMessage(conversationId, message);
-    logger.info({ userId, conversationId }, 'Daily food log reminder sent');
+    logger.info({ userId, conversationId }, 'Daily meal check-in sent');
     return { sent: true };
   },
   {
@@ -348,15 +330,14 @@ const reminderWorker = new Worker(
   },
 );
 
-// Schedule reminder cron — runs at REMINDER_CRON_HOUR daily (default 7pm)
-const reminderCronHour = parseInt(process.env.REMINDER_CRON_HOUR || '19', 10);
+// Schedule meal check-in cron — runs at 8 PM ET daily
 reminderQueue.add('schedule-reminders', {}, {
-  repeat: { pattern: `0 ${reminderCronHour} * * *` },
+  repeat: { pattern: '0 20 * * *', tz: 'America/New_York' },
   jobId: 'daily-reminder-scheduler',
 }).then(() => {
-  logger.info({ cronHour: reminderCronHour }, 'Daily reminder cron scheduled');
+  logger.info({ cron: '0 20 * * * America/New_York' }, 'Daily meal check-in cron scheduled');
 }).catch(err => {
-  logger.error({ err }, 'Failed to schedule reminder cron');
+  logger.error({ err }, 'Failed to schedule meal check-in cron');
 });
 
 reminderWorker.on('ready', () => {
@@ -365,6 +346,121 @@ reminderWorker.on('ready', () => {
 
 reminderWorker.on('failed', (job: Job | undefined, err: Error) => {
   logger.error({ jobId: job?.id, error: err.message }, 'Reminder job failed');
+});
+
+// ============================================================================
+// Weekly Friday Summary — Sends meal patterns + recommendations every Friday
+// ============================================================================
+
+const weeklySummaryQueue = new Queue(WEEKLY_SUMMARY_QUEUE_NAME, { connection: redis });
+const anthropic = new Anthropic({ apiKey: config.anthropicApiKey });
+
+async function generateWeeklySummary(userId: string, language: string, conversationId: number) {
+  const today = new Date();
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - (today.getDay() === 0 ? 6 : today.getDay() - 1));
+  monday.setHours(0, 0, 0, 0);
+
+  const eventsResult = await db.query<{ event_date: string; raw_input: string; event_type: string }>(
+    `SELECT event_date::text, raw_input, event_type
+     FROM health_events
+     WHERE user_id = $1
+       AND event_date >= $2
+       AND raw_input IS NOT NULL
+     ORDER BY event_date, event_time`,
+    [userId, monday.toISOString().split('T')[0]],
+  );
+
+  if (eventsResult.rows.length === 0) {
+    logger.info({ userId }, 'No events this week — skipping weekly summary');
+    return;
+  }
+
+  const eventLines = eventsResult.rows
+    .map(e => `${e.event_date}: ${e.raw_input}`)
+    .join('\n');
+
+  const prompt = language === 'en'
+    ? `You are a nutrition coach. A user logged their meals this week:\n\n${eventLines}\n\nWrite a warm WhatsApp summary in English with:\n1. A brief pattern you noticed across the week (2-3 sentences)\n2. What they did well (1-2 things, specific)\n3. 2-3 concrete improvements for next week (actionable, not preachy)\n\nKeep it under 250 words. Use *bold* for section headings. Tone: encouraging, honest, no shame.`
+    : `Eres un coach de nutrición. Un usuario registró sus comidas esta semana:\n\n${eventLines}\n\nEscribe un resumen cálido para WhatsApp en español con:\n1. Un patrón que notaste durante la semana (2-3 oraciones)\n2. Lo que hizo bien (1-2 cosas, específicas)\n3. 2-3 mejoras concretas para la próxima semana (accionables, sin juzgar)\n\nMáximo 250 palabras. Usa *negritas* para los títulos de sección. Tono: alentador, honesto, sin vergüenza.`;
+
+  const response = await anthropic.messages.create({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 600,
+    messages: [{ role: 'user', content: prompt }],
+  });
+
+  const summary = (response.content[0] as { type: string; text: string }).text;
+  const header = language === 'en'
+    ? '*📊 Your Week in Review*\n\n'
+    : '*📊 Tu Semana en Resumen*\n\n';
+
+  await chatwootClient.sendMessage(conversationId, header + summary);
+  logger.info({ userId, eventsCount: eventsResult.rows.length }, 'Weekly summary sent');
+}
+
+const weeklySummaryWorker = new Worker(
+  WEEKLY_SUMMARY_QUEUE_NAME,
+  async (job: Job) => {
+    if (job.name === 'schedule-weekly-summaries') {
+      logger.info('Running weekly summary scheduler...');
+
+      const usersResult = await db.query<{
+        user_id: string;
+        language: string;
+        conversation_id: number;
+      }>(
+        `SELECT cs.user_id, u.language, cs.conversation_id
+         FROM conversation_state cs
+         JOIN users u ON u.id = cs.user_id
+         WHERE cs.phase = 'active'
+           AND cs.conversation_id IS NOT NULL`,
+      );
+
+      const today = new Date().toISOString().split('T')[0]!;
+      for (const user of usersResult.rows) {
+        await weeklySummaryQueue.add('send-weekly-summary', {
+          userId: user.user_id,
+          language: user.language,
+          conversationId: user.conversation_id,
+        }, {
+          jobId: `weekly-summary-${user.user_id}-${today}`,
+          attempts: 2,
+          backoff: { type: 'exponential', delay: 30000 },
+        });
+      }
+
+      logger.info({ userCount: usersResult.rows.length }, 'Weekly summary jobs scheduled');
+      return { scheduled: true };
+    }
+
+    const { userId, language, conversationId } = job.data;
+    await generateWeeklySummary(userId, language || 'es', conversationId);
+    return { sent: true };
+  },
+  {
+    connection: redis,
+    concurrency: 3,
+    lockDuration: 120000,
+  },
+);
+
+// Schedule weekly summary cron — every Friday at 8 PM ET
+weeklySummaryQueue.add('schedule-weekly-summaries', {}, {
+  repeat: { pattern: '0 20 * * 5', tz: 'America/New_York' },
+  jobId: 'weekly-summary-scheduler',
+}).then(() => {
+  logger.info({ cron: '0 20 * * 5 America/New_York' }, 'Weekly Friday summary cron scheduled');
+}).catch(err => {
+  logger.error({ err }, 'Failed to schedule weekly summary cron');
+});
+
+weeklySummaryWorker.on('ready', () => {
+  logger.info({ queue: WEEKLY_SUMMARY_QUEUE_NAME }, 'Weekly summary worker ready');
+});
+
+weeklySummaryWorker.on('failed', (job: Job | undefined, err: Error) => {
+  logger.error({ jobId: job?.id, error: err.message }, 'Weekly summary job failed');
 });
 
 // ============================================================================
@@ -553,8 +649,10 @@ const shutdown = async (signal: string) => {
     await digestWorker.close();
     await digestSchedulerWorker.close();
     await reminderWorker.close();
+    await weeklySummaryWorker.close();
     await digestQueue.close();
     await reminderQueue.close();
+    await weeklySummaryQueue.close();
     clearTimeout(timeout);
 
     await db.end();
