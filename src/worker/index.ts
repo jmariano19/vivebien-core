@@ -123,11 +123,17 @@ const digestWorker = new Worker(
         return result;
       }
 
-      // Summary saved as pending — Jeff approves in dashboard before it's sent
-      logger.info(
-        { userId, eventCount: result.eventsProcessed, nightlySummaryId: result.nightlySummaryId },
-        'Nightly digest generated — pending approval in dashboard',
-      );
+      // Send summary directly via WhatsApp
+      if (Object.keys(result.summaryData).length > 0 && !result.summaryData.parse_error) {
+        const message = formatSummaryForWhatsApp(result.summaryData, language || 'es');
+        await chatwootClient.sendMessage(conversationId, message);
+        logger.info(
+          { userId, eventCount: result.eventsProcessed, nightlySummaryId: result.nightlySummaryId },
+          'Nightly digest sent via WhatsApp',
+        );
+      } else {
+        logger.warn({ userId, summaryData: result.summaryData }, 'Summary empty or parse error — skipping send');
+      }
 
       return result;
     } catch (error) {
