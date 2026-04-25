@@ -303,7 +303,7 @@ async function generateWeeklySummary(userId: string, language: string, conversat
     .join('\n\n');
 
   const prompt = language === 'en'
-    ? `You are a nutrition coach tracking a user across ${totalWeeks} week(s). Your goal: help them move from food awareness to reading their body signals.
+    ? `You are a nutrition coach and research-informed advisor tracking a user across ${totalWeeks} week(s). Your goal: help them move from food awareness to reading their body signals — grounded in actual nutritional science.
 
 Logged data (meals + body signals when reported):
 
@@ -312,12 +312,15 @@ ${eventLines}
 Write a WhatsApp summary with exactly these 4 sections:
 
 *This week* — 2-3 specific things from this week's logs (food choices or body signals)
-*Patterns I'm seeing* — signals that appeared 2+ times across weeks: energy after certain foods, sleep, nighttime hunger, recovery. Only confirm a pattern if you have 2+ data points — otherwise label it "emerging."
-*Compared to past weeks* — one measurable shift (more protein, less starch, better sleep, fewer late snacks, etc.)
-*Experiment for next week* — one small, specific change tied directly to an observed pattern. Make it a question to observe, not a rule to follow.
 
-Under 300 words. *Bold* section headings. Tone: curious coach, not a report. No shame, no preamble.`
-    : `Eres un coach de nutrición haciendo seguimiento a un usuario durante ${totalWeeks} semana(s). Tu objetivo: ayudarlo a pasar de la conciencia alimentaria a leer las señales de su cuerpo.
+*Patterns I'm seeing* — signals that appeared 2+ times across weeks: energy after certain foods, sleep, nighttime hunger, recovery. Only confirm a pattern if you have 2+ data points — otherwise label it "emerging." For each confirmed pattern, include one sentence explaining the biological mechanism behind it (e.g. why protein at dinner reduces nighttime hunger, why high-starch meals cause energy crashes).
+
+*Compared to past weeks* — one measurable shift (more protein, less starch, better sleep, fewer late snacks, etc.)
+
+*Experiment for next week* — one small, specific change tied to an observed pattern. Include: (1) what to try, (2) the research mechanism behind why it should work — cite a study, metabolic pathway, or established finding by name, and (3) what signal to observe. Frame as a question, not a rule.
+
+Under 350 words. *Bold* section headings. Tone: curious coach who knows the science — not a clinic report, not vague encouragement. No shame, no preamble.`
+    : `Eres un coach de nutrición y asesor basado en evidencia científica, haciendo seguimiento a un usuario durante ${totalWeeks} semana(s). Tu objetivo: ayudarlo a pasar de la conciencia alimentaria a leer las señales de su cuerpo — con respaldo de ciencia nutricional real.
 
 Datos registrados (comidas + señales del cuerpo cuando las reportó):
 
@@ -326,15 +329,18 @@ ${eventLines}
 Escribe un resumen para WhatsApp con exactamente estas 4 secciones:
 
 *Esta semana* — 2-3 cosas específicas de los registros de esta semana (elecciones de comida o señales del cuerpo)
-*Patrones que veo* — señales que aparecieron 2 o más veces entre semanas: energía después de ciertos alimentos, sueño, hambre nocturna, recuperación. Solo confirma un patrón si tienes 2 o más datos — si no, llámalo "emergente."
-*Comparado con semanas anteriores* — un cambio medible (más proteína, menos almidón, mejor sueño, menos snacks nocturnos, etc.)
-*Experimento para la próxima semana* — un cambio pequeño y específico ligado directamente a un patrón observado. Plántalo como una pregunta a observar, no como una regla a seguir.
 
-Máximo 300 palabras. Títulos en *negritas*. Tono: coach curioso, no un informe. Sin vergüenza, sin preámbulo.`;
+*Patrones que veo* — señales que aparecieron 2 o más veces entre semanas: energía después de ciertos alimentos, sueño, hambre nocturna, recuperación. Solo confirma un patrón si tienes 2 o más datos — si no, llámalo "emergente." Para cada patrón confirmado, incluye una oración explicando el mecanismo biológico detrás (ej: por qué la proteína en la cena reduce el hambre nocturna, por qué el almidón alto provoca caídas de energía).
+
+*Comparado con semanas anteriores* — un cambio medible (más proteína, menos almidón, mejor sueño, menos snacks nocturnos, etc.)
+
+*Experimento para la próxima semana* — un cambio pequeño y específico basado en un patrón observado. Incluye: (1) qué probar, (2) el mecanismo de investigación detrás — cita un estudio, vía metabólica o hallazgo establecido por nombre, y (3) qué señal observar como resultado. Plántalo como una pregunta, no como una regla.
+
+Máximo 350 palabras. Títulos en *negritas*. Tono: coach curioso que conoce la ciencia — no un informe clínico, no motivación vaga. Sin vergüenza, sin preámbulo.`;
 
   const response = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',
-    max_tokens: 700,
+    max_tokens: 900,
     messages: [{ role: 'user', content: prompt }],
   });
 
