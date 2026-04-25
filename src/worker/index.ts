@@ -4,12 +4,9 @@
  * Workers:
  * 1. Inbound message worker (save + ack, zero AI during day)
  * 2. Check-in worker (24h follow-ups)
- * 3. Nightly digest worker (ONE Haiku call → PDF → WhatsApp delivery)
- * 4. Digest scheduler (cron at DIGEST_CRON_HOUR, schedules per-user jobs)
- *
- * Nightly sequence per user:
- *   T-15min: Send heads-up message
- *   T-0:     Generate digest (Haiku) → Send summary text via WhatsApp
+ * 3. Digest worker (processes manual digest jobs)
+ * 4. Daily meal check-in scheduler (8 PM ET every day)
+ * 5. Weekly summary scheduler (8 PM ET every Friday)
  */
 
 import { Worker, Job, Queue } from 'bullmq';
@@ -89,7 +86,7 @@ const checkinWorker = new Worker(CHECKIN_QUEUE_NAME, processCheckinJob, {
 });
 
 // ============================================================================
-// Worker 3: Nightly Digest (generates summary + sends via WhatsApp)
+// Worker 3: Nightly Digest (processes individual digest jobs queued manually)
 // ============================================================================
 
 const digestService = new DigestService(db);
@@ -151,121 +148,19 @@ const digestWorker = new Worker(
 );
 
 // ============================================================================
-// Digest Scheduler — Runs at DIGEST_CRON_HOUR daily
+// Digest Queue — no automatic cron; clear any stale repeat jobs on startup
 // ============================================================================
 
 const digestQueue = new Queue(DIGEST_QUEUE_NAME, { connection: redis });
 
-/**
- * Schedule nightly digest jobs for all users with health events today.
- *
- * Flow per user:
- * 1. Send heads-up message immediately
- * 2. Schedule digest generation with 15 min delay
- */
-async function scheduleDigestJobs() {
-  logger.info('Running nightly digest scheduler...');
-
-  try {
-    const today = new Date().toISOString().split('T')[0]!;
-
-    // Find all users who have unprocessed health events today
-    const usersResult = await db.query<{ user_id: string }>(
-      `SELECT DISTINCT user_id
-       FROM health_events
-       WHERE event_date = $1
-         AND processed = FALSE`,
-      [today],
-    );
-
-    const userIds = usersResult.rows.map(r => r.user_id);
-
-    if (userIds.length === 0) {
-      logger.info('No users with events today — skipping digest generation');
-      return;
-    }
-
-    for (const userId of userIds) {
-      // Get user details
-      const userResult = await db.query<{
-        language: string;
-        name: string | null;
-      }>(
-        'SELECT language, name FROM users WHERE id = $1',
-        [userId],
-      );
-
-      if (userResult.rows.length === 0) continue;
-      const user = userResult.rows[0]!;
-
-      // Find the user's most recent conversation ID (for sending messages)
-      const convResult = await db.query<{ conversation_id: number }>(
-        `SELECT conversation_id FROM conversation_state
-         WHERE user_id = $1
-         ORDER BY updated_at DESC LIMIT 1`,
-        [userId],
-      );
-
-      const conversationId = convResult.rows[0]?.conversation_id;
-      if (!conversationId) {
-        logger.warn({ userId }, 'No conversation found — skipping digest');
-        continue;
-      }
-
-      const dateKey = today;
-
-      // Schedule digest generation (no heads-up — Jeff approves before delivery)
-      await digestQueue.add('generate-digest', {
-        userId,
-        language: user.language,
-        userName: user.name,
-        conversationId,
-        jobType: 'generate-digest',
-      }, {
-        jobId: `digest-${userId}-${dateKey}`,
-        attempts: 2,
-        backoff: { type: 'exponential', delay: 30000 },
-      });
-    }
-
-    logger.info(
-      { userCount: userIds.length },
-      'Nightly digest jobs scheduled (heads-up + digest)',
-    );
-  } catch (error) {
-    logger.error({ error }, 'Failed to schedule digest jobs');
+digestQueue.getRepeatableJobs().then(async (jobs) => {
+  for (const job of jobs) {
+    await digestQueue.removeRepeatableByKey(job.key);
+    logger.info({ key: job.key }, 'Removed stale digest repeat job');
   }
-}
-
-// Schedule the cron — runs at DIGEST_CRON_HOUR every day
-const digestCronHour = parseInt(process.env.DIGEST_CRON_HOUR || '21', 10);
-digestQueue.add('schedule-digests', {}, {
-  repeat: {
-    pattern: `0 ${digestCronHour} * * *`,
-  },
-  jobId: 'daily-digest-scheduler',
-}).then(() => {
-  logger.info({ cronHour: digestCronHour }, 'Daily digest cron scheduled');
 }).catch(err => {
-  logger.error({ err }, 'Failed to schedule digest cron');
+  logger.error({ err }, 'Failed to clean up stale digest repeat jobs');
 });
-
-// Scheduler worker — handles the cron trigger
-const digestSchedulerWorker = new Worker(
-  DIGEST_QUEUE_NAME,
-  async (job: Job) => {
-    if (job.name === 'schedule-digests') {
-      await scheduleDigestJobs();
-      return { scheduled: true };
-    }
-    // Regular jobs handled by digestWorker
-    return { skipped: true };
-  },
-  {
-    connection: redis,
-    concurrency: 1,
-  },
-);
 
 // ============================================================================
 // Daily Reminder — Scheduler + Worker
@@ -663,7 +558,6 @@ const shutdown = async (signal: string) => {
     await worker.close();
     await checkinWorker.close();
     await digestWorker.close();
-    await digestSchedulerWorker.close();
     await reminderWorker.close();
     await weeklySummaryWorker.close();
     await digestQueue.close();
