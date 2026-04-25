@@ -46,10 +46,10 @@ const HEADS_UP_MESSAGES: Record<string, string> = {
 // ============================================================================
 
 const MEAL_CHECKIN_MESSAGES: Record<string, string> = {
-  es: '¿Qué comiste hoy? 🍽\n\n• *Desayuno:* ¿qué comiste?\n• *Comida:* ¿qué comiste?\n• *Cena:* ¿qué comiste?\n\nEscríbeme lo que recuerdes, aunque sea poco.',
-  en: "What did you eat today? 🍽\n\n• *Breakfast:* what did you have?\n• *Lunch:* what did you have?\n• *Dinner:* what did you have?\n\nSend me whatever you remember, even if it's just a little.",
-  pt: 'O que você comeu hoje? 🍽\n\n• *Café da manhã:* o que comeu?\n• *Almoço:* o que comeu?\n• *Jantar:* o que comeu?\n\nMe manda o que lembrar, mesmo que seja pouco.',
-  fr: "Qu'avez-vous mangé aujourd'hui ? 🍽\n\n• *Petit-déjeuner:* qu'avez-vous mangé ?\n• *Déjeuner:* qu'avez-vous mangé ?\n• *Dîner:* qu'avez-vous mangé ?\n\nEnvoyez-moi ce dont vous vous souvenez, même un peu.",
+  es: '¿Qué comiste hoy? 🍽\n\n• *Desayuno:* ¿qué comiste?\n• *Comida:* ¿qué comiste?\n• *Cena:* ¿qué comiste?\n\nY dos señales rápidas:\n• *Energía:* alta / media / baja\n• *Sueño:* bien / regular / mal\n\nEscríbeme lo que recuerdes, aunque sea poco.',
+  en: "What did you eat today? 🍽\n\n• *Breakfast:* what did you have?\n• *Lunch:* what did you have?\n• *Dinner:* what did you have?\n\nTwo quick signals:\n• *Energy:* high / medium / low\n• *Sleep:* good / ok / bad\n\nSend me whatever you remember, even if it's just a little.",
+  pt: 'O que você comeu hoje? 🍽\n\n• *Café da manhã:* o que comeu?\n• *Almoço:* o que comeu?\n• *Jantar:* o que comeu?\n\nDois sinais rápidos:\n• *Energia:* alta / média / baixa\n• *Sono:* bem / regular / mal\n\nMe manda o que lembrar, mesmo que seja pouco.',
+  fr: "Qu'avez-vous mangé aujourd'hui ? 🍽\n\n• *Petit-déjeuner:* qu'avez-vous mangé ?\n• *Déjeuner:* qu'avez-vous mangé ?\n• *Dîner:* qu'avez-vous mangé ?\n\nDeux signaux rapides :\n• *Énergie:* haute / moyenne / basse\n• *Sommeil:* bien / correct / mal\n\nEnvoyez-moi ce dont vous vous souvenez, même un peu.",
 };
 
 function getMealCheckin(language: string): string {
@@ -263,9 +263,9 @@ const anthropic = new Anthropic({ apiKey: config.anthropicApiKey });
 
 async function generateWeeklySummary(userId: string, language: string, conversationId: number) {
   const today = new Date();
-  const monday = new Date(today);
-  monday.setDate(today.getDate() - (today.getDay() === 0 ? 6 : today.getDay() - 1));
-  monday.setHours(0, 0, 0, 0);
+  const fourWeeksAgo = new Date(today);
+  fourWeeksAgo.setDate(today.getDate() - 28);
+  fourWeeksAgo.setHours(0, 0, 0, 0);
 
   const eventsResult = await db.query<{ event_date: string; raw_input: string; event_type: string }>(
     `SELECT event_date::text, raw_input, event_type
@@ -274,25 +274,67 @@ async function generateWeeklySummary(userId: string, language: string, conversat
        AND event_date >= $2
        AND raw_input IS NOT NULL
      ORDER BY event_date, event_time`,
-    [userId, monday.toISOString().split('T')[0]],
+    [userId, fourWeeksAgo.toISOString().split('T')[0]],
   );
 
   if (eventsResult.rows.length === 0) {
-    logger.info({ userId }, 'No events this week — skipping weekly summary');
+    logger.info({ userId }, 'No events in last 4 weeks — skipping weekly summary');
     return;
   }
 
-  const eventLines = eventsResult.rows
-    .map(e => `${e.event_date}: ${e.raw_input}`)
-    .join('\n');
+  // Group by week so Claude can read progression
+  const weekMap = new Map<string, string[]>();
+  for (const event of eventsResult.rows) {
+    const date = new Date(event.event_date + 'T12:00:00');
+    const weekStart = new Date(date);
+    weekStart.setDate(date.getDate() - (date.getDay() === 0 ? 6 : date.getDay() - 1));
+    const weekKey = weekStart.toISOString().split('T')[0]!;
+    if (!weekMap.has(weekKey)) weekMap.set(weekKey, []);
+    weekMap.get(weekKey)!.push(`  ${event.event_date}: ${event.raw_input}`);
+  }
+
+  const weeksSorted = [...weekMap.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  const totalWeeks = weeksSorted.length;
+  const eventLines = weeksSorted
+    .map(([weekStart, lines], i) => {
+      const label = i === totalWeeks - 1 ? 'Esta semana' : `Semana ${i + 1}`;
+      return `${label} (desde ${weekStart}):\n${lines.join('\n')}`;
+    })
+    .join('\n\n');
 
   const prompt = language === 'en'
-    ? `You are a nutrition coach. A user logged their meals this week:\n\n${eventLines}\n\nWrite a warm WhatsApp summary in English with:\n1. A brief pattern you noticed across the week (2-3 sentences)\n2. What they did well (1-2 things, specific)\n3. 2-3 concrete improvements for next week (actionable, not preachy)\n\nKeep it under 250 words. Use *bold* for section headings. Tone: encouraging, honest, no shame.`
-    : `Eres un coach de nutrición. Un usuario registró sus comidas esta semana:\n\n${eventLines}\n\nEscribe un resumen cálido para WhatsApp en español con:\n1. Un patrón que notaste durante la semana (2-3 oraciones)\n2. Lo que hizo bien (1-2 cosas, específicas)\n3. 2-3 mejoras concretas para la próxima semana (accionables, sin juzgar)\n\nMáximo 250 palabras. Usa *negritas* para los títulos de sección. Tono: alentador, honesto, sin vergüenza.`;
+    ? `You are a nutrition coach tracking a user across ${totalWeeks} week(s). Your goal: help them move from food awareness to reading their body signals.
+
+Logged data (meals + body signals when reported):
+
+${eventLines}
+
+Write a WhatsApp summary with exactly these 4 sections:
+
+*This week* — 2-3 specific things from this week's logs (food choices or body signals)
+*Patterns I'm seeing* — signals that appeared 2+ times across weeks: energy after certain foods, sleep, nighttime hunger, recovery. Only confirm a pattern if you have 2+ data points — otherwise label it "emerging."
+*Compared to past weeks* — one measurable shift (more protein, less starch, better sleep, fewer late snacks, etc.)
+*Experiment for next week* — one small, specific change tied directly to an observed pattern. Make it a question to observe, not a rule to follow.
+
+Under 300 words. *Bold* section headings. Tone: curious coach, not a report. No shame, no preamble.`
+    : `Eres un coach de nutrición haciendo seguimiento a un usuario durante ${totalWeeks} semana(s). Tu objetivo: ayudarlo a pasar de la conciencia alimentaria a leer las señales de su cuerpo.
+
+Datos registrados (comidas + señales del cuerpo cuando las reportó):
+
+${eventLines}
+
+Escribe un resumen para WhatsApp con exactamente estas 4 secciones:
+
+*Esta semana* — 2-3 cosas específicas de los registros de esta semana (elecciones de comida o señales del cuerpo)
+*Patrones que veo* — señales que aparecieron 2 o más veces entre semanas: energía después de ciertos alimentos, sueño, hambre nocturna, recuperación. Solo confirma un patrón si tienes 2 o más datos — si no, llámalo "emergente."
+*Comparado con semanas anteriores* — un cambio medible (más proteína, menos almidón, mejor sueño, menos snacks nocturnos, etc.)
+*Experimento para la próxima semana* — un cambio pequeño y específico ligado directamente a un patrón observado. Plántalo como una pregunta a observar, no como una regla a seguir.
+
+Máximo 300 palabras. Títulos en *negritas*. Tono: coach curioso, no un informe. Sin vergüenza, sin preámbulo.`;
 
   const response = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',
-    max_tokens: 600,
+    max_tokens: 700,
     messages: [{ role: 'user', content: prompt }],
   });
 
@@ -302,7 +344,7 @@ async function generateWeeklySummary(userId: string, language: string, conversat
     : '*📊 Tu Semana en Resumen*\n\n';
 
   await chatwootClient.sendMessage(conversationId, header + summary);
-  logger.info({ userId, eventsCount: eventsResult.rows.length }, 'Weekly summary sent');
+  logger.info({ userId, eventsCount: eventsResult.rows.length, weeksOfData: totalWeeks }, 'Weekly summary sent');
 }
 
 const weeklySummaryWorker = new Worker(
